@@ -25,14 +25,19 @@ use std::{collections::HashMap, time::Duration};
 use reqwest::Method;
 use tracing::debug;
 
+use crate::model::{secure_boot::SecureBoot, ComputerSystem};
+use crate::EnabledDisabled::Enabled;
 use crate::{
-    model::{oem::lenovo, BootOption},
+    model::{
+        oem::lenovo,
+        software_inventory::{SoftwareInventory, SoftwareInventoryCollection},
+        BootOption,
+    },
     network::REDFISH_ENDPOINT,
     standard::RedfishStandard,
-    Boot, EnabledDisabled, PCIeDevice, PowerState, Redfish, RedfishError, Status, StatusInternal,
-    SystemPowerControl,
+    Boot, BootOptions, EnabledDisabled, PCIeDevice, PowerState, Redfish, RedfishError, Status,
+    StatusInternal, SystemPowerControl,
 };
-use crate::EnabledDisabled::Enabled;
 
 pub struct Bmc {
     s: RedfishStandard,
@@ -45,6 +50,10 @@ impl Bmc {
 }
 
 impl Redfish for Bmc {
+    fn change_password(&self, user: &str, new: &str) -> Result<(), RedfishError> {
+        self.s.change_password(user, new)
+    }
+
     fn get_power_state(&self) -> Result<PowerState, RedfishError> {
         self.s.get_power_state()
     }
@@ -208,6 +217,14 @@ impl Redfish for Bmc {
         })
     }
 
+    fn get_boot_options(&self) -> Result<BootOptions, RedfishError> {
+        self.s.get_boot_options()
+    }
+
+    fn get_boot_option(&self, option_id: &str) -> Result<BootOption, RedfishError> {
+        self.s.get_boot_option(option_id)
+    }
+
     fn boot_once(&self, target: Boot) -> Result<(), RedfishError> {
         match target {
             Boot::Pxe => self.set_boot_override(lenovo::BootSource::Pxe),
@@ -244,6 +261,37 @@ impl Redfish for Bmc {
 
     fn pcie_devices(&self) -> Result<Vec<PCIeDevice>, RedfishError> {
         self.s.pcie_devices()
+    }
+
+    fn update_firmware(
+        &self,
+        firmware: std::fs::File,
+    ) -> Result<crate::model::task::Task, RedfishError> {
+        self.s.update_firmware(firmware)
+    }
+
+    fn get_task(&self, id: &str) -> Result<crate::model::task::Task, RedfishError> {
+        self.s.get_task(id)
+    }
+
+    fn get_firmware(&self, id: &str) -> Result<SoftwareInventory, RedfishError> {
+        self.s.get_firmware(id)
+    }
+
+    fn get_software_inventories(&self) -> Result<SoftwareInventoryCollection, RedfishError> {
+        self.s.get_software_inventories()
+    }
+
+    fn get_system(&self) -> Result<ComputerSystem, RedfishError> {
+        self.s.get_system()
+    }
+
+    fn get_secure_boot(&self) -> Result<SecureBoot, RedfishError> {
+        self.s.get_secure_boot()
+    }
+
+    fn disable_secure_boot(&self) -> Result<(), RedfishError> {
+        self.s.disable_secure_boot()
     }
 }
 
@@ -541,7 +589,7 @@ impl Bmc {
         let (_status_code, _resp_body): (_, Option<HashMap<String, serde_json::Value>>) = self
             .s
             .client
-            .req(Method::PATCH, &url, Some(body), Some(timeout))?;
+            .req(Method::PATCH, &url, Some(body), Some(timeout), None)?;
         Ok(())
     }
 

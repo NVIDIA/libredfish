@@ -25,7 +25,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use super::{oem::SystemExtensions, ODataId, ODataLinks};
+use super::{boot::Boot, oem::SystemExtensions, ODataId, ODataLinks};
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 pub enum SystemPowerControl {
@@ -69,7 +69,7 @@ pub struct StatusState {
 pub struct Systems {
     #[serde(flatten)]
     pub odata: ODataLinks,
-    pub description: String,
+    pub description: Option<String>,
     pub members: Vec<ODataId>,
     pub name: String,
 }
@@ -86,9 +86,9 @@ pub struct SystemStatus {
 #[serde(rename_all = "PascalCase")]
 pub struct SystemProcessors {
     pub count: i64,
-    pub logical_processor_count: i64,
-    pub model: String,
-    pub status: SystemStatus,
+    pub logical_processor_count: Option<i64>,
+    pub model: Option<String>,
+    pub status: Option<SystemStatus>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -102,21 +102,23 @@ pub struct TrustedModule {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct ComputerSystem {
-    pub asset_tag: String,
-    pub bios_version: String,
-    pub manufacturer: String,
-    pub model: String,
-    pub oem: SystemExtensions,
+    pub asset_tag: Option<String>,
+    pub boot: Boot,
+    pub bios_version: Option<String>,
+    pub manufacturer: Option<String>,
+    pub model: Option<String>,
+    pub oem: Option<SystemExtensions>,
     // Dell: String. Lenovo: always null
     //pub part_number: String,
     pub power_state: PowerState,
-    pub processor_summary: SystemProcessors,
+    pub processor_summary: Option<SystemProcessors>,
     #[serde(rename = "SKU")]
-    pub sku: String,
-    pub serial_number: String,
-    pub status: SystemStatus,
+    pub sku: Option<String>,
+    pub serial_number: Option<String>,
+    pub status: Option<SystemStatus>,
+    #[serde(default)]
     pub trusted_modules: Vec<TrustedModule>,
-    #[serde(rename = "PCIeDevices")]
+    #[serde(default, rename = "PCIeDevices")]
     pub pcie_devices: Vec<ODataId>,
 }
 
@@ -172,15 +174,18 @@ mod test {
         let data = include_str!("testdata/system_dell.json");
         let result: super::ComputerSystem = serde_json::from_str(data).unwrap();
         assert_eq!(result.power_state, crate::PowerState::On);
-        assert_eq!(result.processor_summary.count, 2);
+        assert_eq!(result.processor_summary.unwrap().count, 2);
     }
 
     #[test]
     fn test_system_lenovo() {
         let data = include_str!("testdata/system_lenovo.json");
         let result: super::ComputerSystem = serde_json::from_str(data).unwrap();
-        assert_eq!(result.oem.lenovo.unwrap().total_power_on_hours, 3816);
-        assert_eq!(result.processor_summary.count, 2);
+        assert_eq!(
+            result.oem.unwrap().lenovo.unwrap().total_power_on_hours,
+            3816
+        );
+        assert_eq!(result.processor_summary.unwrap().count, 2);
     }
 
     #[test]

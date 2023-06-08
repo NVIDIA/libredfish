@@ -8,13 +8,17 @@ pub mod system;
 pub use system::*;
 
 pub mod bios;
+pub mod boot;
 pub use bios::*;
 
 pub mod oem;
+pub mod secure_boot;
 
 // power/thermal/storage not currently used
 pub mod power;
+pub mod software_inventory;
 pub mod storage;
+pub mod task;
 pub mod thermal;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

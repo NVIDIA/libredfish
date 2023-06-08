@@ -1,22 +1,55 @@
 use std::collections::HashMap;
+use std::fs::File;
 
 pub mod model;
-pub use model::system::{PCIeDevice, PowerState, SystemPowerControl, Systems};
+pub use model::network_device_function::{NetworkDeviceFunction, NetworkDeviceFunctionCollection};
+pub use model::chassis::{Chassis, ChassisCollection};
+pub use model::port::{NetworkPort, NetworkPortCollection};
+pub use model::ethernet_interface::{EthernetInterface, EthernetInterfaceCollection};
+pub use model::system::{BootOptions, PCIeDevice, PowerState, SystemPowerControl, Systems};
+use model::task::Task;
 pub use model::EnabledDisabled;
+use model::{
+    secure_boot::SecureBoot,
+    software_inventory::{SoftwareInventory, SoftwareInventoryCollection},
+    BootOption, ComputerSystem,
+};
 use serde::{Deserialize, Serialize};
 
 mod dell;
 mod error;
 mod lenovo;
 mod network;
+mod nvidia;
 pub use network::{Endpoint, RedfishClientPool, RedfishClientPoolBuilder, REDFISH_ENDPOINT};
 mod standard;
 pub use error::RedfishError;
 
 /// Interface to a BMC Redfish server. All calls will include one or more HTTP network calls.
 pub trait Redfish: Send + Sync + 'static {
+    /// Change password for the user
+    fn change_password(&self, user: &str, new: &str) -> Result<(), RedfishError>;
+
+    // Get firmware version for particular firmware inventory id
+    fn get_firmware(&self, id: &str) -> Result<SoftwareInventory, RedfishError>;
+
+    // Get software inventory collection
+    fn get_software_inventories(&self) -> Result<SoftwareInventoryCollection, RedfishError>;
+
+    // Get information about a task
+    fn get_task(&self, id: &str) -> Result<Task, RedfishError>;
+
     /// Is this thing even on?
     fn get_power_state(&self) -> Result<PowerState, RedfishError>;
+
+    /// Returns info about computer system.
+    fn get_system(&self) -> Result<ComputerSystem, RedfishError>;
+
+    /// Get Secure Boot state
+    fn get_secure_boot(&self) -> Result<SecureBoot, RedfishError>;
+
+    /// Disables Secure Boot
+    fn disable_secure_boot(&self) -> Result<(), RedfishError>;
 
     /// Change power state: on, off, reboot, etc
     fn power(&self, action: SystemPowerControl) -> Result<(), RedfishError>;
@@ -36,6 +69,12 @@ pub trait Redfish: Send + Sync + 'static {
     /// Is the serial console setup?
     fn serial_console_status(&self) -> Result<Status, RedfishError>;
 
+    /// Show available boot options
+    fn get_boot_options(&self) -> Result<BootOptions, RedfishError>;
+
+    /// Show available boot options
+    fn get_boot_option(&self, option_id: &str) -> Result<BootOption, RedfishError>;
+
     /// Boot a single time of the given target. Does not change boot order after that.
     fn boot_once(&self, target: Boot) -> Result<(), RedfishError>;
 
@@ -47,6 +86,9 @@ pub trait Redfish: Send + Sync + 'static {
 
     /// List PCIe devices
     fn pcie_devices(&self) -> Result<Vec<PCIeDevice>, RedfishError>;
+
+    /// Update firmware
+    fn update_firmware(&self, firmware: File) -> Result<Task, RedfishError>;
 
     /*
      * Diagnostic calls

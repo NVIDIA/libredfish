@@ -23,10 +23,19 @@
 use std::collections::HashMap;
 
 use crate::{
-    model::{oem::dell, OnOff},
+    model::{
+        oem::dell,
+        power::Power,
+        secure_boot::SecureBoot,
+        software_inventory::{SoftwareInventory, SoftwareInventoryCollection},
+        network_device_function::{NetworkDeviceFunction, NetworkDeviceFunctionCollection}, 
+        chassis::{Chassis, ChassisCollection},
+        thermal::Thermal,
+        BootOption, ComputerSystem, OnOff,
+    },
     standard::RedfishStandard,
-    Boot, EnabledDisabled, PCIeDevice, PowerState, Redfish, RedfishError, Status, StatusInternal,
-    SystemPowerControl,
+    Boot, BootOptions, EnabledDisabled, PCIeDevice, PowerState, Redfish, RedfishError, Status,
+    StatusInternal, SystemPowerControl,
 };
 
 pub struct Bmc {
@@ -40,6 +49,10 @@ impl Bmc {
 }
 
 impl Redfish for Bmc {
+    fn change_password(&self, user: &str, new: &str) -> Result<(), RedfishError> {
+        self.s.change_password(user, new)
+    }
+
     fn get_power_state(&self) -> Result<PowerState, RedfishError> {
         self.s.get_power_state()
     }
@@ -226,6 +239,14 @@ impl Redfish for Bmc {
         })
     }
 
+    fn get_boot_options(&self) -> Result<BootOptions, RedfishError> {
+        self.s.get_boot_options()
+    }
+
+    fn get_boot_option(&self, option_id: &str) -> Result<BootOption, RedfishError> {
+        self.s.get_boot_option(option_id)
+    }
+
     fn boot_once(&self, target: Boot) -> Result<(), RedfishError> {
         match target {
             Boot::Pxe => self.set_boot_first(dell::BootDevices::PXE, true),
@@ -271,6 +292,37 @@ impl Redfish for Bmc {
 
     fn pcie_devices(&self) -> Result<Vec<PCIeDevice>, RedfishError> {
         self.s.pcie_devices()
+    }
+
+    fn update_firmware(
+        &self,
+        firmware: std::fs::File,
+    ) -> Result<crate::model::task::Task, RedfishError> {
+        self.s.update_firmware(firmware)
+    }
+
+    fn get_task(&self, id: &str) -> Result<crate::model::task::Task, RedfishError> {
+        self.s.get_task(id)
+    }
+
+    fn get_firmware(&self, id: &str) -> Result<SoftwareInventory, RedfishError> {
+        self.s.get_firmware(id)
+    }
+
+    fn get_software_inventories(&self) -> Result<SoftwareInventoryCollection, RedfishError> {
+        self.s.get_software_inventories()
+    }
+
+    fn get_system(&self) -> Result<ComputerSystem, RedfishError> {
+        self.s.get_system()
+    }
+
+    fn get_secure_boot(&self) -> Result<SecureBoot, RedfishError> {
+        self.s.get_secure_boot()
+    }
+
+    fn disable_secure_boot(&self) -> Result<(), RedfishError> {
+        self.s.disable_secure_boot()
     }
 }
 

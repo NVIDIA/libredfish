@@ -24,10 +24,19 @@ use std::collections::{HashMap, HashSet};
 
 use tracing::debug;
 
+use crate::model::chassis::{Chassis, ChassisCollection};
+use crate::model::network_device_function::{
+    NetworkDeviceFunction, NetworkDeviceFunctionCollection,
+};
+use crate::model::power::Power;
+use crate::model::secure_boot::SecureBoot;
+use crate::model::software_inventory::{SoftwareInventory, SoftwareInventoryCollection};
 use crate::model::{power, storage, thermal};
+use crate::model::thermal::Thermal;
+use crate::model::{power, storage, thermal, BootOption};
 use crate::network::{RedfishHttpClient, REDFISH_ENDPOINT};
 use crate::{model, Boot, EnabledDisabled, PowerState, Redfish, Status};
-use crate::{PCIeDevice, RedfishError};
+use crate::{BootOptions, PCIeDevice, RedfishError};
 
 /// The calls that use the Redfish standard without any OEM extensions.
 pub struct RedfishStandard {
@@ -38,6 +47,13 @@ pub struct RedfishStandard {
 }
 
 impl Redfish for RedfishStandard {
+    fn change_password(&self, user: &str, new: &str) -> Result<(), RedfishError> {
+        let url = format!("AccountService/Accounts/{}", user);
+        let mut data = HashMap::new();
+        data.insert("Password", new);
+        self.client.patch(&url, &data).map(|_status_code| Ok(()))?
+    }
+
     fn get_power_state(&self) -> Result<PowerState, RedfishError> {
         let system = self.get_system()?;
         Ok(system.power_state)
@@ -87,6 +103,16 @@ impl Redfish for RedfishStandard {
         unimplemented!("No standard implementation");
     }
 
+    fn get_boot_options(&self) -> Result<BootOptions, RedfishError> {
+        self.get_boot_options()
+    }
+
+    fn get_boot_option(&self, option_id: &str) -> Result<BootOption, RedfishError> {
+        let url = format!("Systems/{}/BootOptions/{}", self.system_id(), option_id);
+        let (_status_code, body) = self.client.get(&url)?;
+        Ok(body)
+    }
+
     fn boot_once(&self, _target: Boot) -> Result<(), RedfishError> {
         unimplemented!("No standard implementation");
     }
@@ -121,6 +147,115 @@ impl Redfish for RedfishStandard {
         }
         out.sort_unstable_by(|a, b| a.manufacturer.partial_cmp(&b.manufacturer).unwrap());
         Ok(out)
+    }
+
+    fn get_firmware(&self, id: &str) -> Result<SoftwareInventory, RedfishError> {
+        let url = format!("UpdateService/FirmwareInventory/{}", id);
+        let (_status_code, body) = self.client.get(&url)?;
+        Ok(body)
+    }
+
+    fn update_firmware(&self, firmware: std::fs::File) -> Result<model::task::Task, RedfishError> {
+        let (_status_code, body) = self.client.post_file("UpdateService", firmware)?;
+        Ok(body)
+    }
+
+    fn get_task(&self, id: &str) -> Result<model::task::Task, RedfishError> {
+        let url = format!("TaskService/Tasks/{}", id);
+        let (_status_code, body) = self.client.get(&url)?;
+        Ok(body)
+    }
+
+    fn get_network_device_function(
+        &self,
+        chassis_id: &str,
+        id: &str,
+    ) -> Result<NetworkDeviceFunction, RedfishError> {
+        let url = format!(
+            "Chassis/{}/NetworkAdapters/NvidiaNetworkAdapter/NetworkDeviceFunctions/{}",
+            chassis_id, id
+        );
+        let (_status_code, body) = self.client.get(&url)?;
+        Ok(body)
+    }
+
+    fn get_network_device_functions(
+        &self,
+        chassis_id: &str,
+    ) -> Result<NetworkDeviceFunctionCollection, RedfishError> {
+        let url = format!(
+            "Chassis/{}/NetworkAdapters/NvidiaNetworkAdapter/NetworkDeviceFunctions",
+            chassis_id
+        );
+        let (_status_code, body) = self.client.get(&url)?;
+        Ok(body)
+    }
+
+    fn get_chassises(&self) -> Result<ChassisCollection, RedfishError> {
+        let url = "Chassis".to_string();
+        let (_status_code, body) = self.client.get(&url)?;
+        Ok(body)
+    }
+
+    fn get_chassis(&self, id: &str) -> Result<Chassis, RedfishError> {
+        let url = format!("Chassis/{}", id);
+        let (_status_code, body) = self.client.get(&url)?;
+        Ok(body)
+    }
+
+    fn get_ports(&self, chassis_id: &str) -> Result<crate::NetworkPortCollection, RedfishError> {
+        let url = format!(
+            "Chassis/{}/NetworkAdapters/NvidiaNetworkAdapter/Ports",
+            chassis_id
+        );
+        let (_status_code, body) = self.client.get(&url)?;
+        Ok(body)
+    }
+
+    fn get_port(&self, chassis_id: &str, id: &str) -> Result<crate::NetworkPort, RedfishError> {
+        let url = format!(
+            "Chassis/{}/NetworkAdapters/NvidiaNetworkAdapter/Ports/{}",
+            chassis_id, id
+        );
+        let (_status_code, body) = self.client.get(&url)?;
+        Ok(body)
+    }
+
+    fn get_ethernet_interfaces(&self) -> Result<crate::EthernetInterfaceCollection, RedfishError> {
+        let url = format!("Managers/{}/EthernetInterfaces", self.manager_id());
+        let (_status_code, body) = self.client.get(&url)?;
+        Ok(body)
+    }
+
+    fn get_ethernet_interface(&self, id: &str) -> Result<crate::EthernetInterface, RedfishError> {
+        let url = format!("Managers/{}/EthernetInterfaces/{}", self.manager_id(), id);
+        let (_status_code, body) = self.client.get(&url)?;
+        Ok(body)
+    }
+
+    fn get_software_inventories(&self) -> Result<SoftwareInventoryCollection, RedfishError> {
+        let (_status_code, body) = self.client.get("UpdateService/FirmwareInventory")?;
+        Ok(body)
+    }
+
+    fn get_system(&self) -> Result<model::ComputerSystem, RedfishError> {
+        let url = format!("Systems/{}/", self.system_id);
+        let host: model::ComputerSystem = self.client.get(&url)?.1;
+        Ok(host)
+    }
+
+    fn get_secure_boot(&self) -> Result<SecureBoot, RedfishError> {
+        let url = format!("Systems/{}/SecureBoot", self.system_id());
+        let (_status_code, body) = self.client.get(&url)?;
+        Ok(body)
+    }
+
+    fn disable_secure_boot(&self) -> Result<(), RedfishError> {
+        let mut data = HashMap::new();
+        data.insert("SecureBootEnable", false);
+        let url = format!("Systems/{}/SecureBoot", self.system_id());
+        let _status_code = self.client.patch(&url, data)?;
+        Ok(())
     }
 }
 
@@ -261,12 +396,6 @@ impl RedfishStandard {
         let v: Vec<&str> = bmcs.members[0].odata_id.split('/').collect();
         self.manager_id = v.last().unwrap().to_string();
         Ok(())
-    }
-
-    fn get_system(&self) -> Result<model::ComputerSystem, RedfishError> {
-        let url = format!("Systems/{}/", self.system_id);
-        let host: model::ComputerSystem = self.client.get(&url)?.1;
-        Ok(host)
     }
 
     //
