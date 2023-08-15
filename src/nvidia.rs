@@ -58,12 +58,20 @@ impl Redfish for Bmc {
         self.s.get_power_state()
     }
 
+    fn get_power_metrics(&self) -> Result<crate::Power, RedfishError> {
+        self.s.get_power_metrics()
+    }
+
     fn power(&self, action: crate::SystemPowerControl) -> Result<(), RedfishError> {
         self.s.power(action)
     }
 
     fn machine_setup(&self) -> Result<(), RedfishError> {
         self.s.machine_setup()
+    }
+
+    fn get_thermal_metrics(&self) -> Result<crate::Thermal, RedfishError> {
+        self.s.get_thermal_metrics()
     }
 
     fn lockdown(&self, target: crate::EnabledDisabled) -> Result<(), RedfishError> {

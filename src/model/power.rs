@@ -28,14 +28,15 @@ pub struct Oem {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
-pub struct PowercontrolPowerlimit {
+pub struct PowerLimit {
+    pub limit_exception: Option<String>,
     pub limit_in_watts: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
-pub struct PowercontrolPowermetric {
-    pub average_consumed_watts: i64,
+pub struct PowerMetrics {
+    pub average_consumed_watts: i64, // we need to track this metric
     pub interval_in_min: i64,
     pub max_consumed_watts: i64,
     pub min_consumed_watts: i64,
@@ -43,11 +44,13 @@ pub struct PowercontrolPowermetric {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
-pub struct Powercontrol {
-    pub power_capacity_watts: i64,
-    pub power_consumed_watts: i64,
-    pub power_limit: PowercontrolPowerlimit,
-    pub power_metrics: PowercontrolPowermetric,
+pub struct PowerControl {
+    pub power_allocated_watts: Option<f64>,
+    pub power_capacity_watts: Option<f64>,
+    pub power_consumed_watts: f64,
+    pub power_requested_watts: Option<f64>,
+    pub power_limit: Option<PowerLimit>,
+    pub power_metrics: PowerMetrics,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -58,7 +61,7 @@ pub struct PowersuppliesOemHpPowersupplystatus {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
-pub struct PowersuppliesOemHp {
+pub struct PowerSuppliesOemHp {
     #[serde(flatten)]
     pub power_type: super::oem::hp::HpType,
     pub average_power_output_watts: i64,
@@ -73,24 +76,37 @@ pub struct PowersuppliesOemHp {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
-pub struct PowersuppliesOem {
-    pub hp: PowersuppliesOemHp,
+pub struct PowerSuppliesOem {
+    pub hp: PowerSuppliesOemHp,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
-pub struct Powersupply {
+pub struct InputRanges {
+    pub input_type: String,
+    pub minimum_voltage: i64,
+    pub maximum_voltage: i64,
+    pub output_wattage: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
+pub struct PowerSupply {
     pub firmware_version: String,
-    pub last_power_output_watts: i64,
-    pub line_input_voltage: i64,
+    pub last_power_output_watts: f64, // we need to track this metric
+    pub line_input_voltage: i64,      // we need to track this metric
     pub line_input_voltage_type: String,
+    pub efficiency_percent: f64,
+    pub hot_pluggable: bool,
     pub model: String,
     pub name: String,
-    pub oem: PowersuppliesOem,
+    pub input_ranges: Vec<InputRanges>,
     pub power_capacity_watts: i64,
+    pub power_input_watts: f64,
+    pub power_output_watts: f64,
     pub power_supply_type: String,
     pub serial_number: String,
-    pub spare_part_number: String,
+    pub spare_part_number: Option<String>,
     pub status: ResourceStatus,
 }
 
@@ -107,21 +123,26 @@ pub struct Redundancy {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
+pub struct Voltages {
+    pub name: String,
+    pub physical_context: String,
+    pub reading_volts: Option<f64>,
+    pub lower_threshold_critical: Option<f64>,
+    pub upper_threshold_critical: Option<f64>,
+    pub status: ResourceStatus,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
 pub struct Power {
     #[serde(flatten)]
     pub odata: ODataLinks,
     pub id: String,
     pub name: String,
-    pub oem: Oem,
-    pub power_capacity_watts: i64,
-    pub power_consumed_watts: i64,
-    pub power_control: Vec<Powercontrol>,
-    pub power_limit: PowercontrolPowerlimit,
-    pub power_metrics: PowercontrolPowermetric,
-    pub power_supplies: Vec<Powersupply>,
+    pub power_control: Vec<PowerControl>,
+    pub power_supplies: Vec<PowerSupply>,
+    pub voltages: Vec<Voltages>,
     pub redundancy: Vec<Redundancy>,
-    #[serde(rename = "Type")]
-    pub power_type: String,
 }
 
 impl StatusVec for Power {
@@ -138,8 +159,16 @@ impl StatusVec for Power {
 mod test {
     #[test]
     fn test_power_parser() {
-        let test_data = include_str!("testdata/power.json");
-        let result: super::Power = serde_json::from_str(test_data).unwrap();
-        println!("result: {result:#?}");
+        // TODO: hpe test data is obsolete, needs to be updated from latest iLO BMC
+        // with newer redfish schema
+        // let test_data_hpe = include_str!("testdata/power-hpe.json");
+        // let result_hpe: super::Power = serde_json::from_str(test_data_hpe).unwrap();
+        // println!("result_hpe: {result_hpe:#?}");
+        let test_data_dell = include_str!("testdata/power-dell.json");
+        let result_dell: super::Power = serde_json::from_str(test_data_dell).unwrap();
+        println!("result_dell: {result_dell:#?}");
+        let test_data_lenovo = include_str!("testdata/power-lenovo.json");
+        let result_lenovo: super::Power = serde_json::from_str(test_data_lenovo).unwrap();
+        println!("result_lenovo: {result_lenovo:#?}");
     }
 }

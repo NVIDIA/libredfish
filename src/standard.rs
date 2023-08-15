@@ -30,7 +30,9 @@ use crate::model::network_device_function::{
 };
 use crate::model::power::Power;
 use crate::model::secure_boot::SecureBoot;
+use crate::model::power::Power;
 use crate::model::software_inventory::{SoftwareInventory, SoftwareInventoryCollection};
+use crate::model::thermal::Thermal;
 use crate::model::{power, storage, thermal};
 use crate::model::thermal::Thermal;
 use crate::model::{power, storage, thermal, BootOption};
@@ -59,12 +61,22 @@ impl Redfish for RedfishStandard {
         Ok(system.power_state)
     }
 
+    fn get_power_metrics(&self) -> Result<Power, RedfishError> {
+        let power = self.get_power_metrics()?;
+        Ok(power)
+    }
+
     fn power(&self, action: model::SystemPowerControl) -> Result<(), RedfishError> {
         let url = format!("Systems/{}/Actions/ComputerSystem.Reset", self.system_id);
         let mut arg = HashMap::new();
         arg.insert("ResetType", action.to_string());
         // Lenovo: The expected HTTP response code is 204 No Content
         self.client.post(&url, arg).map(|_status_code| Ok(()))?
+    }
+
+    fn get_thermal_metrics(&self) -> Result<Thermal, RedfishError> {
+        let thermal = self.get_thermal_metrics()?;
+        Ok(thermal)
     }
 
     fn bios(&self) -> Result<HashMap<String, serde_json::Value>, RedfishError> {
@@ -442,9 +454,15 @@ impl RedfishStandard {
         Ok(body)
     }
 
+    /// Query the power supplies and voltages stats from the server
+    pub fn get_power_metrics(&self) -> Result<power::Power, RedfishError> {
+        let url = format!("Chassis/{}/Power/", self.system_id());
+        let (_status_code, body) = self.client.get(&url)?;
+        Ok(body)
+    }
+
     /// Query the thermal status from the server
-    #[allow(dead_code)]
-    pub fn get_thermal_status(&self) -> Result<thermal::Thermal, RedfishError> {
+    pub fn get_thermal_metrics(&self) -> Result<thermal::Thermal, RedfishError> {
         let url = format!("Chassis/{}/Thermal/", self.system_id());
         let (_status_code, body) = self.client.get(&url)?;
         Ok(body)

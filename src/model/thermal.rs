@@ -1,3 +1,4 @@
+use crate::model::ODataId;
 use serde::{Deserialize, Serialize};
 
 use super::{ODataLinks, ResourceStatus, StatusVec};
@@ -19,11 +20,16 @@ pub struct FansOem {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct Fan {
-    pub current_reading: i64,
+    pub reading: i64,
+    pub reading_units: String,
     pub fan_name: String,
-    pub oem: FansOem,
+    pub physical_context: String,
+    pub sensor_number: Option<i64>,
+    pub lower_threshold_critical: Option<i64>,
+    pub lower_threshold_fatal: Option<i64>,
     pub status: ResourceStatus,
-    pub units: String,
+    pub upper_threshold_critical: Option<i64>,
+    pub upper_threshold_fatal: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -44,18 +50,28 @@ pub struct TemperaturesOem {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct Temperature {
-    pub current_reading: i64,
     pub name: String,
-    pub number: i64,
+    pub sensor_number: Option<i64>,
     pub lower_threshold_critical: Option<i64>,
     pub lower_threshold_fatal: Option<i64>,
-    pub oem: TemperaturesOem,
     pub physical_context: String,
-    pub reading_celsius: i64,
+    pub reading_celsius: Option<i64>,
     pub status: ResourceStatus,
-    pub units: String,
-    pub upper_threshold_critical: i64,
-    pub upper_threshold_fatal: i64,
+    pub upper_threshold_critical: Option<i64>,
+    pub upper_threshold_fatal: Option<i64>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
+pub struct Redundancy {
+    pub max_num_supported: Option<i64>,
+    pub member_id: String,
+    pub min_num_needed: Option<i64>,
+    pub mode: String,
+    pub name: String,
+    pub redundancy_enabled: bool,
+    pub status: ResourceStatus,
+    pub redundancy_set: Vec<ODataId>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -63,12 +79,11 @@ pub struct Temperature {
 pub struct Thermal {
     #[serde(flatten)]
     pub odata: ODataLinks,
-    pub fans: Vec<Fan>,
     pub id: String,
     pub name: String,
+    pub fans: Vec<Fan>,
     pub temperatures: Vec<Temperature>,
-    #[serde(rename = "Type")]
-    pub thermal_type: String,
+    pub redundancy: Option<Vec<Redundancy>>,
 }
 
 impl StatusVec for Thermal {
@@ -88,8 +103,16 @@ impl StatusVec for Thermal {
 mod test {
     #[test]
     fn test_thermal_parser() {
-        let test_data = include_str!("testdata/chassis-thermal.json");
-        let result: super::Thermal = serde_json::from_str(test_data).unwrap();
-        println!("result: {result:#?}");
+        // TODO: hpe test data is obsolete, needs to be updated from latest iLO BMC
+        // with newer redfish schema
+        // let test_data_hpe = include_str!("testdata/thermal-hpe.json");
+        // let result_hpe: super::Thermal = serde_json::from_str(test_data_hpe).unwrap();
+        // println!("result: {result_hpe:#?}");
+        let test_data_dell = include_str!("testdata/thermal-dell.json");
+        let result_dell: super::Thermal = serde_json::from_str(test_data_dell).unwrap();
+        println!("result: {result_dell:#?}");
+        let test_data_lenovo = include_str!("testdata/thermal-lenovo.json");
+        let result_lenovo: super::Thermal = serde_json::from_str(test_data_lenovo).unwrap();
+        println!("result: {result_lenovo:#?}");
     }
 }

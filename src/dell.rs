@@ -30,8 +30,9 @@ use crate::{
         software_inventory::{SoftwareInventory, SoftwareInventoryCollection},
         network_device_function::{NetworkDeviceFunction, NetworkDeviceFunctionCollection}, 
         chassis::{Chassis, ChassisCollection},
-        thermal::Thermal,
         BootOption, ComputerSystem, OnOff,
+        power::Power,
+        thermal::Thermal,
     },
     standard::RedfishStandard,
     Boot, BootOptions, EnabledDisabled, PCIeDevice, PowerState, Redfish, RedfishError, Status,
@@ -57,8 +58,16 @@ impl Redfish for Bmc {
         self.s.get_power_state()
     }
 
+    fn get_power_metrics(&self) -> Result<Power, RedfishError> {
+        self.s.get_power_metrics()
+    }
+
     fn power(&self, action: SystemPowerControl) -> Result<(), RedfishError> {
         self.s.power(action)
+    }
+
+    fn get_thermal_metrics(&self) -> Result<Thermal, RedfishError> {
+        self.s.get_thermal_metrics()
     }
 
     fn bios(&self) -> Result<HashMap<String, serde_json::Value>, RedfishError> {

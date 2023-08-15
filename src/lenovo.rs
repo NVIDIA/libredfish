@@ -30,7 +30,9 @@ use crate::EnabledDisabled::Enabled;
 use crate::{
     model::{
         oem::lenovo,
+        power::Power,
         software_inventory::{SoftwareInventory, SoftwareInventoryCollection},
+        thermal::Thermal,
         BootOption,
     },
     network::REDFISH_ENDPOINT,
@@ -58,8 +60,16 @@ impl Redfish for Bmc {
         self.s.get_power_state()
     }
 
+    fn get_power_metrics(&self) -> Result<Power, RedfishError> {
+        self.s.get_power_metrics()
+    }
+
     fn power(&self, action: SystemPowerControl) -> Result<(), RedfishError> {
         self.s.power(action)
+    }
+
+    fn get_thermal_metrics(&self) -> Result<Thermal, RedfishError> {
+        self.s.get_thermal_metrics()
     }
 
     fn bios(&self) -> Result<HashMap<String, serde_json::Value>, RedfishError> {
