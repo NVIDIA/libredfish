@@ -20,6 +20,10 @@ pub mod software_inventory;
 pub mod storage;
 pub mod task;
 pub mod thermal;
+pub mod network_device_function;
+pub mod chassis;
+pub mod port;
+pub mod ethernet_interface;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ODataLinks {
@@ -160,6 +164,13 @@ pub enum OnOff {
     Off,
 }
 
+#[derive(Debug, Serialize, Deserialize, Copy, Clone, Eq, PartialEq)]
+pub enum LinkStatus {
+    LinkUp,
+    NoLink,
+    LinkDown,
+}
+
 impl fmt::Display for OnOff {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(self, f)
@@ -186,7 +197,8 @@ pub trait StatusVec {
 #[serde(rename_all = "PascalCase")]
 pub struct ResourceStatus {
     pub health: Option<ResourceHealth>,
-    pub state: ResourceState,
+    pub health_rollup: Option<ResourceHealth>,
+    pub state: Option<ResourceState>,
 }
 
 /// Health and State of a disk drive, fan, power supply, etc

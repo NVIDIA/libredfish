@@ -146,7 +146,8 @@ impl OemHpIloselftestresult {
     fn get_resource_status(&self) -> ResourceStatus {
         ResourceStatus {
             health: Some(self.status),
-            state: ResourceState::Enabled, // There is no 'unknown' option
+            state: Some(ResourceState::Enabled),
+            health_rollup: Some(self.status),
         }
     }
 }

@@ -31,10 +31,11 @@ use std::{
     process::{Child, Command},
     sync::Once,
     thread::sleep,
-    time::Duration,
+    time::Duration
 };
 
 use anyhow::anyhow;
+use libredfish::Redfish;
 
 const ROOT_DIR: &str = env!("CARGO_MANIFEST_DIR");
 
@@ -60,6 +61,14 @@ fn test_nvidia_dpu() -> Result<(), anyhow::Error> {
     run_integration_test("nvidia_dpu", NVIDIA_PORT)
 }
 
+fn nvidia_dpu_integration_test(redfish: &dyn Redfish) -> Result<(), anyhow::Error> {
+    let members = redfish.get_software_inventories()?.members;
+    assert!(!members.is_empty());
+    let v: Vec<&str> = members[0].odata_id.split('/').collect();
+    assert!(redfish.get_firmware(v.last().unwrap())?.version.is_some());
+    Ok(())
+}
+
 fn run_integration_test(vendor_dir: &'static str, port: &'static str) -> Result<(), anyhow::Error> {
     SETUP_LOGGING.call_once(|| {
         use tracing_subscriber::fmt::Layer;
@@ -80,13 +89,46 @@ fn run_integration_test(vendor_dir: &'static str, port: &'static str) -> Result<
             )
             .init();
     });
-    let mut mockup_server = match MockupServer::new(vendor_dir, port) {
+    let mut pip= PathBuf::new();
+    let mut python = PathBuf::new();
+    match std::env::var_os("CI") {
+        Some(ci_env) => {
+                println!("Running in a GitLab CI job {:?}", ci_env);
+                if let Ok(python_path) = std::env::var("PYTHON_PATH") {
+                    python.push(python_path)
+                } else {
+                        return Err(anyhow::Error::msg("`python` not found"))
+                }
+            
+                if let Ok(pip_path) = std::env::var("PIP_PATH") {
+                    pip.push(pip_path)
+                } else {
+                    return Err(anyhow::Error::msg("`pip` not found"))
+                }
+        }
+        None => {
+                println!("Not running in a GitLab CI job");
+                pip = match find_path("pip") {
+                    Some(p) => p,
+                    None => {
+                        return Err(anyhow::Error::msg("`pip` not found"))
+                    }
+                };
+                python = match find_path("python") {
+                    Some(p) => p,
+                    None => {
+                        return Err(anyhow::Error::msg("`python` not found"))
+                    }
+                };
+            }
+    }
+    let mut mockup_server = match MockupServer::new(vendor_dir, port, pip, python) {
         Some(s) => s,
         None => {
             return Ok(());
         }
     };
-    // install python packages 'requests' and 'grequests'
+    
     mockup_server.install_python_requirements()?;
     mockup_server.start()?; // stops on drop
 
@@ -97,6 +139,10 @@ fn run_integration_test(vendor_dir: &'static str, port: &'static str) -> Result<
 
     let pool = libredfish::RedfishClientPool::builder().build()?;
     let redfish = pool.create_client(endpoint)?;
+
+    if vendor_dir == "nvidia_dpu" {
+       return nvidia_dpu_integration_test(redfish.as_ref())
+    }
 
     assert_eq!(redfish.get_power_state()?, libredfish::PowerState::On);
     assert!(redfish.bios()?.len() > 10);
@@ -157,21 +203,7 @@ impl Drop for MockupServer {
 
 impl MockupServer {
     // Creates a server if pip and python is present, otherwise returns None
-    fn new(vendor_dir: &'static str, port: &'static str) -> Option<MockupServer> {
-        let pip = match find_path("pip") {
-            Some(p) => p,
-            None => {
-                eprintln!("`pip` not found, skipping redfish mockup integration test");
-                return None;
-            }
-        };
-        let python = match find_path("python") {
-            Some(p) => p,
-            None => {
-                eprintln!("`python` not found, skipping redfish mockup integration test");
-                return None;
-            }
-        };
+    fn new(vendor_dir: &'static str, port: &'static str, pip:PathBuf, python:PathBuf) -> Option<MockupServer> {
         Some(MockupServer {
             vendor_dir,
             port,

@@ -33,7 +33,8 @@ pub struct Task {
     #[serde(flatten)]
     pub odata: ODataLinks,
     pub id: String,
-    pub messages: Option<Vec<Message>>,
+    #[serde(default)]
+    pub messages: Vec<Message>,
     pub name: Option<String>,
     pub task_state: Option<TaskState>,
     pub task_status: Option<String>,
@@ -47,7 +48,8 @@ pub struct Task {
 #[serde(rename_all = "PascalCase")]
 pub struct Message {
     pub message: String,
-    pub message_args: Option<Vec<String>>,
+    #[serde(default)]
+    pub message_args: Vec<String>,
     pub message_id: String,
     pub resolution: Option<String>,
     pub severity: Option<String>,

@@ -2,16 +2,17 @@ use std::collections::HashMap;
 use std::fs::File;
 
 pub mod model;
+use model::software_inventory::{SoftwareInventory, SoftwareInventoryCollection};
 pub use model::network_device_function::{NetworkDeviceFunction, NetworkDeviceFunctionCollection};
 pub use model::chassis::{Chassis, ChassisCollection};
 pub use model::port::{NetworkPort, NetworkPortCollection};
 pub use model::ethernet_interface::{EthernetInterface, EthernetInterfaceCollection};
+use model::software_inventory::{SoftwareInventory, SoftwareInventoryCollection};
 pub use model::system::{BootOptions, PCIeDevice, PowerState, SystemPowerControl, Systems};
 use model::task::Task;
 pub use model::EnabledDisabled;
 use model::{
     secure_boot::SecureBoot,
-    software_inventory::{SoftwareInventory, SoftwareInventoryCollection},
     BootOption, ComputerSystem,
 };
 use serde::{Deserialize, Serialize};
@@ -110,6 +111,33 @@ pub trait Redfish: Send + Sync + 'static {
 
     /// Clear all pending jobs
     fn clear_pending(&self) -> Result<(), RedfishError>;
+
+    // List all Network Device Functions of a given Chassis
+    fn get_network_device_functions(&self, chassis_id: &str) -> Result<NetworkDeviceFunctionCollection, RedfishError>;
+
+    // Get Network Device Function details
+    fn get_network_device_function(&self, chassis_id: &str, id: &str) -> Result<NetworkDeviceFunction, RedfishError>;
+
+    // List all Chassises
+    fn get_chassises(&self) -> Result<ChassisCollection, RedfishError>;
+
+    // Get Chassis details
+    fn get_chassis(&self, id: &str) -> Result<Chassis, RedfishError>;
+
+    // List all High Speed Ports of a given Chassis
+    fn get_ports(&self, chassis_id: &str) -> Result<NetworkPortCollection, RedfishError>;
+
+    // Get High Speed Port details
+    fn get_port(&self, chassis_id: &str, id: &str) -> Result<NetworkPort, RedfishError>;
+
+    // List all Ethernet Interfaces
+    fn get_ethernet_interfaces(&self) -> Result<EthernetInterfaceCollection, RedfishError>;
+
+    // Get Ethernet Interface details
+    fn get_ethernet_interface(&self, id: &str) -> Result<EthernetInterface, RedfishError>;
+
+    // Change UEFI Password
+    fn change_uefi_password(&self, current_uefi_password: &str, new_uefi_password: &str) -> Result<(), RedfishError>;
 }
 
 // When Carbide drops it's `IpmiCommand.launch_command` background job system, we can

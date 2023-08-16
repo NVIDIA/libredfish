@@ -31,8 +31,10 @@ use crate::{
     model::{
         oem::lenovo,
         power::Power,
-        software_inventory::{SoftwareInventory, SoftwareInventoryCollection},
         thermal::Thermal,
+        network_device_function::{NetworkDeviceFunction, NetworkDeviceFunctionCollection}, 
+        chassis::{Chassis, ChassisCollection},
+        software_inventory::{SoftwareInventory, SoftwareInventoryCollection},
         BootOption,
     },
     network::REDFISH_ENDPOINT,
@@ -303,6 +305,44 @@ impl Redfish for Bmc {
     fn disable_secure_boot(&self) -> Result<(), RedfishError> {
         self.s.disable_secure_boot()
     }
+
+    fn get_network_device_function(&self, chassis_id: &str, id: &str) -> Result<NetworkDeviceFunction, RedfishError> {
+        self.s.get_network_device_function(chassis_id, id)
+    }
+
+    fn get_network_device_functions(&self, chassis_id: &str) -> Result<NetworkDeviceFunctionCollection, RedfishError> {
+        self.s.get_network_device_functions(chassis_id)
+    }
+
+    fn get_chassises(&self) -> Result<ChassisCollection, RedfishError> {
+        self.s.get_chassises()
+    }
+
+    fn get_chassis(&self, id: &str) -> Result<Chassis, RedfishError> {
+        self.s.get_chassis(id)
+    }
+
+    fn get_ports(&self, chassis_id: &str) -> Result<crate::NetworkPortCollection, RedfishError> {
+        self.s.get_ports(chassis_id)
+    }
+
+    fn get_port(&self, chassis_id: &str, id: &str) -> Result<crate::NetworkPort, RedfishError> {
+        self.s.get_port(chassis_id, id)
+    }
+
+    fn get_ethernet_interfaces(&self) -> Result<crate::EthernetInterfaceCollection, RedfishError> {
+        self.s.get_ethernet_interfaces()
+    }
+
+    fn get_ethernet_interface(&self, id: &str) -> Result<crate::EthernetInterface, RedfishError> {
+        self.s.get_ethernet_interface(id)
+    }
+
+    fn change_uefi_password(&self, current_uefi_password: &str, new_uefi_password: &str) -> Result<(), RedfishError> {
+        unimplemented!()
+    }
+
+
 }
 
 impl Bmc {
