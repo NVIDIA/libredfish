@@ -27,7 +27,7 @@ pub struct NetworkDeviceFunction {
     pub ethernet: Option<Ethernet>,
     pub name: Option<String>,
     pub net_dev_func_capabilities: Vec<String>,
-    pub net_dev_func_type: Option<String>
+    pub net_dev_func_type: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -39,5 +39,4 @@ pub struct Ethernet {
     pub mac_address: Option<String>,
     #[serde(rename = "MTUSize")]
     pub mtu_size: Option<i32>,
-
 }

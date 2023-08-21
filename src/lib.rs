@@ -2,19 +2,15 @@ use std::collections::HashMap;
 use std::fs::File;
 
 pub mod model;
-use model::software_inventory::{SoftwareInventory, SoftwareInventoryCollection};
-pub use model::network_device_function::{NetworkDeviceFunction, NetworkDeviceFunctionCollection};
 pub use model::chassis::{Chassis, ChassisCollection};
-pub use model::port::{NetworkPort, NetworkPortCollection};
 pub use model::ethernet_interface::{EthernetInterface, EthernetInterfaceCollection};
+pub use model::network_device_function::{NetworkDeviceFunction, NetworkDeviceFunctionCollection};
+pub use model::port::{NetworkPort, NetworkPortCollection};
 use model::software_inventory::{SoftwareInventory, SoftwareInventoryCollection};
 pub use model::system::{BootOptions, PCIeDevice, PowerState, SystemPowerControl, Systems};
 use model::task::Task;
 pub use model::EnabledDisabled;
-use model::{
-    secure_boot::SecureBoot,
-    BootOption, ComputerSystem,
-};
+use model::{secure_boot::SecureBoot, BootOption, ComputerSystem};
 use serde::{Deserialize, Serialize};
 
 mod dell;
@@ -90,6 +86,9 @@ pub trait Redfish: Send + Sync + 'static {
     /// Change boot order putting this target first
     fn boot_first(&self, target: Boot) -> Result<(), RedfishError>;
 
+    /// Change boot order by setting boot array.
+    fn change_boot_order(&self, boot_array: Vec<String>) -> Result<(), RedfishError>;
+
     /// Reset and enable the TPM
     fn clear_tpm(&self) -> Result<(), RedfishError>;
 
@@ -113,10 +112,17 @@ pub trait Redfish: Send + Sync + 'static {
     fn clear_pending(&self) -> Result<(), RedfishError>;
 
     // List all Network Device Functions of a given Chassis
-    fn get_network_device_functions(&self, chassis_id: &str) -> Result<NetworkDeviceFunctionCollection, RedfishError>;
+    fn get_network_device_functions(
+        &self,
+        chassis_id: &str,
+    ) -> Result<NetworkDeviceFunctionCollection, RedfishError>;
 
     // Get Network Device Function details
-    fn get_network_device_function(&self, chassis_id: &str, id: &str) -> Result<NetworkDeviceFunction, RedfishError>;
+    fn get_network_device_function(
+        &self,
+        chassis_id: &str,
+        id: &str,
+    ) -> Result<NetworkDeviceFunction, RedfishError>;
 
     // List all Chassises
     fn get_chassises(&self) -> Result<ChassisCollection, RedfishError>;
@@ -137,7 +143,11 @@ pub trait Redfish: Send + Sync + 'static {
     fn get_ethernet_interface(&self, id: &str) -> Result<EthernetInterface, RedfishError>;
 
     // Change UEFI Password
-    fn change_uefi_password(&self, current_uefi_password: &str, new_uefi_password: &str) -> Result<(), RedfishError>;
+    fn change_uefi_password(
+        &self,
+        current_uefi_password: &str,
+        new_uefi_password: &str,
+    ) -> Result<(), RedfishError>;
 }
 
 // When Carbide drops it's `IpmiCommand.launch_command` background job system, we can
@@ -146,6 +156,7 @@ pub trait Redfish: Send + Sync + 'static {
 pub enum Boot {
     Pxe,
     HardDisk,
+    UefiHttp,
 }
 
 /// The current status of something (lockdown, serial_console), saying whether it has been enabled,

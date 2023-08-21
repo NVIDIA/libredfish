@@ -12,7 +12,7 @@ pub struct ChassisActions {
 pub struct ChassisAction {
     #[serde(rename = "@Redfish.ActionInfo")]
     pub title: Option<String>,
-    pub target: Option<String>,        // URL path of the action
+    pub target: Option<String>, // URL path of the action
 }
 
 #[derive(Debug, Serialize, Deserialize, Copy, Clone, Eq, PartialEq)]
@@ -39,7 +39,7 @@ pub enum ChassisType {
     StorageEnclosure,
     ImmersionTank,
     HeatExchanger,
-    Other
+    Other,
 }
 
 /// http://redfish.dmtf.org/schemas/v1/ChassisCollection.json

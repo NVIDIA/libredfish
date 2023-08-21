@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::{ODataId, ODataLinks, LinkStatus};
-
+use super::{LinkStatus, ODataId, ODataLinks};
 
 /// http://redfish.dmtf.org/schemas/v1/NetworkPortCollection.json
 /// The NetworkPortCollection schema contains a collection of network port instances.

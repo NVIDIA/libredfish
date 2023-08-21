@@ -24,6 +24,8 @@ use std::collections::HashMap;
 
 use crate::{
     model::{
+        chassis::{Chassis, ChassisCollection},
+        network_device_function::{NetworkDeviceFunction, NetworkDeviceFunctionCollection},
         oem::dell,
         power::Power,
         secure_boot::SecureBoot,
@@ -260,6 +262,7 @@ impl Redfish for Bmc {
         match target {
             Boot::Pxe => self.set_boot_first(dell::BootDevices::PXE, true),
             Boot::HardDisk => self.set_boot_first(dell::BootDevices::HDD, true),
+            Boot::UefiHttp => unimplemented!("No dell UefiHttp implementation"),
         }
     }
 
@@ -267,6 +270,7 @@ impl Redfish for Bmc {
         match target {
             Boot::Pxe => self.set_boot_first(dell::BootDevices::PXE, false),
             Boot::HardDisk => self.set_boot_first(dell::BootDevices::HDD, false),
+            Boot::UefiHttp => unimplemented!("No dell UefiHttp implementation"),
         }
     }
 
@@ -334,11 +338,18 @@ impl Redfish for Bmc {
         self.s.disable_secure_boot()
     }
 
-    fn get_network_device_function(&self, chassis_id: &str, id: &str) -> Result<NetworkDeviceFunction, RedfishError> {
+    fn get_network_device_function(
+        &self,
+        chassis_id: &str,
+        id: &str,
+    ) -> Result<NetworkDeviceFunction, RedfishError> {
         self.s.get_network_device_function(chassis_id, id)
     }
 
-    fn get_network_device_functions(&self, chassis_id: &str) -> Result<NetworkDeviceFunctionCollection, RedfishError> {
+    fn get_network_device_functions(
+        &self,
+        chassis_id: &str,
+    ) -> Result<NetworkDeviceFunctionCollection, RedfishError> {
         self.s.get_network_device_functions(chassis_id)
     }
 
@@ -366,10 +377,17 @@ impl Redfish for Bmc {
         self.s.get_ethernet_interface(id)
     }
 
-    fn change_uefi_password(&self, current_uefi_password: &str, new_uefi_password: &str) -> Result<(), RedfishError> {
+    fn change_uefi_password(
+        &self,
+        _current_uefi_password: &str,
+        _new_uefi_password: &str,
+    ) -> Result<(), RedfishError> {
         unimplemented!()
     }
 
+    fn change_boot_order(&self, boot_array: Vec<String>) -> Result<(), RedfishError> {
+        self.s.change_boot_order(boot_array)
+    }
 }
 
 impl Bmc {

@@ -1,3 +1,5 @@
+use std::fmt;
+
 use serde::{Deserialize, Serialize};
 
 /// https://redfish.dmtf.org/schemas/v1/ComputerSystem.v1_20_1.json
@@ -31,6 +33,12 @@ pub enum BootSourceOverrideEnabled {
     Disabled,
 }
 
+impl fmt::Display for BootSourceOverrideEnabled {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(self, f)
+    }
+}
+
 /// http://redfish.dmtf.org/schemas/v1/ComputerSystem.json#/definitions/BootSource
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum BootSourceOverrideTarget {
@@ -50,6 +58,12 @@ pub enum BootSourceOverrideTarget {
     RemoteDrive,
     UefiBootNext,
     Recovery,
+}
+
+impl fmt::Display for BootSourceOverrideTarget {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(self, f)
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

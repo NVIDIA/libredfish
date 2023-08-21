@@ -31,7 +31,7 @@ use std::{
     process::{Child, Command},
     sync::Once,
     thread::sleep,
-    time::Duration
+    time::Duration,
 };
 
 use anyhow::anyhow;
@@ -66,6 +66,12 @@ fn nvidia_dpu_integration_test(redfish: &dyn Redfish) -> Result<(), anyhow::Erro
     assert!(!members.is_empty());
     let v: Vec<&str> = members[0].odata_id.split('/').collect();
     assert!(redfish.get_firmware(v.last().unwrap())?.version.is_some());
+    let boot = redfish.get_system()?.boot;
+    let mut boot_array = boot.boot_order.clone();
+    assert!(boot_array.len() > 1);
+    boot_array.swap(0, 1);
+    redfish.change_boot_order(boot_array)?;
+
     Ok(())
 }
 
@@ -89,38 +95,34 @@ fn run_integration_test(vendor_dir: &'static str, port: &'static str) -> Result<
             )
             .init();
     });
-    let mut pip= PathBuf::new();
+    let mut pip = PathBuf::new();
     let mut python = PathBuf::new();
     match std::env::var_os("CI") {
         Some(ci_env) => {
-                println!("Running in a GitLab CI job {:?}", ci_env);
-                if let Ok(python_path) = std::env::var("PYTHON_PATH") {
-                    python.push(python_path)
-                } else {
-                        return Err(anyhow::Error::msg("`python` not found"))
-                }
-            
-                if let Ok(pip_path) = std::env::var("PIP_PATH") {
-                    pip.push(pip_path)
-                } else {
-                    return Err(anyhow::Error::msg("`pip` not found"))
-                }
+            println!("Running in a GitLab CI job {:?}", ci_env);
+            if let Ok(python_path) = std::env::var("PYTHON_PATH") {
+                python.push(python_path)
+            } else {
+                return Err(anyhow::Error::msg("`python` not found"));
+            }
+
+            if let Ok(pip_path) = std::env::var("PIP_PATH") {
+                pip.push(pip_path)
+            } else {
+                return Err(anyhow::Error::msg("`pip` not found"));
+            }
         }
         None => {
-                println!("Not running in a GitLab CI job");
-                pip = match find_path("pip") {
-                    Some(p) => p,
-                    None => {
-                        return Err(anyhow::Error::msg("`pip` not found"))
-                    }
-                };
-                python = match find_path("python") {
-                    Some(p) => p,
-                    None => {
-                        return Err(anyhow::Error::msg("`python` not found"))
-                    }
-                };
-            }
+            println!("Not running in a GitLab CI job");
+            pip = match find_path("pip") {
+                Some(p) => p,
+                None => return Err(anyhow::Error::msg("`pip` not found")),
+            };
+            python = match find_path("python") {
+                Some(p) => p,
+                None => return Err(anyhow::Error::msg("`python` not found")),
+            };
+        }
     }
     let mut mockup_server = match MockupServer::new(vendor_dir, port, pip, python) {
         Some(s) => s,
@@ -128,7 +130,7 @@ fn run_integration_test(vendor_dir: &'static str, port: &'static str) -> Result<
             return Ok(());
         }
     };
-    
+
     mockup_server.install_python_requirements()?;
     mockup_server.start()?; // stops on drop
 
@@ -141,7 +143,7 @@ fn run_integration_test(vendor_dir: &'static str, port: &'static str) -> Result<
     let redfish = pool.create_client(endpoint)?;
 
     if vendor_dir == "nvidia_dpu" {
-       return nvidia_dpu_integration_test(redfish.as_ref())
+        return nvidia_dpu_integration_test(redfish.as_ref());
     }
 
     assert_eq!(redfish.get_power_state()?, libredfish::PowerState::On);
@@ -203,7 +205,12 @@ impl Drop for MockupServer {
 
 impl MockupServer {
     // Creates a server if pip and python is present, otherwise returns None
-    fn new(vendor_dir: &'static str, port: &'static str, pip:PathBuf, python:PathBuf) -> Option<MockupServer> {
+    fn new(
+        vendor_dir: &'static str,
+        port: &'static str,
+        pip: PathBuf,
+        python: PathBuf,
+    ) -> Option<MockupServer> {
         Some(MockupServer {
             vendor_dir,
             port,

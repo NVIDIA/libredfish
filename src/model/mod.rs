@@ -15,15 +15,15 @@ pub mod oem;
 pub mod secure_boot;
 
 // power/thermal/storage not currently used
+pub mod chassis;
+pub mod ethernet_interface;
+pub mod network_device_function;
+pub mod port;
 pub mod power;
 pub mod software_inventory;
 pub mod storage;
 pub mod task;
 pub mod thermal;
-pub mod network_device_function;
-pub mod chassis;
-pub mod port;
-pub mod ethernet_interface;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ODataLinks {

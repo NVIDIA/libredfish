@@ -29,12 +29,12 @@ use crate::model::{secure_boot::SecureBoot, ComputerSystem};
 use crate::EnabledDisabled::Enabled;
 use crate::{
     model::{
+        chassis::{Chassis, ChassisCollection},
+        network_device_function::{NetworkDeviceFunction, NetworkDeviceFunctionCollection},
         oem::lenovo,
         power::Power,
-        thermal::Thermal,
-        network_device_function::{NetworkDeviceFunction, NetworkDeviceFunctionCollection}, 
-        chassis::{Chassis, ChassisCollection},
         software_inventory::{SoftwareInventory, SoftwareInventoryCollection},
+        thermal::Thermal,
         BootOption,
     },
     network::REDFISH_ENDPOINT,
@@ -241,6 +241,7 @@ impl Redfish for Bmc {
         match target {
             Boot::Pxe => self.set_boot_override(lenovo::BootSource::Pxe),
             Boot::HardDisk => self.set_boot_override(lenovo::BootSource::Hdd),
+            Boot::UefiHttp => unimplemented!("No lenovo UefiHttp implementation"),
         }
     }
 
@@ -248,6 +249,7 @@ impl Redfish for Bmc {
         match target {
             Boot::Pxe => self.set_boot_first(lenovo::BootOptionName::Network),
             Boot::HardDisk => self.set_boot_first(lenovo::BootOptionName::HardDisk),
+            Boot::UefiHttp => unimplemented!("No lenovo UefiHttp implementation"),
         }
     }
 
@@ -306,11 +308,18 @@ impl Redfish for Bmc {
         self.s.disable_secure_boot()
     }
 
-    fn get_network_device_function(&self, chassis_id: &str, id: &str) -> Result<NetworkDeviceFunction, RedfishError> {
+    fn get_network_device_function(
+        &self,
+        chassis_id: &str,
+        id: &str,
+    ) -> Result<NetworkDeviceFunction, RedfishError> {
         self.s.get_network_device_function(chassis_id, id)
     }
 
-    fn get_network_device_functions(&self, chassis_id: &str) -> Result<NetworkDeviceFunctionCollection, RedfishError> {
+    fn get_network_device_functions(
+        &self,
+        chassis_id: &str,
+    ) -> Result<NetworkDeviceFunctionCollection, RedfishError> {
         self.s.get_network_device_functions(chassis_id)
     }
 
@@ -338,11 +347,25 @@ impl Redfish for Bmc {
         self.s.get_ethernet_interface(id)
     }
 
-    fn change_uefi_password(&self, current_uefi_password: &str, new_uefi_password: &str) -> Result<(), RedfishError> {
+    fn change_uefi_password(
+        &self,
+        _current_uefi_password: &str,
+        _new_uefi_password: &str,
+    ) -> Result<(), RedfishError> {
         unimplemented!()
     }
 
-
+    fn change_boot_order(&self, boot_array: Vec<String>) -> Result<(), RedfishError> {
+        let body = HashMap::from([("Boot", HashMap::from([("BootOrder", boot_array)]))]);
+        let url = format!("Systems/{}/Pending", self.s.system_id());
+        // BMC takes longer to respond to this one, so override timeout
+        let timeout = Duration::from_secs(10);
+        let (_status_code, _resp_body): (_, Option<HashMap<String, serde_json::Value>>) = self
+            .s
+            .client
+            .req(Method::PATCH, &url, Some(body), Some(timeout), None)?;
+        Ok(())
+    }
 }
 
 impl Bmc {
@@ -632,15 +655,7 @@ impl Bmc {
             Some(b) => b,
         };
 
-        let body = HashMap::from([("Boot", HashMap::from([("BootOrder", boot_array)]))]);
-        let url = format!("Systems/{}/Pending", self.s.system_id());
-        // BMC takes longer to respond to this one, so override timeout
-        let timeout = Duration::from_secs(10);
-        let (_status_code, _resp_body): (_, Option<HashMap<String, serde_json::Value>>) = self
-            .s
-            .client
-            .req(Method::PATCH, &url, Some(body), Some(timeout), None)?;
-        Ok(())
+        self.change_boot_order(boot_array)
     }
 
     // A Vec of string boot option names, with the one you want first.

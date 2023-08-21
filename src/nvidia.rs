@@ -20,11 +20,31 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+use crate::{
+    model::BootOption, standard::RedfishStandard, NetworkDeviceFunction,
+    NetworkDeviceFunctionCollection, Redfish, RedfishError,
+};
 use std::collections::HashMap;
-use crate::{model::BootOption, standard::RedfishStandard, Redfish, RedfishError, NetworkDeviceFunctionCollection, NetworkDeviceFunction};
+
+use crate::model::boot::{BootSourceOverrideEnabled, BootSourceOverrideTarget};
 
 pub struct Bmc {
     s: RedfishStandard,
+}
+
+pub enum BootOptionName {
+    Http,
+    Pxe,
+    Disk,
+}
+impl BootOptionName {
+    fn to_string(&self) -> &str {
+        match self {
+            BootOptionName::Http => "UEFI HTTPv4",
+            BootOptionName::Pxe => "UEFI PXEv4",
+            BootOptionName::Disk => "UEFI Non-Block Boot Device",
+        }
+    }
 }
 
 impl Bmc {
@@ -100,11 +120,28 @@ impl Redfish for Bmc {
     }
 
     fn boot_once(&self, target: crate::Boot) -> Result<(), RedfishError> {
-        self.s.boot_once(target)
+        match target {
+            crate::Boot::Pxe => self.change_boot_settings(
+                BootSourceOverrideTarget::Pxe,
+                BootSourceOverrideEnabled::Once,
+            ),
+            crate::Boot::HardDisk => self.change_boot_settings(
+                BootSourceOverrideTarget::Hdd,
+                BootSourceOverrideEnabled::Once,
+            ),
+            crate::Boot::UefiHttp => self.change_boot_settings(
+                BootSourceOverrideTarget::UefiHttp,
+                BootSourceOverrideEnabled::Once,
+            ),
+        }
     }
 
     fn boot_first(&self, target: crate::Boot) -> Result<(), RedfishError> {
-        self.s.boot_first(target)
+        match target {
+            crate::Boot::Pxe => self.set_boot_first(&BootOptionName::Pxe),
+            crate::Boot::HardDisk => self.set_boot_first(&BootOptionName::Disk),
+            crate::Boot::UefiHttp => self.set_boot_first(&BootOptionName::Http),
+        }
     }
 
     fn clear_tpm(&self) -> Result<(), RedfishError> {
@@ -206,8 +243,12 @@ impl Redfish for Bmc {
         let (_status_code, body) = self.s.client.get(&url)?;
         Ok(body)
     }
-    
-    fn change_uefi_password(&self, current_uefi_password: &str, new_uefi_password: &str) -> Result<(), RedfishError> {
+
+    fn change_uefi_password(
+        &self,
+        current_uefi_password: &str,
+        new_uefi_password: &str,
+    ) -> Result<(), RedfishError> {
         let mut attributes = HashMap::new();
         let mut data = HashMap::new();
         data.insert("CurrentUefiPassword", current_uefi_password.to_string());
@@ -217,5 +258,70 @@ impl Redfish for Bmc {
         let _status_code = self.s.client.patch(&url, attributes)?;
         Ok(())
     }
-    
+
+    fn change_boot_order(&self, boot_array: Vec<String>) -> Result<(), RedfishError> {
+        let body = HashMap::from([("Boot", HashMap::from([("BootOrder", boot_array)]))]);
+        let url = format!("Systems/{}/Settings", self.s.system_id());
+        self.s.client.patch(&url, body)?;
+        Ok(())
+    }
+}
+
+impl Bmc {
+    fn change_boot_settings(
+        &self,
+        override_taget: BootSourceOverrideTarget,
+        override_enabled: BootSourceOverrideEnabled,
+    ) -> Result<(), RedfishError> {
+        let mut data: HashMap<String, String> = HashMap::new();
+        data.insert("BootSourceOverrideMode".to_string(), "UEFI".to_string());
+        data.insert(
+            "BootSourceOverrideEnabled".to_string(),
+            format!("{}", override_enabled),
+        );
+        data.insert(
+            "BootSourceOverrideTarget".to_string(),
+            format!("{}", override_taget),
+        );
+        let url = format!("Systems/{}/Settings ", self.s.system_id());
+        self.s.client.patch(&url, HashMap::from([("Boot", data)]))?;
+        Ok(())
+    }
+
+    // name: The name of the device you want to make the first boot choice.
+    fn set_boot_first(&self, name: &BootOptionName) -> Result<(), RedfishError> {
+        let boot_array = match self.get_boot_options_ids_with_first(name)? {
+            None => {
+                return Err(RedfishError::MissingBootOption(name.to_string().to_owned()));
+            }
+            Some(b) => b,
+        };
+        self.change_boot_order(boot_array)
+    }
+
+    // A Vec of string boot option names, with the one you want first.
+    //
+    // Example: get_boot_options_ids_with_first(lenovo::BootOptionName::Network) might return
+    // ["Boot0003", "Boot0002", "Boot0001", "Boot0004"] where Boot0003 is Network. It has been
+    // moved to the front ready for sending as an update.
+    // The order of the other boot options does not change.
+    //
+    // If the boot option you want is not found returns Ok(None)
+    fn get_boot_options_ids_with_first(
+        &self,
+        with_name: &BootOptionName,
+    ) -> Result<Option<Vec<String>>, RedfishError> {
+        let with_name_str = with_name.to_string();
+        let mut ordered = Vec::new(); // the final boot options
+        let boot_options = self.s.get_system()?.boot.boot_order;
+        for member in boot_options {
+            let b: BootOption = self.s.get_boot_option(member.as_str())?;
+            if b.display_name.starts_with(with_name_str) {
+                ordered.insert(0, b.id);
+            } else {
+                ordered.push(b.id);
+            }
+        }
+        Ok(Some(ordered))
+    }
 }

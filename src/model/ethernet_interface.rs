@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::{ODataId, ODataLinks, LinkStatus, ResourceStatus};
-
+use super::{LinkStatus, ODataId, ODataLinks, ResourceStatus};
 
 /// http://redfish.dmtf.org/schemas/v1/EthernetInterfaceCollection.json
 /// The EthernetInterfaceCollection schema contains a collection of Ethernet interfaces instances.
@@ -65,7 +64,7 @@ pub enum IPv4AddressOrigin {
     Static,
     DHCP,
     BOOTP,
-    IPv4LinkLocal
+    IPv4LinkLocal,
 }
 
 #[derive(Debug, Serialize, Deserialize, Copy, Clone, Eq, PartialEq)]
@@ -73,7 +72,7 @@ pub enum IPv6AddressOrigin {
     Static,
     DHCPv6,
     LinkLocal,
-    SLAAC
+    SLAAC,
 }
 
 /// http://redfish.dmtf.org/schemas/v1/IPAddresses.v1_0_10.json
