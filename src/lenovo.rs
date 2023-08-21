@@ -25,6 +25,7 @@ use std::{collections::HashMap, time::Duration};
 use reqwest::Method;
 use tracing::debug;
 
+use crate::model::oem::nvidia::{HostPrivilegeLevel, InternalCPUModel};
 use crate::model::{secure_boot::SecureBoot, ComputerSystem};
 use crate::EnabledDisabled::Enabled;
 use crate::{
@@ -365,6 +366,14 @@ impl Redfish for Bmc {
             .client
             .req(Method::PATCH, &url, Some(body), Some(timeout), None)?;
         Ok(())
+    }    
+    
+    fn set_internal_cpu_model(&self, model: InternalCPUModel)-> Result<(), RedfishError> {
+        self.s.set_internal_cpu_model(model)
+    }
+
+    fn set_host_privilege_level(&self, level: HostPrivilegeLevel)-> Result<(), RedfishError> {
+        self.s.set_host_privilege_level(level)
     }
 }
 

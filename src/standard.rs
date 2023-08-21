@@ -25,6 +25,7 @@ use std::collections::{HashMap, HashSet};
 use tracing::debug;
 
 use crate::model::chassis::{Chassis, ChassisCollection};
+use crate::model::oem::nvidia::{InternalCPUModel, HostPrivilegeLevel};
 use crate::model::power::Power;
 use crate::model::secure_boot::SecureBoot;
 use crate::model::power::Power;
@@ -311,6 +312,15 @@ impl Redfish for RedfishStandard {
     fn change_boot_order(&self, _boot_array: Vec<String>) -> Result<(), RedfishError> {
         unimplemented!("No standard implementation for change boot order");
     }
+
+    fn set_internal_cpu_model(&self, model: InternalCPUModel)-> Result<(), RedfishError> {
+        unimplemented!()
+    }
+
+    fn set_host_privilege_level(&self, level: HostPrivilegeLevel)-> Result<(), RedfishError> {
+        unimplemented!()
+    }
+
 }
 
 impl RedfishStandard {

@@ -25,6 +25,7 @@ use serde::{Deserialize, Serialize};
 pub mod dell;
 pub mod hp;
 pub mod lenovo;
+pub mod nvidia;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]

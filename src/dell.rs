@@ -26,7 +26,7 @@ use crate::{
     model::{
         chassis::{Chassis, ChassisCollection},
         network_device_function::{NetworkDeviceFunction, NetworkDeviceFunctionCollection},
-        oem::dell,
+        oem::{dell, nvidia::{InternalCPUModel, HostPrivilegeLevel}},
         power::Power,
         secure_boot::SecureBoot,
         software_inventory::{SoftwareInventory, SoftwareInventoryCollection},
@@ -388,6 +388,14 @@ impl Redfish for Bmc {
     fn change_boot_order(&self, boot_array: Vec<String>) -> Result<(), RedfishError> {
         self.s.change_boot_order(boot_array)
     }
+    fn set_internal_cpu_model(&self, model: InternalCPUModel)-> Result<(), RedfishError> {
+        self.s.set_internal_cpu_model(model)
+    }
+
+    fn set_host_privilege_level(&self, level: HostPrivilegeLevel)-> Result<(), RedfishError> {
+        self.s.set_host_privilege_level(level)
+    }
+
 }
 
 impl Bmc {

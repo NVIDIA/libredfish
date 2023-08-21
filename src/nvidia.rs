@@ -27,6 +27,7 @@ use crate::{
 use std::collections::HashMap;
 
 use crate::model::boot::{BootSourceOverrideEnabled, BootSourceOverrideTarget};
+use crate::model::oem::nvidia::{InternalCPUModel, HostPrivilegeLevel};
 
 pub struct Bmc {
     s: RedfishStandard,
@@ -264,6 +265,18 @@ impl Redfish for Bmc {
         let url = format!("Systems/{}/Settings", self.s.system_id());
         self.s.client.patch(&url, body)?;
         Ok(())
+    }
+
+    fn set_host_privilege_level(&self, level: HostPrivilegeLevel)-> Result<(), RedfishError> {
+        let data = HashMap::from([("Attributes", HashMap::from([("Host Privilege Level", level.to_string())]))]);
+        let url = format!("Systems/{}/Bios/Settings", self.s.system_id());
+        self.s.client.patch(&url, data).map(|_status_code| Ok(()))?
+    }
+
+    fn set_internal_cpu_model(&self, model: InternalCPUModel)-> Result<(), RedfishError> {
+        let data = HashMap::from([("Attributes", HashMap::from([("Internal CPU Model", model.to_string())]))]);
+        let url = format!("Systems/{}/Bios/Settings", self.s.system_id());
+        self.s.client.patch(&url, data).map(|_status_code| Ok(()))?
     }
 }
 
