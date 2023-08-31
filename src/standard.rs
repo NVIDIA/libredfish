@@ -34,8 +34,8 @@ use crate::model::{power, storage, thermal, BootOption};
 use crate::model::service_root::ServiceRoot;
 use crate::network::{RedfishHttpClient, REDFISH_ENDPOINT};
 use crate::{
-    model, Boot, EnabledDisabled, NetworkDeviceFunction,
-    NetworkPort, PowerState, Redfish, RoleId, Status, Systems, EthernetInterfaceCollection,
+    model, Boot, EnabledDisabled, EthernetInterfaceCollection, NetworkDeviceFunction, NetworkPort,
+    PowerState, Redfish, RoleId, Status, Systems,
 };
 use crate::{BootOptions, PCIeDevice, RedfishError};
 use crate::model::network_device_function::{NetworkDeviceFunction, NetworkDeviceFunctionCollection};
@@ -60,7 +60,7 @@ impl Redfish for RedfishStandard {
         let mut data = HashMap::new();
         data.insert("UserName", username.to_string());
         data.insert("Password", password.to_string());
-        data.insert("RoleId", format!("{}", role_id).to_string());
+        data.insert("RoleId", role_id.to_string());
         self.client
             .post("AccountService/Accounts", data)
             .map(|_status_code| Ok(()))?
@@ -277,7 +277,7 @@ impl Redfish for RedfishStandard {
 
     fn get_ethernet_interfaces(&self) -> Result<Vec<String>, RedfishError> {
         let url = format!("Managers/{}/EthernetInterfaces", self.manager_id);
-        let (_status_code, eth_ifaces): (_, EthernetInterfaceCollection)  = self.client.get(&url)?;
+        let (_status_code, eth_ifaces): (_, EthernetInterfaceCollection) = self.client.get(&url)?;
 
         if eth_ifaces.members.is_empty() {
             return Ok(vec![]);
@@ -298,7 +298,8 @@ impl Redfish for RedfishStandard {
     }
 
     fn get_software_inventories(&self) -> Result<Vec<String>, RedfishError> {
-        let (_status_code, sw_inventories): (_, SoftwareInventoryCollection) = self.client.get("UpdateService/FirmwareInventory")?;
+        let (_status_code, sw_inventories): (_, SoftwareInventoryCollection) =
+            self.client.get("UpdateService/FirmwareInventory")?;
 
         if sw_inventories.members.is_empty() {
             return Ok(vec![]);
@@ -332,10 +333,7 @@ impl Redfish for RedfishStandard {
         Ok(())
     }
 
-    fn get_network_device_functions(
-        &self,
-        _chassis_id: &str,
-    ) -> Result<Vec<String>, RedfishError> {
+    fn get_network_device_functions(&self, _chassis_id: &str) -> Result<Vec<String>, RedfishError> {
         Err(RedfishError::NotSupported(
             "get_network_device_functions".to_string(),
         ))
