@@ -29,10 +29,19 @@ use super::{boot::Boot, oem::SystemExtensions, ODataId, ODataLinks};
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 pub enum SystemPowerControl {
+    /// Power on a machine
     On,
+    /// Graceful host shutdown
     GracefulShutdown,
+    /// Forcefully powers a machine off
     ForceOff,
+    /// Graceful restart. Asks the OS to restart via ACPI
+    /// - Might restart DPUs if no OS is running
+    /// - Will not apply pending BIOS/UEFI setting changes
     GracefulRestart,
+    /// Force restart. This is equivalent to pressing the reset button on the front panel.
+    /// - Will not restart DPUs
+    /// - Will apply pending BIOS/UEFI setting changes
     ForceRestart,
     // Dell also has: PushPowerButton, PowerCycle, and Nmi
     // Lenovo also has: ForceOn and Nmi
