@@ -22,6 +22,7 @@
  */
 use std::collections::{HashMap, HashSet};
 
+use reqwest::Method;
 use tracing::debug;
 
 use crate::model::chassis::{Chassis, ChassisCollection};
@@ -31,7 +32,7 @@ use crate::model::secure_boot::SecureBoot;
 use crate::model::sel::LogEntry;
 use crate::model::service_root::ServiceRoot;
 use crate::model::software_inventory::{SoftwareInventory, SoftwareInventoryCollection};
-use crate::model::task::{TaskCollection, Task};
+use crate::model::task::{Task, TaskCollection};
 use crate::model::thermal::Thermal;
 use crate::model::{power, storage, thermal, BootOption};
 use crate::model::service_root::ServiceRoot;
@@ -343,6 +344,31 @@ impl Redfish for RedfishStandard {
         let url = format!("Systems/{}/SecureBoot", self.system_id());
         let (_status_code, body) = self.client.get(&url)?;
         Ok(body)
+    }
+
+    fn enable_secure_boot(&self) -> Result<(), RedfishError> {
+        let mut data = HashMap::new();
+        data.insert("SecureBootEnable", true);
+        let url = format!("Systems/{}/SecureBoot", self.system_id());
+        let _status_code = self.client.patch(&url, data)?;
+        Ok(())
+    }
+
+    fn add_secure_boot_certificate(&self, pem_cert: &str) -> Result<Task, RedfishError> {
+        let mut data = HashMap::new();
+        data.insert("CertificateString", pem_cert);
+        data.insert("CertificateType", "PEM");
+        let url = format!(
+            "Systems/{}/SecureBoot/SecureBootDatabases/db/Certificates",
+            self.system_id()
+        );
+        let (_status_code, resp_opt) =
+            self.client
+                .req::<Task, _>(Method::POST, &url, Some(data), None, None)?;
+        match resp_opt {
+            Some(response_body) => Ok(response_body),
+            None => Err(RedfishError::NoContent),
+        }
     }
 
     fn disable_secure_boot(&self) -> Result<(), RedfishError> {

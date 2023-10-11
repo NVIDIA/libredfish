@@ -38,6 +38,7 @@ use crate::{
         network_device_function::{NetworkDeviceFunction, NetworkDeviceFunctionCollection}, 
         chassis::{Chassis, ChassisCollection},
         power::Power,
+        task::Task,
         thermal::Thermal,
         BootOption, ComputerSystem, Manager, OnOff,
     },
@@ -360,8 +361,16 @@ impl Redfish for Bmc {
         self.s.get_system()
     }
 
+    fn add_secure_boot_certificate(&self, pem_cert: &str) -> Result<Task, RedfishError> {
+        self.s.add_secure_boot_certificate(pem_cert)
+    }
+
     fn get_secure_boot(&self) -> Result<SecureBoot, RedfishError> {
         self.s.get_secure_boot()
+    }
+
+    fn enable_secure_boot(&self) -> Result<(), RedfishError> {
+        self.s.enable_secure_boot()
     }
 
     fn disable_secure_boot(&self) -> Result<(), RedfishError> {

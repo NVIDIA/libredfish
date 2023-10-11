@@ -50,7 +50,7 @@ pub trait Redfish: Send + Sync + 'static {
     fn get_software_inventories(&self) -> Result<Vec<String>, RedfishError>;
 
     // List all Tasks
-    fn get_tasks(&self) -> Result<Vec<String>, RedfishError> ;
+    fn get_tasks(&self) -> Result<Vec<String>, RedfishError>;
 
     // Get information about a task
     fn get_task(&self, id: &str) -> Result<Task, RedfishError>;
@@ -78,6 +78,13 @@ pub trait Redfish: Send + Sync + 'static {
 
     /// Disables Secure Boot
     fn disable_secure_boot(&self) -> Result<(), RedfishError>;
+
+    /// Enables Secure Boot
+    fn enable_secure_boot(&self) -> Result<(), RedfishError>;
+
+    /// Adds certificate to secure boot DB
+    /// Need to reboot DPU for UEFI Redfish client to execute.
+    fn add_secure_boot_certificate(&self, pem_cert: &str) -> Result<Task, RedfishError>;
 
     /// Power supplies and voltages metrics
     fn get_power_metrics(&self) -> Result<Power, RedfishError>;
