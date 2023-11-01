@@ -44,8 +44,9 @@ const PYTHON_VENV_DIR: &str = "libredfish-python-venv";
 // Ports we hope are not in use
 const DELL_PORT: &str = "8733";
 const LENOVO_PORT: &str = "8734";
-const NVIDIA_PORT: &str = "8735";
+const NVIDIA_DPU_PORT: &str = "8735";
 const SUPERMICRO_PORT: &str = "8736";
+const NVIDIA_VIKING_PORT: &str = "8737";
 
 static SETUP: Once = Once::new();
 
@@ -61,7 +62,12 @@ async fn test_lenovo() -> Result<(), anyhow::Error> {
 
 #[tokio::test]
 async fn test_nvidia_dpu() -> Result<(), anyhow::Error> {
-    run_integration_test("nvidia_dpu", NVIDIA_PORT).await
+    run_integration_test("nvidia_dpu", NVIDIA_DPU_PORT).await
+}
+
+#[tokio::test]
+async fn test_nvidia_viking() -> Result<(), anyhow::Error> {
+    run_integration_test("nvidia_viking", NVIDIA_VIKING_PORT).await
 }
 
 #[tokio::test]

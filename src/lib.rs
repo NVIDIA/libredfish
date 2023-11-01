@@ -5,7 +5,7 @@ pub mod model;
 pub use model::chassis::{Chassis, ChassisCollection};
 pub use model::ethernet_interface::{EthernetInterface, EthernetInterfaceCollection};
 pub use model::network_device_function::{NetworkDeviceFunction, NetworkDeviceFunctionCollection};
-use model::oem::nvidia::{HostPrivilegeLevel, InternalCPUModel};
+use model::oem::nvidia_dpu::{HostPrivilegeLevel, InternalCPUModel};
 pub use model::port::{NetworkPort, NetworkPortCollection};
 use model::service_root::ServiceRoot;
 use model::software_inventory::SoftwareInventory;
@@ -20,7 +20,8 @@ mod dell;
 mod error;
 mod lenovo;
 mod network;
-mod nvidia;
+mod nvidia_dpu;
+mod nvidia_viking;
 mod supermicro;
 pub use network::{Endpoint, RedfishClientPool, RedfishClientPoolBuilder, REDFISH_ENDPOINT};
 pub mod standard;
@@ -194,13 +195,6 @@ pub trait Redfish: Send + Sync + 'static {
         current_uefi_password: &str,
         new_uefi_password: &str,
     ) -> Result<(), RedfishError>;
-
-    // Set Internal CPU Mode
-    async fn set_internal_cpu_model(&self, model: InternalCPUModel) -> Result<(), RedfishError>;
-
-    // Set Internal Host Privilege Mode
-    async fn set_host_privilege_level(&self, level: HostPrivilegeLevel)
-        -> Result<(), RedfishError>;
 }
 
 // When Carbide drops it's `IpmiCommand.launch_command` background job system, we can

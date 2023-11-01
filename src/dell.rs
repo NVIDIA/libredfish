@@ -26,10 +26,7 @@ use crate::{
     model::{
         chassis::Chassis,
         network_device_function::NetworkDeviceFunction,
-        oem::{
-            dell,
-            nvidia::{HostPrivilegeLevel, InternalCPUModel},
-        },
+        oem::dell,
         power::Power,
         secure_boot::SecureBoot,
         sel::{LogEntry, LogEntryCollection},
@@ -106,6 +103,7 @@ impl Redfish for Bmc {
         let apply_time = dell::SetSettingsApplyTime {
             apply_time: dell::RedfishSettingsApplyTime::OnReset, // requires reboot to apply
         };
+        // dell idrac requires applying all bios settings at once.
         let machine_settings = dell::MachineBiosAttrs {
             in_band_manageability_interface: EnabledDisabled::Disabled,
             uefi_variable_access: dell::UefiVariableAccessSettings::Controlled,
@@ -115,6 +113,7 @@ impl Redfish for Bmc {
             fail_safe_baud: "115200".to_string(),
             con_term_type: dell::SerialPortTermSettings::Vt100Vt220,
             redir_after_boot: EnabledDisabled::Enabled,
+            sriov_global_enable: EnabledDisabled::Enabled,
             tpm_security: OnOff::On,
             tpm2_hierarchy: dell::Tpm2HierarchySettings::Clear,
         };
@@ -442,16 +441,6 @@ impl Redfish for Bmc {
 
     async fn change_boot_order(&self, boot_array: Vec<String>) -> Result<(), RedfishError> {
         self.s.change_boot_order(boot_array).await
-    }
-    async fn set_internal_cpu_model(&self, model: InternalCPUModel) -> Result<(), RedfishError> {
-        self.s.set_internal_cpu_model(model).await
-    }
-
-    async fn set_host_privilege_level(
-        &self,
-        level: HostPrivilegeLevel,
-    ) -> Result<(), RedfishError> {
-        self.s.set_host_privilege_level(level).await
     }
 
     async fn get_service_root(&self) -> Result<ServiceRoot, RedfishError> {

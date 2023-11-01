@@ -25,7 +25,8 @@ use serde::{Deserialize, Serialize};
 pub mod dell;
 pub mod hp;
 pub mod lenovo;
-pub mod nvidia;
+pub mod nvidia_dpu;
+pub mod nvidia_viking;
 pub mod supermicro;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

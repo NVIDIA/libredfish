@@ -121,7 +121,7 @@ impl Redfish for Bmc {
         add_keys!("IPv6PXESupport", EnabledDisabled::Disabled);
 
         let mut attrs = HashMap::new();
-        attrs.extend(bios_attrs.into_iter());
+        attrs.extend(bios_attrs);
         let body = HashMap::from([("Attributes", attrs)]);
         let url = format!("Systems/{}/Bios", self.s.system_id());
         self.s
@@ -370,16 +370,6 @@ impl Redfish for Bmc {
         let body = HashMap::from([("Boot", HashMap::from([("BootOrder", boot_array)]))]);
         let url = format!("Systems/{}", self.s.system_id());
         self.s.client.patch(&url, body).await.map(|_status_code| ())
-    }
-    async fn set_internal_cpu_model(&self, model: InternalCPUModel) -> Result<(), RedfishError> {
-        self.s.set_internal_cpu_model(model).await
-    }
-
-    async fn set_host_privilege_level(
-        &self,
-        level: HostPrivilegeLevel,
-    ) -> Result<(), RedfishError> {
-        self.s.set_host_privilege_level(level).await
     }
 
     async fn get_service_root(&self) -> Result<ServiceRoot, RedfishError> {

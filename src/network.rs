@@ -21,14 +21,17 @@
  * DEALINGS IN THE SOFTWARE.
  */
 use std::{collections::HashMap, fs::File, time::Duration};
+use std::string::{String, ToString};
+use std::vec::Vec;
 
 use reqwest::{
-    header::HeaderValue, header::ACCEPT, header::CONTENT_TYPE, Client as HttpClient,
-    ClientBuilder as HttpClientBuilder, Method, StatusCode,
+    header::{HeaderName, HeaderValue, ACCEPT, CONTENT_TYPE},
+    Client as HttpClient, ClientBuilder as HttpClientBuilder, Method, StatusCode,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use tracing::debug;
 
+use crate::model::InvalidValueError;
 pub use crate::RedfishError;
 use crate::{standard::RedfishStandard, Redfish};
 
@@ -129,6 +132,7 @@ impl RedfishClientPool {
         let manager_id = managers.first().unwrap();
         s.set_system_id(system_id)?;
         s.set_manager_id(manager_id)?;
+        // call set_system_id always before calling set_vendor
         s.set_vendor(&service_root.vendor().unwrap_or("".to_string()))
     }
 
@@ -165,7 +169,7 @@ impl RedfishHttpClient {
         T: DeserializeOwned + ::std::fmt::Debug,
     {
         let (status_code, resp_opt) = self
-            .req::<T, String>(Method::GET, api, None, None, None)
+            .req::<T, String>(Method::GET, api, None, None, None, Vec::new())
             .await?;
         match resp_opt {
             Some(response_body) => Ok((status_code, response_body)),
@@ -178,8 +182,9 @@ impl RedfishHttpClient {
         api: &str,
         data: HashMap<&str, String>,
     ) -> Result<StatusCode, RedfishError> {
-        let (status_code, _resp_body): (_, Option<HashMap<String, serde_json::Value>>) =
-            self.req(Method::POST, api, Some(data), None, None).await?;
+        let (status_code, _resp_body): (_, Option<HashMap<String, serde_json::Value>>) = self
+            .req(Method::POST, api, Some(data), None, None, Vec::new())
+            .await?;
         Ok(status_code)
     }
 
@@ -198,7 +203,14 @@ impl RedfishHttpClient {
                 |m| Duration::from_secs(m.len() / MIN_UPLOAD_BANDWIDTH),
             );
         let (status_code, resp_opt) = self
-            .req::<T, _>(Method::POST, api, body_option, Some(timeout), Some(file))
+            .req::<T, _>(
+                Method::POST,
+                api,
+                body_option,
+                Some(timeout),
+                Some(file),
+                Vec::new(),
+            )
             .await?;
         match resp_opt {
             Some(response_body) => Ok((status_code, response_body)),
@@ -210,8 +222,9 @@ impl RedfishHttpClient {
     where
         T: Serialize + ::std::fmt::Debug,
     {
-        let (status_code, _resp_body): (_, Option<HashMap<String, serde_json::Value>>) =
-            self.req(Method::PATCH, api, Some(data), None, None).await?;
+        let (status_code, _resp_body): (_, Option<HashMap<String, serde_json::Value>>) = self
+            .req(Method::PATCH, api, Some(data), None, None, Vec::new())
+            .await?;
         Ok(status_code)
     }
 
@@ -220,7 +233,7 @@ impl RedfishHttpClient {
     #[allow(dead_code)]
     pub async fn delete(&self, api: &str) -> Result<StatusCode, RedfishError> {
         let (status_code, _resp_body): (_, Option<HashMap<String, serde_json::Value>>) = self
-            .req::<_, String>(Method::DELETE, api, None, None, None)
+            .req::<_, String>(Method::DELETE, api, None, None, None, Vec::new())
             .await?;
         Ok(status_code)
     }
@@ -233,6 +246,7 @@ impl RedfishHttpClient {
         body: Option<B>,
         override_timeout: Option<Duration>,
         file: Option<tokio::fs::File>,
+        custom_headers: Vec<(HeaderName, String)>,
     ) -> Result<(StatusCode, Option<T>), RedfishError>
     where
         T: DeserializeOwned + ::std::fmt::Debug,
@@ -284,6 +298,23 @@ impl RedfishHttpClient {
             );
         } else {
             req_b = req_b.header(CONTENT_TYPE, HeaderValue::from_static("application/json"));
+        }
+
+        for (key, val) in custom_headers.iter() {
+            let value = match HeaderValue::from_str(val) {
+                Ok(x) => x,
+                Err(e) => {
+                    return Err(RedfishError::InvalidValue {
+                        url: url.to_string(),
+                        field: "0".to_string(),
+                        err: InvalidValueError(format!(
+                            "Invalid custom header {} value: {}, error: {}",
+                            key, val, e
+                        )),
+                    })
+                }
+            };
+            req_b = req_b.header(key, value);
         }
 
         if let Some(user) = &self.endpoint.user {

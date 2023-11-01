@@ -47,7 +47,7 @@ pub struct PowerMetrics {
 pub struct PowerControl {
     pub power_allocated_watts: Option<f64>,
     pub power_capacity_watts: Option<f64>,
-    pub power_consumed_watts: f64,
+    pub power_consumed_watts: Option<f64>,
     pub power_requested_watts: Option<f64>,
     pub power_limit: Option<PowerLimit>,
     pub power_metrics: PowerMetrics,
@@ -143,16 +143,18 @@ pub struct Power {
     pub id: String,
     pub name: String,
     pub power_control: Vec<PowerControl>,
-    pub power_supplies: Vec<PowerSupply>,
+    pub power_supplies: Option<Vec<PowerSupply>>,
     pub voltages: Vec<Voltages>,
-    pub redundancy: Vec<Redundancy>,
+    pub redundancy: Option<Vec<Redundancy>>,
 }
 
 impl StatusVec for Power {
     fn get_vec(&self) -> Vec<ResourceStatus> {
         let mut v: Vec<ResourceStatus> = Vec::new();
-        for res in &self.power_supplies {
-            v.push(res.status)
+        if self.power_supplies.is_some() {
+            for res in self.power_supplies.clone().unwrap() {
+                v.push(res.status)
+            }
         }
         v
     }
