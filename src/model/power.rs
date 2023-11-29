@@ -84,9 +84,9 @@ pub struct PowerSuppliesOem {
 #[serde(rename_all = "PascalCase")]
 pub struct InputRanges {
     pub input_type: String,
-    pub minimum_voltage: i64,
-    pub maximum_voltage: i64,
-    pub output_wattage: i64,
+    pub minimum_voltage: Option<i64>,
+    pub maximum_voltage: Option<i64>,
+    pub output_wattage: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -96,7 +96,7 @@ pub struct PowerSupply {
     // we need to track this metric
     pub last_power_output_watts: Option<f64>, // not in Supermicro or NVIDIA DPU
     // we need to track this metric
-    pub line_input_voltage: i64,
+    pub line_input_voltage: Option<i64>,
     pub line_input_voltage_type: String,
     pub efficiency_percent: Option<f64>, // not in Supermicro or NVIDIA DPU
     pub hot_pluggable: Option<bool>,

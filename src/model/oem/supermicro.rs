@@ -33,3 +33,20 @@ impl fmt::Display for Privilege {
         fmt::Debug::fmt(self, f)
     }
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "PascalCase")]
+pub struct FixedBootOrder {
+    pub boot_mode_selected: BootMode,
+    pub fixed_boot_order: Vec<String>,
+    #[serde(rename = "UEFINetwork")]
+    pub uefi_network: Vec<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Copy, Clone, Eq, PartialEq)]
+#[allow(clippy::upper_case_acronyms)]
+pub enum BootMode {
+    Legacy,
+    UEFI,
+    Dual,
+}

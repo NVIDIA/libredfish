@@ -51,7 +51,6 @@ pub struct Manager {
     pub manager_type: String,
     pub name: String,
     pub network_protocol: ODataId,
-    pub serial_console: Commandshell,
     pub status: Status,
     #[serde(rename = "UUID")]
     pub uuid: String,

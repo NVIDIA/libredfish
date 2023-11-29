@@ -132,6 +132,29 @@ pub struct ComputerSystem {
     pub trusted_modules: Vec<TrustedModule>,
     #[serde(default, rename = "PCIeDevices")]
     pub pcie_devices: Vec<ODataId>, // not in Supermicro
+    pub serial_console: Option<SerialConsole>, // Newer Redfish impls, inc Supermicro
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
+pub struct SerialConsole {
+    pub max_concurrent_sessions: usize,
+    #[serde(rename = "SSH")]
+    pub ssh: SerialConsoleConnectionType,
+    #[serde(rename = "IPMI")]
+    pub ipmi: SerialConsoleConnectionType,
+}
+
+#[derive(Default, Debug, Serialize, Deserialize, Clone)]
+#[serde_with::skip_serializing_none]
+#[serde(rename_all = "PascalCase")]
+pub struct SerialConsoleConnectionType {
+    pub service_enabled: bool,
+    pub port: Option<usize>,
+    pub hot_key_sequence_display: Option<String>,
+    #[serde(rename = "SharedWithManagerCLI")]
+    pub shared_with_manager_cli: Option<bool>, // SSH only
+    pub console_entry_command: Option<String>, // SSH only
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
