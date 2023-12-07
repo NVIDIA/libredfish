@@ -347,7 +347,7 @@ impl RedfishHttpClient {
                 url: url.clone(),
                 source: e,
             })?;
-        let mut res = None;
+        debug!("RX {status_code} {}", truncate(&response_body, 1500));
 
         if !status_code.is_success() {
             return Err(RedfishError::HTTPErrorCode {
@@ -357,8 +357,8 @@ impl RedfishHttpClient {
             });
         }
 
+        let mut res = None;
         if !response_body.is_empty() {
-            debug!("RX {status_code} {}", truncate(&response_body, 1500));
             match serde_json::from_str(&response_body) {
                 Ok(v) => res.insert(v),
                 Err(e) => {
@@ -369,14 +369,19 @@ impl RedfishHttpClient {
                     });
                 }
             };
-        } else {
-            debug!("RX {status_code}");
         }
-
         Ok((status_code, res))
     }
 }
 
 fn truncate(s: &str, len: usize) -> &str {
     &s[..len.min(s.len())]
+}
+
+#[test]
+fn test_truncate() {
+    assert_eq!(truncate("", 1500), "");
+
+    let big = "a".repeat(2000);
+    assert_eq!(truncate(&big, 1500).len(), 1500);
 }
