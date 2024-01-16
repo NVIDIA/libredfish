@@ -93,12 +93,12 @@ pub struct Availableaction {
 
 #[cfg(test)]
 mod test {
-    use crate::model::oem::{dell, hp};
+    use crate::model::oem::{dell, hpe};
 
     #[test]
     fn test_manager_parser_hp() {
         let test_data = include_str!("testdata/manager_hp.json");
-        let result: hp::Manager = serde_json::from_str(test_data).unwrap();
+        let result: hpe::Manager = serde_json::from_str(test_data).unwrap();
         println!("result: {result:#?}");
     }
 

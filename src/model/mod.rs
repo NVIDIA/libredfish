@@ -194,6 +194,42 @@ impl From<EnableDisable> for serde_json::Value {
     }
 }
 
+#[derive(Debug, Default, Serialize, Deserialize, Copy, Clone, Eq, PartialEq)]
+pub enum YesNo {
+    #[default]
+    Yes,
+    No,
+}
+
+impl YesNo {
+    pub fn is_enabled(self) -> bool {
+        self == YesNo::Yes
+    }
+}
+
+impl fmt::Display for YesNo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(self, f)
+    }
+}
+
+impl FromStr for YesNo {
+    type Err = InvalidValueError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Yes" => Ok(Self::Yes),
+            "No" => Ok(Self::No),
+            x => Err(InvalidValueError(format!("Invalid YesNo value: {x}"))),
+        }
+    }
+}
+
+impl From<YesNo> for serde_json::Value {
+    fn from(val: YesNo) -> Self {
+        serde_json::Value::String(val.to_string())
+    }
+}
+
 #[derive(Debug)]
 pub struct InvalidValueError(pub String);
 

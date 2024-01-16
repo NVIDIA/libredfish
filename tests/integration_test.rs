@@ -44,16 +44,22 @@ const PYTHON_VENV_DIR: &str = "libredfish-python-venv";
 
 // Ports we hope are not in use
 const DELL_PORT: &str = "8733";
-const LENOVO_PORT: &str = "8734";
-const NVIDIA_DPU_PORT: &str = "8735";
-const SUPERMICRO_PORT: &str = "8736";
+const HPE_PORT: &str = "8734";
+const LENOVO_PORT: &str = "8735";
+const NVIDIA_DPU_PORT: &str = "8736";
 const NVIDIA_VIKING_PORT: &str = "8737";
+const SUPERMICRO_PORT: &str = "8738";
 
 static SETUP: Once = Once::new();
 
 #[tokio::test]
 async fn test_dell() -> Result<(), anyhow::Error> {
     run_integration_test("dell", DELL_PORT).await
+}
+
+#[tokio::test]
+async fn test_hpe() -> Result<(), anyhow::Error> {
+    run_integration_test("hpe", HPE_PORT).await
 }
 
 #[tokio::test]
@@ -219,11 +225,12 @@ async fn run_integration_test(
     let chassis = redfish.get_chassis_all().await?;
     assert!(!chassis.is_empty());
     for chassis_id in &chassis {
-        let Ok(chassis_net_adapters) = redfish.get_chassis_network_adapters(chassis_id).await else {
+        let Ok(chassis_net_adapters) = redfish.get_chassis_network_adapters(chassis_id).await
+        else {
             continue;
         };
         for net_adapter_id in &chassis_net_adapters {
-            let value = redfish
+            let _value = redfish
                 .get_chassis_network_adapter(chassis_id, net_adapter_id)
                 .await?;
         }

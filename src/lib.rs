@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 
 mod dell;
 mod error;
+mod hpe;
 mod lenovo;
 mod network;
 mod nvidia_dpu;

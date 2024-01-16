@@ -7,7 +7,7 @@ use crate::model::ODataId;
 #[serde(rename_all = "PascalCase")]
 pub struct FansOemHp {
     #[serde(flatten)]
-    pub fan_type: super::oem::hp::HpType,
+    pub fan_type: super::oem::hpe::HpType,
     pub location: String,
 }
 
@@ -24,7 +24,7 @@ pub struct Fan {
     pub reading_units: String,
     pub fan_name: Option<String>, // Dell, Lenovo, NVIDIA DPU
     pub name: Option<String>,     // Supermicro
-    pub physical_context: String,
+    pub physical_context: Option<String>,
     pub sensor_number: Option<i64>,
     pub lower_threshold_critical: Option<i64>,
     pub lower_threshold_fatal: Option<i64>,
@@ -37,7 +37,7 @@ pub struct Fan {
 #[serde(rename_all = "PascalCase")]
 pub struct TemperaturesOemHp {
     #[serde(flatten)]
-    pub temp_type: super::oem::hp::HpType,
+    pub temp_type: super::oem::hpe::HpType,
     pub location_xmm: i64,
     pub location_ymm: i64,
 }

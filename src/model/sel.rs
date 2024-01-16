@@ -8,7 +8,7 @@ pub struct LogEntry {
     #[serde(flatten)]
     pub odata: ODataLinks,
     pub created: String,
-    pub description: String,
+    pub description: Option<String>,
     pub entry_code: Option<String>,
     pub entry_type: String,
     pub id: String,

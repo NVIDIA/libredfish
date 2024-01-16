@@ -96,17 +96,12 @@ impl RedfishError {
     /// This is method on `RedfishError` in order to preserve the full error
     /// details in `RedfishError::HttpErrorCode`
     pub fn is_unauthorized(&self) -> bool {
-        match self {
-            RedfishError::HTTPErrorCode {
+        // clippy wants use of matches! macro
+        matches!(self, RedfishError::HTTPErrorCode {
                 url: _,
                 status_code,
                 response_body: _,
             } if *status_code == StatusCode::UNAUTHORIZED
-                || *status_code == StatusCode::FORBIDDEN =>
-            {
-                true
-            }
-            _ => false,
-        }
+                || *status_code == StatusCode::FORBIDDEN)
     }
 }

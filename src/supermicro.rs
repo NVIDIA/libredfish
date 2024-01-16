@@ -193,7 +193,9 @@ impl Redfish for Bmc {
         let s_interface = self.s.get_serial_interface().await?;
         let system = self.s.get_system().await?;
         let Some(sr) = &system.serial_console else {
-            return Err(RedfishError::NotSupported("No SerialConsole in Manager object".to_string()));
+            return Err(RedfishError::NotSupported(
+                "No SerialConsole in Manager object".to_string(),
+            ));
         };
         let is_enabled = sr.ssh.service_enabled
             && sr.max_concurrent_sessions != 0
@@ -236,16 +238,18 @@ impl Redfish for Bmc {
     async fn clear_tpm(&self) -> Result<(), RedfishError> {
         let bios_attrs = self.s.bios_attributes().await?;
         let Some(attrs_map) = bios_attrs.as_object() else {
-                return Err(RedfishError::InvalidKeyType {
-                    key: "Attributes".to_string(),
-                    expected_type: "Map".to_string(),
-                    url: String::new(),
-                })
+            return Err(RedfishError::InvalidKeyType {
+                key: "Attributes".to_string(),
+                expected_type: "Map".to_string(),
+                url: String::new(),
+            });
         };
 
         // Yes the BIOS attribute to clear the TPM is called "PendingOperation<something>"
         let Some(name) = attrs_map.keys().find(|k| k.starts_with("PendingOperation")) else {
-            return Err(RedfishError::NotSupported("Cannot clear_tpm, PendingOperation BIOS attr missing".to_string()))
+            return Err(RedfishError::NotSupported(
+                "Cannot clear_tpm, PendingOperation BIOS attr missing".to_string(),
+            ));
         };
 
         let body = HashMap::from([("Attributes", HashMap::from([(name, "TPM Clear")]))]);
@@ -603,8 +607,14 @@ impl Bmc {
         const HARD_DISK: &str = "UEFI Hard Disk";
         const NETWORK: &str = "UEFI Network";
         // The network name is not consistent because it includes the interface name
-        let Some(network) = fbo.fixed_boot_order.iter().find(|entry| entry.starts_with(NETWORK)) else {
-            return Err(RedfishError::NotSupported(format!("No match for {NETWORK} in top level boot order")));
+        let Some(network) = fbo
+            .fixed_boot_order
+            .iter()
+            .find(|entry| entry.starts_with(NETWORK))
+        else {
+            return Err(RedfishError::NotSupported(format!(
+                "No match for {NETWORK} in top level boot order"
+            )));
         };
 
         // Make our option the first option, the other one second, and everything else (CD/ROM,
@@ -623,8 +633,14 @@ impl Bmc {
 
         // Set the DPU to be the first network device to boot from, for faster boots
         if target != Boot::HardDisk {
-            let Some(pos) = fbo.uefi_network.iter().position(|s| s.contains("UEFI HTTP IPv4 Mellanox")) else {
-                return Err(RedfishError::NotSupported("No match for 'UEFI HTTP IPv4 Mellanox' in network boot order".to_string()));
+            let Some(pos) = fbo
+                .uefi_network
+                .iter()
+                .position(|s| s.contains("UEFI HTTP IPv4 Mellanox"))
+            else {
+                return Err(RedfishError::NotSupported(
+                    "No match for 'UEFI HTTP IPv4 Mellanox' in network boot order".to_string(),
+                ));
             };
             fbo.uefi_network.swap(0, pos);
         };
@@ -691,11 +707,11 @@ impl Bmc {
     async fn bios_attributes_name_map(&self) -> Result<HashMap<String, Vec<String>>, RedfishError> {
         let bios_attrs = self.s.bios_attributes().await?;
         let Some(attrs_map) = bios_attrs.as_object() else {
-                return Err(RedfishError::InvalidKeyType {
-                    key: "Attributes".to_string(),
-                    expected_type: "Map".to_string(),
-                    url: String::new(),
-                })
+            return Err(RedfishError::InvalidKeyType {
+                key: "Attributes".to_string(),
+                expected_type: "Map".to_string(),
+                url: String::new(),
+            });
         };
         let mut by_name: HashMap<String, Vec<String>> = HashMap::with_capacity(attrs_map.len());
         for k in attrs_map.keys() {

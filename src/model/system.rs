@@ -27,7 +27,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{boot::Boot, oem::SystemExtensions, ODataId, ODataLinks};
 
-#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone, Copy)]
 pub enum SystemPowerControl {
     /// Power on a machine
     On,
@@ -94,11 +94,19 @@ pub struct SystemStatus {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
+pub struct ComponentStatus {
+    pub health: Option<String>,
+    pub health_rollup: Option<String>,
+    pub state: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
 pub struct SystemProcessors {
     pub count: i64,
     pub logical_processor_count: Option<i64>,
     pub model: Option<String>,
-    pub status: Option<SystemStatus>,
+    pub status: Option<ComponentStatus>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

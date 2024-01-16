@@ -13,7 +13,7 @@ pub struct OemHpSnmppowerthresholdalert {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OemHp {
     #[serde(flatten)]
-    pub oem_type: super::oem::hp::HpType,
+    pub oem_type: super::oem::hpe::HpType,
     #[serde(rename = "SNMPPowerThresholdAlert")]
     pub snmp_power_threshold_alert: OemHpSnmppowerthresholdalert,
     #[serde(flatten)]
@@ -63,7 +63,7 @@ pub struct PowersuppliesOemHpPowersupplystatus {
 #[serde(rename_all = "PascalCase")]
 pub struct PowerSuppliesOemHp {
     #[serde(flatten)]
-    pub power_type: super::oem::hp::HpType,
+    pub power_type: super::oem::hpe::HpType,
     pub average_power_output_watts: i64,
     pub bay_number: i64,
     pub hotplug_capable: bool,
@@ -144,7 +144,7 @@ pub struct Power {
     pub name: String,
     pub power_control: Vec<PowerControl>,
     pub power_supplies: Option<Vec<PowerSupply>>,
-    pub voltages: Vec<Voltages>,
+    pub voltages: Option<Vec<Voltages>>,
     pub redundancy: Option<Vec<Redundancy>>,
 }
 

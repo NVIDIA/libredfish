@@ -265,6 +265,40 @@ impl RedfishHttpClient {
         T: DeserializeOwned + ::std::fmt::Debug,
         B: Serialize + ::std::fmt::Debug,
     {
+        let is_file = file.is_some();
+        match self
+            ._req(&method, api, &body, override_timeout, file, &custom_headers)
+            .await
+        {
+            Ok(x) => Ok(x),
+            // HPE sends RST in case same connection is reused. To avoid that let's retry.
+            Err(a) if matches!(a, RedfishError::NetworkError { .. }) => {
+                // Handling of post_file failure must be done manually. The seek is moved and we
+                // can't reuse file by cloning. Clone shares read, writes and seek.
+                if is_file {
+                    return Err(a);
+                }
+                self._req(&method, api, &body, override_timeout, None, &custom_headers)
+                    .await
+            }
+            Err(x) => Err(x),
+        }
+    }
+
+    // All the HTTP requests happen from here.
+    async fn _req<T, B>(
+        &self,
+        method: &Method,
+        api: &str,
+        body: &Option<B>,
+        override_timeout: Option<Duration>,
+        file: Option<tokio::fs::File>,
+        custom_headers: &[(HeaderName, String)],
+    ) -> Result<(StatusCode, Option<T>), RedfishError>
+    where
+        T: DeserializeOwned + ::std::fmt::Debug,
+        B: Serialize + ::std::fmt::Debug,
+    {
         let url = match self.endpoint.port {
             Some(p) => format!(
                 "https://{}:{}/{}/{}",
@@ -279,7 +313,7 @@ impl RedfishHttpClient {
             Some(b) => {
                 let url: String = url.clone();
                 let body_enc =
-                    serde_json::to_string(&b).map_err(|e| RedfishError::JsonSerializeError {
+                    serde_json::to_string(b).map_err(|e| RedfishError::JsonSerializeError {
                         url,
                         object_debug: format!("{b:?}"),
                         source: e,
@@ -295,7 +329,7 @@ impl RedfishHttpClient {
             body_enc.as_deref().unwrap_or_default()
         );
 
-        let mut req_b = match method {
+        let mut req_b = match *method {
             Method::GET => self.http_client.get(&url),
             Method::POST => self.http_client.post(&url),
             Method::PATCH => self.http_client.patch(&url),
@@ -352,6 +386,7 @@ impl RedfishHttpClient {
             // Note that Lenovo accepts these unnecessary operations and returns '204 No Content'.
             return Err(RedfishError::UnnecessaryOperation);
         }
+        debug!("RX {status_code}");
         // read the body even if not status 2XX, because BMCs give useful error messages as JSON
         let response_body = response
             .text()
