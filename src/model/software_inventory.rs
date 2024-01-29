@@ -35,4 +35,5 @@ pub struct SoftwareInventory {
     pub description: Option<String>,
     pub id: String,
     pub version: Option<String>,
+    pub release_date: Option<String>,
 }
