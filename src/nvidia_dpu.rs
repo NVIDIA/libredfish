@@ -22,6 +22,7 @@
  */
 use std::collections::HashMap;
 
+use crate::model::account_service::ManagerAccount;
 use crate::model::task::Task;
 use crate::Boot::UefiHttp;
 use crate::HostPrivilegeLevel::Restricted;
@@ -77,8 +78,16 @@ impl Redfish for Bmc {
         self.s.create_user(username, password, role_id).await
     }
 
+    async fn change_username(&self, old_name: &str, new_name: &str) -> Result<(), RedfishError> {
+        self.s.change_username(old_name, new_name).await
+    }
+
     async fn change_password(&self, user: &str, new: &str) -> Result<(), RedfishError> {
         self.s.change_password(user, new).await
+    }
+
+    async fn get_accounts(&self) -> Result<Vec<ManagerAccount>, RedfishError> {
+        self.s.get_accounts().await
     }
 
     async fn get_firmware(
@@ -129,6 +138,10 @@ impl Redfish for Bmc {
         self.set_host_privilege_level(Restricted).await?;
         self.set_internal_cpu_model(Embedded).await?;
         self.boot_once(UefiHttp).await
+    }
+
+    async fn set_machine_password_policy(&self) -> Result<(), RedfishError> {
+        self.s.set_machine_password_policy().await
     }
 
     async fn lockdown(&self, target: crate::EnabledDisabled) -> Result<(), RedfishError> {

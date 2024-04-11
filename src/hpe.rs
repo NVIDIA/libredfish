@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     model::{
+        account_service::ManagerAccount,
         chassis::{Chassis, NetworkAdapter},
         network_device_function::NetworkDeviceFunction,
         oem::hpe,
@@ -44,8 +45,16 @@ impl Redfish for Bmc {
         self.s.create_user(username, password, role_id).await
     }
 
+    async fn change_username(&self, old_name: &str, new_name: &str) -> Result<(), RedfishError> {
+        self.s.change_username(old_name, new_name).await
+    }
+
     async fn change_password(&self, user: &str, new: &str) -> Result<(), RedfishError> {
         self.s.change_password(user, new).await
+    }
+
+    async fn get_accounts(&self) -> Result<Vec<ManagerAccount>, RedfishError> {
+        self.s.get_accounts().await
     }
 
     async fn get_power_state(&self) -> Result<PowerState, RedfishError> {
@@ -88,6 +97,36 @@ impl Redfish for Bmc {
         self.set_uefi_nic_boot().await?;
         self.set_boot_order(BootDevices::Pxe).await?;
         self.lockdown(Enabled).await
+    }
+
+    async fn set_machine_password_policy(&self) -> Result<(), RedfishError> {
+        use serde_json::Value;
+        let hpe = Value::Object(serde_json::Map::from_iter(vec![
+            (
+                "AuthFailureDelayTimeSeconds".to_string(),
+                Value::Number(0.into()),
+            ),
+            (
+                "AuthFailureLoggingThreshold".to_string(),
+                Value::Number(0.into()),
+            ),
+            (
+                "AuthFailuresBeforeDelay".to_string(),
+                Value::Number(0.into()),
+            ),
+            ("EnforcePasswordComplexity".to_string(), Value::Bool(false)),
+        ]));
+        let mut oem = serde_json::Map::new();
+        oem.insert("Hpe".to_string(), hpe);
+
+        let mut body = HashMap::new();
+        body.insert("Oem".to_string(), serde_json::Value::Object(oem));
+
+        self.s
+            .client
+            .patch("AccountService", body)
+            .await
+            .map(|_status_code| ())
     }
 
     async fn lockdown(&self, target: EnabledDisabled) -> Result<(), RedfishError> {

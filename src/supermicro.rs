@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     model::{
+        account_service::ManagerAccount,
         boot,
         chassis::{Chassis, NetworkAdapter},
         network_device_function::NetworkDeviceFunction,
@@ -41,24 +42,20 @@ impl Redfish for Bmc {
         self.s.create_user(username, password, role_id).await
     }
 
+    async fn change_username(&self, old_name: &str, new_name: &str) -> Result<(), RedfishError> {
+        self.s.change_username(old_name, new_name).await
+    }
+
     async fn change_password(
         &self,
         username: &str,
         new_password: &str,
     ) -> Result<(), RedfishError> {
-        let account_ids = self.s.get_members("AccountService/Accounts").await?;
-        let mut maybe_user_id = None;
-        for id in account_ids {
-            let account = self.s.get_account(&id).await?;
-            if account.username == username {
-                maybe_user_id = Some(id);
-                break;
-            }
-        }
-        match maybe_user_id {
-            Some(user_id) => self.s.change_password(&user_id, new_password).await,
-            None => Err(RedfishError::UserNotFound(username.to_string())),
-        }
+        self.s.change_password(username, new_password).await
+    }
+
+    async fn get_accounts(&self) -> Result<Vec<ManagerAccount>, RedfishError> {
+        self.s.get_accounts().await
     }
 
     async fn get_power_state(&self) -> Result<PowerState, RedfishError> {
@@ -141,6 +138,20 @@ impl Redfish for Bmc {
         self.boot_first(Boot::Pxe).await?;
         // always do system lockdown last
         self.lockdown(EnabledDisabled::Enabled).await
+    }
+
+    async fn set_machine_password_policy(&self) -> Result<(), RedfishError> {
+        use serde_json::Value::Number;
+        let body = HashMap::from([
+            ("AccountLockoutThreshold", Number(0.into())),
+            ("AccountLockoutDuration", Number(0.into())),
+            ("AccountLockoutCounterResetAfter", Number(0.into())),
+        ]);
+        self.s
+            .client
+            .patch("AccountService", body)
+            .await
+            .map(|_status_code| ())
     }
 
     async fn lockdown(&self, target: EnabledDisabled) -> Result<(), RedfishError> {

@@ -141,6 +141,7 @@ impl FromStr for FrontPanelUSBMode {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct FrontPanelUSBModeParseError(String);
 

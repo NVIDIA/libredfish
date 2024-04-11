@@ -5,6 +5,7 @@ use reqwest::header::{HeaderMap, HeaderName, IF_MATCH};
 use reqwest::Method;
 use version_compare::Version;
 
+use crate::model::account_service::ManagerAccount;
 use crate::EnabledDisabled::Enabled;
 use crate::RoleId;
 use crate::{
@@ -55,8 +56,16 @@ impl Redfish for Bmc {
         self.s.create_user(username, password, role_id).await
     }
 
+    async fn change_username(&self, old_name: &str, new_name: &str) -> Result<(), RedfishError> {
+        self.s.change_username(old_name, new_name).await
+    }
+
     async fn change_password(&self, user: &str, new: &str) -> Result<(), RedfishError> {
         self.s.change_password(user, new).await
+    }
+
+    async fn get_accounts(&self) -> Result<Vec<ManagerAccount>, RedfishError> {
+        self.s.get_accounts().await
     }
 
     async fn get_power_state(&self) -> Result<PowerState, RedfishError> {
@@ -94,6 +103,22 @@ impl Redfish for Bmc {
         self.set_uefi_nic_boot().await?;
         self.set_boot_order(Pxe).await?;
         self.lockdown(Enabled).await
+    }
+
+    async fn set_machine_password_policy(&self) -> Result<(), RedfishError> {
+        use serde_json::Value;
+        let body = HashMap::from([
+            ("AccountLockoutThreshold", Value::Number(0.into())),
+            ("AccountLockoutDuration", Value::Number(0.into())),
+            ("AccountLockoutCounterResetAfter", Value::Number(0.into())),
+            ("AccountLockoutCounterResetEnabled", Value::Bool(false)),
+            ("AuthFailureLoggingThreshold", Value::Number(0.into())),
+        ]);
+        self.s
+            .client
+            .patch("AccountService", body)
+            .await
+            .map(|_status_code| ())
     }
 
     async fn lockdown(&self, target: EnabledDisabled) -> Result<(), RedfishError> {

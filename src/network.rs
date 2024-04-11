@@ -20,9 +20,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-use std::{collections::HashMap, fs::File, time::Duration};
-use std::string::{String, ToString};
-use std::vec::Vec;
+use std::{collections::HashMap, time::Duration};
 
 use reqwest::header::HeaderMap;
 use reqwest::Proxy;

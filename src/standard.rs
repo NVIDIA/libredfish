@@ -74,14 +74,37 @@ impl Redfish for RedfishStandard {
             .map(|_resp| Ok(()))?
     }
 
+    async fn change_username(&self, old_name: &str, new_name: &str) -> Result<(), RedfishError> {
+        let account = self.get_account_by_name(old_name).await?;
+        let url = format!("AccountService/Accounts/{}", account.id);
+        let mut data = HashMap::new();
+        data.insert("UserName", new_name);
+        self.client
+            .patch(&url, &data)
+            .await
+            .map(|_status_code| Ok(()))?
+    }
+
     async fn change_password(&self, user: &str, new: &str) -> Result<(), RedfishError> {
-        let url = format!("AccountService/Accounts/{}", user);
+        let account = self.get_account_by_name(user).await?;
+        let url = format!("AccountService/Accounts/{}", account.id);
         let mut data = HashMap::new();
         data.insert("Password", new);
         self.client
             .patch(&url, &data)
             .await
             .map(|_status_code| Ok(()))?
+    }
+
+    async fn get_accounts(&self) -> Result<Vec<ManagerAccount>, RedfishError> {
+        let account_ids = self.get_members("AccountService/Accounts").await?;
+        let mut accounts = Vec::with_capacity(account_ids.len());
+        for id in account_ids {
+            let account = self.get_account_by_id(&id).await?;
+            accounts.push(account);
+        }
+        accounts.sort();
+        Ok(accounts)
     }
 
     async fn get_power_state(&self) -> Result<PowerState, RedfishError> {
@@ -138,6 +161,19 @@ impl Redfish for RedfishStandard {
 
     async fn machine_setup(&self) -> Result<(), RedfishError> {
         Err(RedfishError::NotSupported("machine_setup".to_string()))
+    }
+
+    async fn set_machine_password_policy(&self) -> Result<(), RedfishError> {
+        use serde_json::Value::Number;
+        let body = HashMap::from([
+            ("AccountLockoutThreshold", Number(0.into())),
+            ("AccountLockoutDuration", Number(0.into())),
+            ("AccountLockoutCounterResetAfter", Number(0.into())),
+        ]);
+        self.client
+            .patch("AccountService", body)
+            .await
+            .map(|_status_code| ())
     }
 
     async fn lockdown(&self, _target: EnabledDisabled) -> Result<(), RedfishError> {
@@ -678,10 +714,30 @@ impl RedfishStandard {
             })
     }
 
-    pub async fn get_account(&self, account_id: &str) -> Result<ManagerAccount, RedfishError> {
+    pub async fn get_account_by_id(
+        &self,
+        account_id: &str,
+    ) -> Result<ManagerAccount, RedfishError> {
         let url = format!("AccountService/Accounts/{account_id}");
         let (_status_code, body) = self.client.get(&url).await?;
         Ok(body)
+    }
+
+    /// Iterates all accounts comparing the username. In practice I've never seen a BMC with more
+    /// than about three accounts, so perf not a concern.
+    /// Returns an error if the account does not exist.
+    pub async fn get_account_by_name(
+        &self,
+        username: &str,
+    ) -> Result<ManagerAccount, RedfishError> {
+        let account_ids = self.get_members("AccountService/Accounts").await?;
+        for id in account_ids {
+            let account = self.get_account_by_id(&id).await?;
+            if account.username == username {
+                return Ok(account);
+            }
+        }
+        Err(RedfishError::UserNotFound(username.to_string()))
     }
 
     //

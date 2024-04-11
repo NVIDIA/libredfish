@@ -26,6 +26,7 @@ use reqwest::header::HeaderMap;
 use reqwest::Method;
 use tracing::debug;
 
+use crate::model::account_service::ManagerAccount;
 use crate::model::service_root::ServiceRoot;
 use crate::model::task::Task;
 use crate::model::Manager;
@@ -72,8 +73,16 @@ impl Redfish for Bmc {
         self.s.create_user(username, password, role_id).await
     }
 
+    async fn change_username(&self, old_name: &str, new_name: &str) -> Result<(), RedfishError> {
+        self.s.change_username(old_name, new_name).await
+    }
+
     async fn change_password(&self, user: &str, new: &str) -> Result<(), RedfishError> {
         self.s.change_password(user, new).await
+    }
+
+    async fn get_accounts(&self) -> Result<Vec<ManagerAccount>, RedfishError> {
+        self.s.get_accounts().await
     }
 
     async fn get_power_state(&self) -> Result<PowerState, RedfishError> {
@@ -109,8 +118,57 @@ impl Redfish for Bmc {
         self.clear_tpm().await?;
         self.boot_first(Boot::Pxe).await?;
         self.set_virt_enable().await?;
+        self.set_uefi_boot_only().await?;
         // always do system lockdown last
         self.lockdown(Enabled).await
+    }
+
+    /// Redfish equivalent of `accseccfg -pew 0 -pe 0 -chgnew off -rc 0 -ci 0 -lf 0`
+    async fn set_machine_password_policy(&self) -> Result<(), RedfishError> {
+        use serde_json::Value;
+        let mut body = HashMap::from([
+            (
+                "AccountLockoutThreshold".to_string(),
+                Value::Number(0.into()),
+            ), // -lf 0
+            (
+                "AccountLockoutDuration".to_string(),
+                // 60 secs is the shortest Lenovo allows. The docs say 0 disables it, but my
+                // test Lenovo rejects 0.
+                Value::Number(60.into()),
+            ),
+        ]);
+        let lenovo = Value::Object(serde_json::Map::from_iter(vec![
+            (
+                "PasswordExpirationPeriodDays".to_string(),
+                Value::Number(0.into()),
+            ), // -pe 0
+            (
+                "PasswordChangeOnFirstAccess".to_string(),
+                Value::Bool(false),
+            ), // -chgnew off
+            (
+                "MinimumPasswordChangeIntervalHours".to_string(),
+                Value::Number(0.into()),
+            ), // -ci 0
+            (
+                "MinimumPasswordReuseCycle".to_string(),
+                Value::Number(0.into()),
+            ), // -rc 0
+            (
+                "PasswordExpirationWarningPeriod".to_string(),
+                Value::Number(0.into()),
+            ), // -pew 0
+        ]));
+        let mut oem = serde_json::Map::new();
+        oem.insert("Lenovo".to_string(), lenovo);
+        body.insert("Oem".to_string(), serde_json::Value::Object(oem));
+
+        self.s
+            .client
+            .patch("AccountService", body)
+            .await
+            .map(|_status_code| ())
     }
 
     async fn lockdown(&self, target: EnabledDisabled) -> Result<(), RedfishError> {
@@ -750,6 +808,33 @@ impl Bmc {
         body.insert(
             "Attributes",
             HashMap::from([("Processors_IntelVirtualizationTechnology", "Enabled")]),
+        );
+        let url = format!("Systems/{}/Bios/Pending", self.s.system_id());
+        self.s.client.patch(&url, body).await.map(|_status_code| ())
+    }
+
+    /// Set so that we only UEFI IPv4 HTTP boot, and we retry that.
+    ///
+    /// Disable PXE Boot
+    /// Disable LegacyBIOS Mode
+    /// Set Bootmode to UEFI
+    /// Enable IPv4 HTTP Boot
+    /// Disable IPv4 PXE Boot
+    /// Disable IPv6 PXE Boot
+    /// Enable Infinite Boot Mode
+    async fn set_uefi_boot_only(&self) -> Result<(), RedfishError> {
+        let mut body = HashMap::new();
+        body.insert(
+            "Attributes",
+            HashMap::from([
+                ("LegacyBIOS_NonOnboardPXE", "Disabled"),
+                ("LegacyBIOS_LegacyBIOS", "Disabled"),
+                ("BootModes_SystemBootMode", "UEFIMode"),
+                ("NetworkStackSettings_IPv4HTTPSupport", "Enabled"),
+                ("NetworkStackSettings_IPv4PXESupport", "Disabled"),
+                ("NetworkStackSettings_IPv6PXESupport", "Disabled"),
+                ("BootModes_InfiniteBootRetry", "Enabled"),
+            ]),
         );
         let url = format!("Systems/{}/Bios/Pending", self.s.system_id());
         self.s.client.patch(&url, body).await.map(|_status_code| ())
