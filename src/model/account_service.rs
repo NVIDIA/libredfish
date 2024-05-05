@@ -11,8 +11,8 @@ pub struct ManagerAccount {
     pub name: String,
     pub description: String,
     pub role_id: String,
-    pub enabled: bool,
-    pub locked: bool,
+    pub enabled: Option<bool>,
+    pub locked: Option<bool>,
 }
 
 impl Ord for ManagerAccount {

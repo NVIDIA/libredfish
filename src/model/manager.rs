@@ -42,7 +42,7 @@ pub struct Manager {
     pub odata: ODataLinks,
     pub actions: Action,
     pub command_shell: Commandshell,
-    pub description: String,
+    pub description: Option<String>,
     pub ethernet_interfaces: ODataId,
     pub firmware_version: String,
     pub graphical_console: Commandshell,
