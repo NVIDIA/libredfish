@@ -20,20 +20,21 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-use std::{collections::HashMap, time::Duration};
-
-use reqwest::header::HeaderMap;
-use reqwest::Proxy;
+use crate::{model::InvalidValueError, standard::RedfishStandard, Redfish, RedfishError};
 use reqwest::{
-    header::{HeaderName, HeaderValue, ACCEPT, CONTENT_TYPE},
-    Client as HttpClient, ClientBuilder as HttpClientBuilder, Method, StatusCode,
+    header::{HeaderMap, HeaderName, HeaderValue, ACCEPT, CONTENT_TYPE},
+    multipart::{Form, Part},
+    Client as HttpClient, ClientBuilder as HttpClientBuilder, Method, Proxy, StatusCode,
 };
 use serde::{de::DeserializeOwned, Serialize};
+use std::{
+    collections::HashMap,
+    path::Path,
+    string::{String, ToString},
+    time::Duration,
+    vec::Vec,
+};
 use tracing::debug;
-
-use crate::model::InvalidValueError;
-pub use crate::RedfishError;
-use crate::{standard::RedfishStandard, Redfish};
 
 pub const REDFISH_ENDPOINT: &str = "redfish/v1";
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(20);
@@ -438,6 +439,101 @@ impl RedfishHttpClient {
         }
 
         Ok((status_code, res, res_headers))
+    }
+
+    // req_multipart_firmware_upload does a Refish request for a multipart based firmware upload.
+    pub async fn req_update_firmware_multipart(
+        &self,
+        filename: &Path,
+        file: tokio::fs::File,
+        parameters: String,
+        api: &str,
+    ) -> Result<(StatusCode, Option<String>, String), RedfishError> {
+        let user = match &self.endpoint.user {
+            Some(user) => user,
+            None => return Err(RedfishError::NotSupported("User not specified".to_string())),
+        };
+
+        let basename = match Path::file_name(filename) {
+            Some(x) => x.to_string_lossy().to_string(),
+            None => {
+                return Err(RedfishError::FileError("Bad filename".to_string()));
+            }
+        };
+
+        let url = match self.endpoint.port {
+            Some(p) => format!(
+                "https://{}:{}/{}/{}",
+                self.endpoint.host, p, REDFISH_ENDPOINT, api
+            ),
+            None => format!(
+                "https://{}/{}/{}",
+                self.endpoint.host, REDFISH_ENDPOINT, api
+            ),
+        };
+
+        let length = filename
+            .metadata()
+            .map_err(|e| RedfishError::FileError(e.to_string()))?
+            .len();
+        let response = self
+            .http_client
+            .post(url.clone())
+            .multipart(
+                Form::new()
+                    // The spec is for two parts to the form: UpdateParameters, which is JSON encoded metadata,
+                    // and UpdateFile, which is the file itself.  Exact details of UpdateParameters end up being implementation specific.
+                    .part(
+                        "UpdateParameters",
+                        reqwest::multipart::Part::text(parameters)
+                            .mime_str("application/json")
+                            .unwrap(),
+                    )
+                    .part(
+                        "UpdateFile",
+                        Part::stream_with_length(file, length)
+                            .mime_str("application/octet-stream")
+                            .unwrap()
+                            // Yes, the filename passed does matter for some reason, at least for Dells, and it has to be the basename.
+                            .file_name(basename.clone()),
+                    ),
+            )
+            .basic_auth(user, self.endpoint.password.as_ref())
+            .send()
+            .await
+            .map_err(|e| RedfishError::NetworkError {
+                url: url.to_string(),
+                source: e,
+            })?;
+
+        let status_code = response.status();
+        debug!("RX {status_code}");
+
+        // Some (or all?) implementations will return the task ID in the Location header, with an empty body.
+        let loc = response
+            .headers()
+            .get("Location")
+            .map(|x| x.to_str().unwrap().to_string());
+
+        // read the body even if not status 2XX, because BMCs give useful error messages as JSON
+        let response_body = response
+            .text()
+            .await
+            .map_err(|e| RedfishError::NetworkError {
+                url: url.to_string(),
+                source: e,
+            })?;
+        debug!("RX {status_code} {}", truncate(&response_body, 1500));
+
+        if !status_code.is_success() {
+            return Err(RedfishError::HTTPErrorCode {
+                url: url.to_string(),
+                status_code,
+                response_body,
+            });
+        }
+
+        Ok((status_code, loc, response_body))
     }
 }
 

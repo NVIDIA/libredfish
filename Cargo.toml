@@ -4,16 +4,22 @@ description = "A redfish library. Useful for querying server hardware from a BMC
 authors = ["Chris Holcombe <xfactor973@gmail.com>", "NVIDIA Engineering"]
 repository = "https://github.com/nvidia/libredfish"
 license = "MIT"
-version = "0.17.1"
+version = "0.17.2"
 edition = "2021"
 
 [dependencies]
 async-trait = { version = "*", registry = "cratesio" }
 log = { version = "0.4", registry = "cratesio" }
-reqwest = {version = "0.11", default-features = false, features = ["json", "rustls-tls", "stream", "socks"], registry = "cratesio"}
+reqwest = { version = "0.11", default-features = false, features = [
+    "json",
+    "rustls-tls",
+    "stream",
+    "socks",
+    "multipart",
+], registry = "cratesio" }
 serde = { version = "1", features = ["derive"], registry = "cratesio" }
 serde_with = { version = "3.4", registry = "cratesio" }
-serde_json =  { version = "1", registry = "cratesio" }
+serde_json = { version = "1", registry = "cratesio" }
 thiserror = { version = "1", registry = "cratesio" }
 tokio = { version = "1", features = ["full"], registry = "cratesio" }
 tracing = { version = "0.1", registry = "cratesio" }
@@ -21,5 +27,7 @@ version-compare = { version = "0.1.1", registry = "cratesio" }
 
 [dev-dependencies]
 anyhow = { version = "1", registry = "cratesio" }
-tracing-subscriber = { version = "*", features = ["env-filter", "local-time"], registry = "cratesio" }
-
+tracing-subscriber = { version = "*", features = [
+    "env-filter",
+    "local-time",
+], registry = "cratesio" }

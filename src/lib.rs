@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-use std::fmt;
+use std::{collections::HashMap, fmt, path::Path};
 
 pub mod model;
 use model::account_service::ManagerAccount;
@@ -156,7 +155,14 @@ pub trait Redfish: Send + Sync + 'static {
     async fn pcie_devices(&self) -> Result<Vec<PCIeDevice>, RedfishError>;
 
     /// Update BMC firmware
-    async fn update_firmware(&self, firmware: tokio::fs::File) -> Result<Task, RedfishError>;
+    async fn update_firmware(&self, filename: tokio::fs::File) -> Result<Task, RedfishError>;
+
+    /// Update UEFI firmware, returns a task ID
+    async fn update_firmware_multipart(
+        &self,
+        firmware: &Path,
+        reboot: bool,
+    ) -> Result<String, RedfishError>;
 
     /*
      * Diagnostic calls

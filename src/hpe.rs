@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, path::Path};
 
 use crate::{
     model::{
@@ -245,6 +245,14 @@ impl Redfish for Bmc {
 
     async fn update_firmware(&self, firmware: tokio::fs::File) -> Result<Task, RedfishError> {
         self.s.update_firmware(firmware).await
+    }
+
+    async fn update_firmware_multipart(
+        &self,
+        filename: &Path,
+        reboot: bool,
+    ) -> Result<String, RedfishError> {
+        self.s.update_firmware_multipart(filename, reboot).await
     }
 
     async fn get_tasks(&self) -> Result<Vec<String>, RedfishError> {

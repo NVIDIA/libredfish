@@ -20,11 +20,6 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-use std::{collections::HashMap, time};
-
-use tokio::time::sleep;
-use tracing::debug;
-
 use crate::{
     model::{
         account_service::ManagerAccount,
@@ -47,6 +42,11 @@ use crate::{
     Boot, BootOptions, EnabledDisabled, PCIeDevice, PowerState, Redfish, RedfishError, RoleId,
     Status, StatusInternal, SystemPowerControl,
 };
+use serde::Serialize;
+use std::{collections::HashMap, path::Path, time};
+use tokio::fs::File;
+use tokio::time::sleep;
+use tracing::debug;
 
 const UEFI_PASSWORD_NAME: &str = "SetupPassword";
 
@@ -371,6 +371,44 @@ impl Redfish for Bmc {
         firmware: tokio::fs::File,
     ) -> Result<crate::model::task::Task, RedfishError> {
         self.s.update_firmware(firmware).await
+    }
+
+    // update_firmware_multipart returns a string with the task ID
+    async fn update_firmware_multipart(
+        &self,
+        filename: &Path,
+        reboot: bool,
+    ) -> Result<String, RedfishError> {
+        let firmware = File::open(&filename).await.map_err(|e| {
+            RedfishError::FileError(format!("Could not open file: {}", e.to_string()))
+        })?;
+
+        let parameters = serde_json::to_string(&UpdateParameters::new(reboot)).map_err(|e| {
+            RedfishError::JsonSerializeError {
+                url: "".to_string(),
+                object_debug: "".to_string(),
+                source: e,
+            }
+        })?;
+
+        let (_status_code, loc, _body) = self
+            .s
+            .client
+            .req_update_firmware_multipart(
+                filename,
+                firmware,
+                parameters,
+                "UpdateService/MultipartUpload",
+            )
+            .await?;
+
+        let loc = match loc {
+            None => "Unknown".to_string(),
+            Some(x) => x,
+        };
+
+        // iDRAC returns the full endpoint, we just want the task ID
+        Ok(loc.replace("/redfish/v1/TaskService/Tasks/", ""))
     }
 
     async fn get_tasks(&self) -> Result<Vec<String>, RedfishError> {
@@ -1091,6 +1129,35 @@ impl JobState {
             "Completed" => JobState::Completed,
             "CompletedWithErrors" => JobState::CompletedWithErrors,
             _ => JobState::Unknown,
+        }
+    }
+}
+
+// UpdateParameters is what is sent for a multipart firmware upload's metadata.
+#[derive(Serialize)]
+#[serde(rename_all = "PascalCase")]
+struct UpdateParameters {
+    targets: Vec<String>,
+    #[serde(rename = "@Redfish.OperationApplyTime")]
+    pub apply_time: String,
+    oem: Empty,
+}
+
+// The BMC expects to have a {} in its JSON, even though it doesn't seem to do anything with it.  Their implementation must be... interesting.
+#[derive(Serialize)]
+struct Empty {}
+
+impl UpdateParameters {
+    pub fn new(reboot_immediate: bool) -> UpdateParameters {
+        let apply_time = match reboot_immediate {
+            true => "Immediate",
+            false => "OnReset",
+        }
+        .to_string();
+        UpdateParameters {
+            targets: vec![],
+            apply_time,
+            oem: Empty {},
         }
     }
 }
