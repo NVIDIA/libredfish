@@ -96,6 +96,9 @@ pub enum RedfishError {
 
     #[error("Could not identify BMC vendor")]
     MissingVendor,
+
+    #[error("Password change required")]
+    PasswordChangeRequired,
 }
 
 impl RedfishError {

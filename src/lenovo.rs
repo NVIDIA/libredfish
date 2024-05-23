@@ -33,7 +33,6 @@ use crate::model::service_root::ServiceRoot;
 use crate::model::task::Task;
 use crate::model::Manager;
 use crate::model::{secure_boot::SecureBoot, ComputerSystem};
-use crate::EnabledDisabled::Enabled;
 use crate::RoleId;
 use crate::{
     model::{
@@ -83,6 +82,14 @@ impl Redfish for Bmc {
         self.s.change_password(user, new).await
     }
 
+    async fn change_password_by_id(
+        &self,
+        account_id: &str,
+        new_pass: &str,
+    ) -> Result<(), RedfishError> {
+        self.s.change_password_by_id(account_id, new_pass).await
+    }
+
     async fn get_accounts(&self) -> Result<Vec<ManagerAccount>, RedfishError> {
         self.s.get_accounts().await
     }
@@ -121,10 +128,7 @@ impl Redfish for Bmc {
         self.boot_first(Boot::Pxe).await?;
         self.set_virt_enable().await?;
         self.set_uefi_boot_only().await?;
-        // always do system lockdown last
-        self.lockdown(Enabled).await
-
-        // If you change machine_setup also change machine_setup_status
+        Ok(())
     }
 
     async fn machine_setup_status(&self) -> Result<MachineSetupStatus, RedfishError> {

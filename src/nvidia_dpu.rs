@@ -34,7 +34,6 @@ use crate::{
         boot::{BootSourceOverrideEnabled, BootSourceOverrideTarget},
         chassis::NetworkAdapter,
         oem::nvidia_dpu::{HostPrivilegeLevel, InternalCPUModel},
-        port::NetworkPortCollection,
         sel::{LogEntry, LogEntryCollection},
         service_root::ServiceRoot,
         BootOption, ComputerSystem, Manager,
@@ -86,6 +85,15 @@ impl Redfish for Bmc {
 
     async fn change_password(&self, user: &str, new: &str) -> Result<(), RedfishError> {
         self.s.change_password(user, new).await
+    }
+
+    /// Note that DPU account_ids are not numbers but usernames: "root", "admin", etc
+    async fn change_password_by_id(
+        &self,
+        account_id: &str,
+        new_pass: &str,
+    ) -> Result<(), RedfishError> {
+        self.s.change_password_by_id(account_id, new_pass).await
     }
 
     async fn get_accounts(&self) -> Result<Vec<ManagerAccount>, RedfishError> {

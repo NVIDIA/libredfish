@@ -63,6 +63,14 @@ impl Redfish for Bmc {
         self.s.change_password(user, new).await
     }
 
+    async fn change_password_by_id(
+        &self,
+        account_id: &str,
+        new_pass: &str,
+    ) -> Result<(), RedfishError> {
+        self.s.change_password_by_id(account_id, new_pass).await
+    }
+
     async fn get_accounts(&self) -> Result<Vec<ManagerAccount>, RedfishError> {
         self.s.get_accounts().await
     }
@@ -101,7 +109,7 @@ impl Redfish for Bmc {
         self.set_virt_enable().await?;
         self.set_uefi_nic_boot().await?;
         self.set_boot_order(Pxe).await?;
-        self.lockdown(Enabled).await
+        Ok(())
     }
 
     async fn machine_setup_status(&self) -> Result<MachineSetupStatus, RedfishError> {

@@ -80,6 +80,14 @@ impl Redfish for Bmc {
         self.s.change_password(username, new_password).await
     }
 
+    async fn change_password_by_id(
+        &self,
+        account_id: &str,
+        new_pass: &str,
+    ) -> Result<(), RedfishError> {
+        self.s.change_password_by_id(account_id, new_pass).await
+    }
+
     async fn get_accounts(&self) -> Result<Vec<ManagerAccount>, RedfishError> {
         self.s.get_accounts().await
     }
@@ -113,9 +121,9 @@ impl Redfish for Bmc {
     }
 
     async fn machine_setup(&self) -> Result<(), RedfishError> {
-    /// Note that you can't use this for initial setup unless you reboot and run it twice.
-    /// `boot_first` won't find the Mellanox HTTP device. `uefi_nic_boot_attrs` enables it,
-    /// but it won't show until after reboot so that step will fail on first time through.
+    // Note that you can't use this for initial setup unless you reboot and run it twice.
+    // `boot_first` won't find the Mellanox HTTP device. `uefi_nic_boot_attrs` enables it,
+    // but it won't show until after reboot so that step will fail on first time through.
         self.setup_serial_console().await?;
 
         let bios_attrs = self.machine_setup_attrs().await?;
@@ -130,8 +138,7 @@ impl Redfish for Bmc {
             .map(|_status_code| ())?;
 
         self.boot_first(Boot::Pxe).await?;
-        // always do system lockdown last
-        self.lockdown(EnabledDisabled::Enabled).await
+        Ok(())
     }
 
     async fn machine_setup_status(&self) -> Result<MachineSetupStatus, RedfishError> {

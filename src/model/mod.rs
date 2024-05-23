@@ -17,6 +17,7 @@ pub mod secure_boot;
 
 pub mod account_service;
 pub mod chassis;
+pub mod error;
 pub mod ethernet_interface;
 pub mod network_device_function;
 pub mod port;
@@ -329,4 +330,17 @@ impl fmt::Display for ResourceState {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(self, f)
     }
+}
+
+/// https://redfish.dmtf.org/schemas/v1/Message.v1_1_2.json
+/// The message that the Redfish service returns.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
+pub struct Message {
+    pub message: String,
+    #[serde(default)]
+    pub message_args: Vec<String>,
+    pub message_id: String,
+    pub resolution: Option<String>,
+    pub severity: Option<String>,
 }

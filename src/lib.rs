@@ -6,7 +6,7 @@ pub use model::chassis::{Chassis, NetworkAdapter};
 pub use model::ethernet_interface::EthernetInterface;
 pub use model::network_device_function::NetworkDeviceFunction;
 use model::oem::nvidia_dpu::{HostPrivilegeLevel, InternalCPUModel};
-pub use model::port::{NetworkPort, NetworkPortCollection};
+pub use model::port::NetworkPort;
 use model::service_root::ServiceRoot;
 use model::software_inventory::SoftwareInventory;
 pub use model::system::{BootOptions, PCIeDevice, PowerState, SystemPowerControl, Systems};
@@ -38,8 +38,18 @@ pub trait Redfish: Send + Sync + 'static {
     /// Rename a user
     async fn change_username(&self, old_name: &str, new_name: &str) -> Result<(), RedfishError>;
 
-    /// Change password for the user
-    async fn change_password(&self, user: &str, new: &str) -> Result<(), RedfishError>;
+    /// Change password by username
+    /// This looks up the ID for given username before calling change_password_by_id.
+    /// That lookup makes it unsuitable for changing the initial password on
+    /// PasswordChangeRequired.
+    async fn change_password(&self, username: &str, new_pass: &str) -> Result<(), RedfishError>;
+
+    /// Change password by id
+    async fn change_password_by_id(
+        &self,
+        account_id: &str,
+        new_pass: &str,
+    ) -> Result<(), RedfishError>;
 
     /// List current user accounts
     async fn get_accounts(&self) -> Result<Vec<ManagerAccount>, RedfishError>;

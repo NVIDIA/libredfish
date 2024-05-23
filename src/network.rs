@@ -30,7 +30,9 @@ use reqwest::{
 use serde::{de::DeserializeOwned, Serialize};
 use tracing::debug;
 
-use crate::{model::InvalidValueError, standard::RedfishStandard, Redfish, RedfishError};
+use crate::{
+    model::error, model::InvalidValueError, standard::RedfishStandard, Redfish, RedfishError,
+};
 
 pub const REDFISH_ENDPOINT: &str = "redfish/v1";
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(20);
@@ -441,6 +443,26 @@ impl RedfishHttpClient {
         debug!("RX {status_code} {}", truncate(&response_body, 1500));
 
         if !status_code.is_success() {
+            if status_code == StatusCode::FORBIDDEN && !response_body.is_empty() {
+                let err: error::Error = match serde_json::from_str(&response_body) {
+                    Ok(redfish_err) => redfish_err,
+                    Err(e) => {
+                        return Err(RedfishError::JsonDeserializeError {
+                            url,
+                            body: response_body,
+                            source: e,
+                        });
+                    }
+                };
+                if err
+                    .error
+                    .extended
+                    .iter()
+                    .any(|ext| &ext.message_id == "Base.1.8.PasswordChangeRequired")
+                {
+                    return Err(RedfishError::PasswordChangeRequired);
+                }
+            }
             return Err(RedfishError::HTTPErrorCode {
                 url,
                 status_code,

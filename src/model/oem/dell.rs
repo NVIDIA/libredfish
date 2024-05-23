@@ -274,7 +274,7 @@ pub struct MachineBiosAttrs {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
-pub struct SetMachineBiosAttrs {
+pub struct SetBiosAttrs {
     #[serde(rename = "@Redfish.SettingsApplyTime")]
     pub redfish_settings_apply_time: SetSettingsApplyTime,
     pub attributes: MachineBiosAttrs,

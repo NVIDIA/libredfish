@@ -49,8 +49,6 @@ use crate::{
     MachineSetupStatus,
 };
 use crate::{BootOptions, PCIeDevice, RedfishError};
-use crate::model::network_device_function::{NetworkDeviceFunction, NetworkDeviceFunctionCollection};
-use crate::model::chassis::{Chassis, ChassisCollection};
 
 const UEFI_PASSWORD_NAME: &str = "AdministratorPassword";
 
@@ -93,11 +91,19 @@ impl Redfish for RedfishStandard {
             .map(|_status_code| Ok(()))?
     }
 
-    async fn change_password(&self, user: &str, new: &str) -> Result<(), RedfishError> {
+    async fn change_password(&self, user: &str, new_pass: &str) -> Result<(), RedfishError> {
         let account = self.get_account_by_name(user).await?;
-        let url = format!("AccountService/Accounts/{}", account.id);
+        self.change_password_by_id(&account.id, new_pass).await
+    }
+
+    async fn change_password_by_id(
+        &self,
+        account_id: &str,
+        new_pass: &str,
+    ) -> Result<(), RedfishError> {
+        let url = format!("AccountService/Accounts/{}", account_id);
         let mut data = HashMap::new();
-        data.insert("Password", new);
+        data.insert("Password", new_pass);
         self.client
             .patch(&url, &data)
             .await
@@ -286,54 +292,6 @@ impl Redfish for RedfishStandard {
         Ok(body)
     }
     
-    fn get_network_device_function(&self, chassis_id: &str, id: &str) -> Result<NetworkDeviceFunction, RedfishError> {
-        let url = format!("Chassis/{}/NetworkAdapters/NvidiaNetworkAdapter/NetworkDeviceFunctions/{}", chassis_id, id);
-        let (_status_code, body) = self.client.get(&url)?;
-        Ok(body)
-    }
-
-    fn get_network_device_functions(&self, chassis_id: &str) -> Result<NetworkDeviceFunctionCollection, RedfishError> {
-        let url = format!("Chassis/{}/NetworkAdapters/NvidiaNetworkAdapter/NetworkDeviceFunctions", chassis_id);
-        let (_status_code, body) = self.client.get(&url)?;
-        Ok(body)
-    }
-
-    fn get_chassises(&self) -> Result<ChassisCollection, RedfishError> {
-        let url =  "Chassis".to_string();
-        let (_status_code, body) = self.client.get(&url)?;
-        Ok(body)
-    }
-
-    fn get_chassis(&self, id: &str) -> Result<Chassis, RedfishError> {
-        let url = format!("Chassis/{}", id);
-        let (_status_code, body) = self.client.get(&url)?;
-        Ok(body)
-    }
-
-    fn get_ports(&self, chassis_id: &str) -> Result<crate::NetworkPortCollection, RedfishError> {
-        let url = format!("Chassis/{}/NetworkAdapters/NvidiaNetworkAdapter/Ports", chassis_id);
-        let (_status_code, body) = self.client.get(&url)?;
-        Ok(body)
-    }
-
-    fn get_port(&self, chassis_id: &str, id: &str) -> Result<crate::NetworkPort, RedfishError> {
-        let url = format!("Chassis/{}/NetworkAdapters/NvidiaNetworkAdapter/Ports/{}", chassis_id, id);
-        let (_status_code, body) = self.client.get(&url)?;
-        Ok(body)
-    }
-
-    fn get_ethernet_interfaces(&self) -> Result<crate::EthernetInterfaceCollection, RedfishError> {
-        let url = format!("Managers/{}/EthernetInterfaces", self.manager_id());
-        let (_status_code, body) = self.client.get(&url)?;
-        Ok(body)
-    }
-
-    fn get_ethernet_interface(&self, id: &str) -> Result<crate::EthernetInterface, RedfishError> {
-        let url = format!("Managers/{}/EthernetInterfaces/{}", self.manager_id(), id);
-        let (_status_code, body) = self.client.get(&url)?;
-        Ok(body)
-    }
-
     /// Vec of chassis id
     /// http://redfish.dmtf.org/schemas/v1/ChassisCollection.json
     async fn get_chassis_all(&self) -> Result<Vec<String>, RedfishError> {

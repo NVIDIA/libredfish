@@ -37,10 +37,7 @@ use crate::{
         secure_boot::SecureBoot,
         sel::{LogEntry, LogEntryCollection},
         service_root::ServiceRoot,
-        software_inventory::{SoftwareInventory, SoftwareInventoryCollection},
-        network_device_function::{NetworkDeviceFunction, NetworkDeviceFunctionCollection}, 
-        chassis::{Chassis, ChassisCollection},
-        power::Power,
+        software_inventory::SoftwareInventory,
         task::Task,
         thermal::Thermal,
         BootOption, ComputerSystem, InvalidValueError, Manager, OnOff,
@@ -71,8 +68,16 @@ impl Redfish for Bmc {
         self.s.change_username(old_name, new_name).await
     }
 
-    async fn change_password(&self, user: &str, new: &str) -> Result<(), RedfishError> {
-        self.s.change_password(user, new).await
+    async fn change_password(&self, username: &str, new_pass: &str) -> Result<(), RedfishError> {
+        self.s.change_password(username, new_pass).await
+    }
+
+    async fn change_password_by_id(
+        &self,
+        account_id: &str,
+        new_pass: &str,
+    ) -> Result<(), RedfishError> {
+        self.s.change_password_by_id(account_id, new_pass).await
     }
 
     async fn get_accounts(&self) -> Result<Vec<ManagerAccount>, RedfishError> {
@@ -130,9 +135,7 @@ impl Redfish for Bmc {
         self.machine_setup_oem().await?;
 
         self.setup_bmc_remote_access().await?;
-        // always do system lockdown last.
-        self.enable_bmc_lockdown(dell::BootDevices::PXE, false)
-            .await
+        Ok(())
     }
 
     async fn machine_setup_status(&self) -> Result<MachineSetupStatus, RedfishError> {
@@ -276,16 +279,12 @@ impl Redfish for Bmc {
         use EnabledDisabled::*;
         match target {
             Enabled => {
-                self.delete_job_queue().await?;
-                self.enable_bios_lockdown().await?;
-                self.enable_bmc_lockdown(dell::BootDevices::PXE, false)
-                    .await
+                //self.enable_bios_lockdown().await?;
+                self.enable_bmc_lockdown(dell::BootDevices::PXE).await
             }
             Disabled => {
-                // ideally we'd delete the job queue here, but we can't when lockdown is enabled
-                self.disable_bmc_lockdown(dell::BootDevices::PXE, false)
-                    .await?;
-                self.disable_bios_lockdown().await
+                self.disable_bmc_lockdown(dell::BootDevices::PXE).await
+                //self.disable_bios_lockdown().await
             }
         }
     }
@@ -296,7 +295,7 @@ impl Redfish for Bmc {
         let disabled = EnabledDisabled::Disabled.to_string();
 
         // BIOS lockdown
-
+        /*
         let url = format!("Systems/{}/Bios", self.s.system_id());
         let (_status_code, bios): (_, dell::Bios) = self.s.client.get(&url).await?;
 
@@ -310,6 +309,7 @@ impl Redfish for Bmc {
             && uefi_var == dell::UefiVariableAccessSettings::Controlled.to_string();
         let is_bios_unlocked = in_band == enabled
             && uefi_var == dell::UefiVariableAccessSettings::Standard.to_string();
+        */
 
         // BMC lockdown
 
@@ -352,9 +352,9 @@ impl Redfish for Bmc {
 
         Ok(Status {
             message,
-            status: if is_bios_locked && is_bmc_locked {
+            status: if is_bmc_locked {
                 StatusInternal::Enabled
-            } else if is_bios_unlocked && is_bmc_unlocked {
+            } else if is_bmc_unlocked {
                 StatusInternal::Disabled
             } else {
                 StatusInternal::Partial
@@ -751,6 +751,7 @@ impl Bmc {
             .map(|_status_code| ())
     }
 
+    /* SystemLockdown covers all of this so we don't need it
     async fn enable_bios_lockdown(&self) -> Result<(), RedfishError> {
         let apply_time = dell::SetSettingsApplyTime {
             apply_time: dell::RedfishSettingsApplyTime::OnReset, // requires reboot to apply
@@ -770,12 +771,9 @@ impl Bmc {
             .await
             .map(|_status_code| ())
     }
+    */
 
-    async fn enable_bmc_lockdown(
-        &self,
-        entry: dell::BootDevices,
-        once: bool,
-    ) -> Result<(), RedfishError> {
+    async fn enable_bmc_lockdown(&self, entry: dell::BootDevices) -> Result<(), RedfishError> {
         let apply_time = dell::SetSettingsApplyTime {
             apply_time: dell::RedfishSettingsApplyTime::OnReset,
         };
@@ -784,11 +782,7 @@ impl Bmc {
         // and prevents the other settings being applied.
         let boot_entry = dell::ServerBoot {
             first_boot_device: entry,
-            boot_once: if once {
-                EnabledDisabled::Enabled
-            } else {
-                EnabledDisabled::Disabled
-            },
+            boot_once: EnabledDisabled::Disabled,
         };
         let lockdown = dell::BmcLockdown {
             system_lockdown: None,
@@ -824,6 +818,7 @@ impl Bmc {
             .map(|_status_code| ())
     }
 
+    /*
     async fn disable_bios_lockdown(&self) -> Result<(), RedfishError> {
         let apply_time = dell::SetSettingsApplyTime {
             apply_time: dell::RedfishSettingsApplyTime::OnReset, // requires reboot to apply
@@ -843,22 +838,15 @@ impl Bmc {
             .await
             .map(|_status_code| ())
     }
+    */
 
-    async fn disable_bmc_lockdown(
-        &self,
-        entry: dell::BootDevices,
-        once: bool,
-    ) -> Result<(), RedfishError> {
+    async fn disable_bmc_lockdown(&self, entry: dell::BootDevices) -> Result<(), RedfishError> {
         let apply_time = dell::SetSettingsApplyTime {
             apply_time: dell::RedfishSettingsApplyTime::Immediate, // bmc settings don't require reboot
         };
         let boot_entry = dell::ServerBoot {
             first_boot_device: entry,
-            boot_once: if once {
-                EnabledDisabled::Enabled
-            } else {
-                EnabledDisabled::Disabled
-            },
+            boot_once: EnabledDisabled::Disabled,
         };
         let lockdown = dell::BmcLockdown {
             system_lockdown: Some(EnabledDisabled::Disabled),
