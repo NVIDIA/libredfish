@@ -458,7 +458,10 @@ impl RedfishHttpClient {
                     .error
                     .extended
                     .iter()
-                    .any(|ext| &ext.message_id == "Base.1.8.PasswordChangeRequired")
+                    // TODO(ajf) The actual message ID is specified in DTMF RedFish 9.5.11.2 so we
+                    // should properly parse it into a type since the error may come from different
+                    // MessageRegistries
+                    .any(|ext| ext.message_id.ends_with("PasswordChangeRequired") )
                 {
                     return Err(RedfishError::PasswordChangeRequired);
                 }
