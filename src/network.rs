@@ -461,7 +461,7 @@ impl RedfishHttpClient {
                     // TODO(ajf) The actual message ID is specified in DTMF RedFish 9.5.11.2 so we
                     // should properly parse it into a type since the error may come from different
                     // MessageRegistries
-                    .any(|ext| ext.message_id.ends_with("PasswordChangeRequired") )
+                    .any(|ext| ext.message_id.ends_with("PasswordChangeRequired"))
                 {
                     return Err(RedfishError::PasswordChangeRequired);
                 }
@@ -498,6 +498,7 @@ impl RedfishHttpClient {
         parameters: String,
         api: &str,
         drop_redfish_url_part: bool,
+        timeout: Duration,
     ) -> Result<(StatusCode, Option<String>, String), RedfishError> {
         let user = match &self.endpoint.user {
             Some(user) => user,
@@ -532,6 +533,7 @@ impl RedfishHttpClient {
         let response = self
             .http_client
             .post(url.clone())
+            .timeout(timeout)
             .multipart(
                 Form::new()
                     // The spec is for two parts to the form: UpdateParameters, which is JSON encoded metadata,

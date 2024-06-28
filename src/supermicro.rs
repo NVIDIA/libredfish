@@ -20,7 +20,7 @@
 * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 * DEALINGS IN THE SOFTWARE.
 */
-use std::{collections::HashMap, path::Path};
+use std::{collections::HashMap, path::Path, time::Duration};
 
 use crate::{
     model::{
@@ -387,8 +387,11 @@ impl Redfish for Bmc {
         &self,
         filename: &Path,
         reboot: bool,
+        timeout: Duration,
     ) -> Result<String, RedfishError> {
-        self.s.update_firmware_multipart(filename, reboot).await
+        self.s
+            .update_firmware_multipart(filename, reboot, timeout)
+            .await
     }
 
     async fn get_tasks(&self) -> Result<Vec<String>, RedfishError> {
