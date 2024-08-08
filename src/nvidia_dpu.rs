@@ -23,9 +23,11 @@
 use std::{collections::HashMap, path::Path, time::Duration};
 
 use serde::Deserialize;
+use tokio::fs::File;
 
 use crate::model::account_service::ManagerAccount;
 use crate::model::task::Task;
+use crate::model::update_service::UpdateService;
 use crate::Boot::UefiHttp;
 use crate::HostPrivilegeLevel::Restricted;
 use crate::InternalCPUModel::Embedded;
@@ -120,7 +122,7 @@ impl Redfish for Bmc {
     }
 
     async fn get_power_state(&self) -> Result<crate::PowerState, RedfishError> {
-        self.s.get_power_state().await    
+        self.s.get_power_state().await
     }
 
     async fn get_power_metrics(&self) -> Result<crate::Power, RedfishError> {
@@ -302,15 +304,51 @@ impl Redfish for Bmc {
         self.s.update_firmware(firmware).await
     }
 
+    async fn get_update_service(&self) -> Result<UpdateService, RedfishError> {
+        self.s.get_update_service().await
+    }
+
     async fn update_firmware_multipart(
         &self,
         filename: &Path,
-        reboot: bool,
+        _reboot: bool,
         timeout: Duration,
     ) -> Result<String, RedfishError> {
-        self.s
-            .update_firmware_multipart(filename, reboot, timeout)
+        let firmware = File::open(&filename)
             .await
+            .map_err(|e| RedfishError::FileError(format!("Could not open file: {}", e)))?;
+
+        let update_service = self.s.get_update_service().await?;
+
+        if update_service.multipart_http_push_uri.is_empty() {
+            return Err(RedfishError::NotSupported(
+                "Host BMC does not support HTTP multipart push".to_string(),
+            ));
+        }
+
+        let parameters = "{}".to_string();
+
+        let (_status_code, _loc, body) = self
+            .s
+            .client
+            .req_update_firmware_multipart(
+                filename,
+                firmware,
+                parameters,
+                &update_service.multipart_http_push_uri,
+                true,
+                timeout,
+            )
+            .await?;
+
+        let task: Task =
+            serde_json::from_str(&body).map_err(|e| RedfishError::JsonDeserializeError {
+                url: update_service.multipart_http_push_uri,
+                body,
+                source: e,
+            })?;
+
+        Ok(task.id)
     }
 
     async fn bios(

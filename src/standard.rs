@@ -30,7 +30,6 @@ use std::{
 use reqwest::{Method, StatusCode};
 use tracing::debug;
 
-use crate::model::power::Power;
 use crate::model::secure_boot::SecureBoot;
 use crate::model::sel::LogEntry;
 use crate::model::serial_interface::SerialInterface;
@@ -40,6 +39,7 @@ use crate::model::task::Task;
 use crate::model::thermal::Thermal;
 use crate::model::{account_service::ManagerAccount, service_root::RedfishVendor};
 use crate::model::{power, thermal, BootOption, InvalidValueError, Manager, Managers, ODataId};
+use crate::model::{power::Power, update_service::UpdateService};
 use crate::network::{RedfishHttpClient, REDFISH_ENDPOINT};
 use crate::{
     model, Boot, EnabledDisabled, JobState, NetworkDeviceFunction, NetworkPort, PowerState,
@@ -577,6 +577,11 @@ impl Redfish for RedfishStandard {
         current_uefi_password: &str,
     ) -> Result<Option<String>, RedfishError> {
         self.change_uefi_password(current_uefi_password, "").await
+    }
+
+    async fn get_update_service(&self) -> Result<UpdateService, RedfishError> {
+        let (_, update_service) = self.client.get(self.update_service().as_str()).await?;
+        Ok(update_service)
     }
 }
 

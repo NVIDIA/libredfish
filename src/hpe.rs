@@ -36,6 +36,7 @@ use crate::{
         storage,
         task::Task,
         thermal::Thermal,
+        update_service::UpdateService,
         BootOption, ComputerSystem, Manager,
     },
     standard::RedfishStandard,
@@ -464,6 +465,10 @@ impl Redfish for Bmc {
 
     async fn get_resource(&self, id: ODataId) -> Result<Resource, RedfishError> {
         self.s.get_resource(id).await
+    }
+
+    async fn get_update_service(&self) -> Result<UpdateService, RedfishError> {
+        self.s.get_update_service().await
     }
 
     async fn set_boot_order_dpu_first(

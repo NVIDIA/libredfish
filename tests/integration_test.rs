@@ -248,7 +248,9 @@ async fn run_integration_test(
             let adapter_ids = redfish.get_base_network_adapters(chassis_id).await?;
             assert!(!adapter_ids.is_empty());
             for adapter_id in &adapter_ids {
-                redfish.get_base_network_adapter(chassis_id, adapter_id).await?;
+                redfish
+                    .get_base_network_adapter(chassis_id, adapter_id)
+                    .await?;
             }
         }
     }

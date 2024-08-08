@@ -39,6 +39,7 @@ use crate::{
         software_inventory::SoftwareInventory,
         task::Task,
         thermal::Thermal,
+        update_service::UpdateService,
         BootOption, ComputerSystem, InvalidValueError, Manager, OnOff,
     },
     standard::RedfishStandard,
@@ -129,6 +130,10 @@ impl Redfish for Bmc {
 
     async fn get_thermal_metrics(&self) -> Result<Thermal, RedfishError> {
         self.s.get_thermal_metrics().await
+    }
+
+    async fn get_update_service(&self) -> Result<UpdateService, RedfishError> {
+        self.s.get_update_service().await
     }
 
     async fn get_system_event_log(&self) -> Result<Vec<LogEntry>, RedfishError> {

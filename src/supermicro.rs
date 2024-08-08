@@ -36,6 +36,7 @@ use crate::{
         software_inventory::SoftwareInventory,
         task::Task,
         thermal::Thermal,
+        update_service::UpdateService,
         BootOption, ComputerSystem, EnableDisable, InvalidValueError, Manager,
     },
     standard::RedfishStandard,
@@ -393,6 +394,10 @@ impl Redfish for Bmc {
         self.s
             .update_firmware_multipart(filename, reboot, timeout)
             .await
+    }
+
+    async fn get_update_service(&self) -> Result<UpdateService, RedfishError> {
+        self.s.get_update_service().await
     }
 
     async fn get_tasks(&self) -> Result<Vec<String>, RedfishError> {

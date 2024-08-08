@@ -30,6 +30,7 @@ use version_compare::Version;
 
 use crate::model::account_service::ManagerAccount;
 use crate::model::resource::{IsResource, ResourceCollection};
+use crate::model::update_service::UpdateService;
 use crate::EnabledDisabled::Enabled;
 use crate::{
     model::{
@@ -416,6 +417,10 @@ impl Redfish for Bmc {
 
     async fn get_task(&self, id: &str) -> Result<crate::model::task::Task, RedfishError> {
         self.s.get_task(id).await
+    }
+
+    async fn get_update_service(&self) -> Result<UpdateService, RedfishError> {
+        self.s.get_update_service().await
     }
 
     async fn get_firmware(&self, id: &str) -> Result<SoftwareInventory, RedfishError> {

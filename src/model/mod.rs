@@ -52,6 +52,7 @@ pub mod software_inventory;
 pub mod storage;
 pub mod task;
 pub mod thermal;
+pub mod update_service;
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct ODataLinks {

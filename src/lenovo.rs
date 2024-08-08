@@ -24,13 +24,14 @@ use std::{collections::HashMap, path::Path, time::Duration};
 
 use reqwest::header::HeaderMap;
 use reqwest::Method;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use tokio::fs::File;
 use tracing::debug;
 
 use crate::model::account_service::ManagerAccount;
 use crate::model::service_root::ServiceRoot;
 use crate::model::task::Task;
+use crate::model::update_service::UpdateService;
 use crate::model::Manager;
 use crate::model::{secure_boot::SecureBoot, ComputerSystem};
 use crate::{
@@ -451,6 +452,10 @@ impl Redfish for Bmc {
         self.s.update_firmware(firmware).await
     }
 
+    async fn get_update_service(&self) -> Result<UpdateService, RedfishError> {
+        self.s.get_update_service().await
+    }
+
     async fn update_firmware_multipart(
         &self,
         filename: &Path,
@@ -463,8 +468,7 @@ impl Redfish for Bmc {
 
         // The Python example code followed the schema to get the actual endpoint; this may or may not be needed, but
         // it's safest not to assume that it will always be the same thing.
-        let (_status_code, update_service): (_, UpdateService) =
-            self.s.client.get(self.s.update_service().as_str()).await?;
+        let update_service = self.get_update_service().await?;
 
         if update_service.multipart_http_push_uri.is_empty() {
             return Err(RedfishError::NotSupported(
@@ -1113,12 +1117,6 @@ impl Bmc {
         let log_entries = log_entry_collection.members;
         Ok(log_entries)
     }
-}
-
-#[derive(Debug, Default, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "PascalCase", default)]
-struct UpdateService {
-    multipart_http_push_uri: String,
 }
 
 #[derive(Debug, Default, Serialize, Clone)]
