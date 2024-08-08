@@ -241,12 +241,21 @@ pub enum TPMOperation {
     UpdateToTPM2_0FirmwareVersion7_2_2_0,
     Clear, // reset
 }
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct Bios {
     #[serde(flatten)]
     pub common: BiosCommon,
     pub attributes: BiosAttributes,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
+pub struct LenovoBootOrder {
+    pub boot_order_current: Vec<String>,
+    pub boot_order_next: Vec<String>,
+    pub boot_order_supported: Vec<String>,
 }
 
 #[cfg(test)]

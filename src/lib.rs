@@ -336,8 +336,6 @@ pub trait Redfish: Send + Sync + 'static {
     async fn get_update_service(&self) -> Result<UpdateService, RedfishError>;
 }
 
-// When Carbide drops it's `IpmiCommand.launch_command` background job system, we can
-// remove the Serialize and Deserialize here.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 pub enum Boot {
     Pxe,

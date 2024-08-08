@@ -29,11 +29,13 @@ use tokio::fs::File;
 use tracing::debug;
 
 use crate::model::account_service::ManagerAccount;
+use crate::model::oem::lenovo::LenovoBootOrder;
+use crate::model::resource::ResourceCollection;
 use crate::model::service_root::ServiceRoot;
 use crate::model::task::Task;
 use crate::model::update_service::UpdateService;
-use crate::model::Manager;
 use crate::model::{secure_boot::SecureBoot, ComputerSystem};
+use crate::model::{Manager, PCIeFunction};
 use crate::{
     model::{
         chassis::{Chassis, NetworkAdapter},
@@ -130,6 +132,10 @@ impl Redfish for Bmc {
         self.boot_first(Boot::Pxe).await?;
         self.set_virt_enable().await?;
         self.set_uefi_boot_only().await?;
+        // non-fatal error because possibly we need a reboot between set_uefi_boot_only and this
+        if let Err(err) = self.set_boot_order_dpu_first(None).await {
+            tracing::warn!(%err, "libredfish Lenovo set_boot_order_dpu_first");
+        };
         Ok(())
     }
 
@@ -691,6 +697,7 @@ impl Redfish for Bmc {
     async fn bmc_reset_to_defaults(&self) -> Result<(), RedfishError> {
         self.s.bmc_reset_to_defaults().await
     }
+
     async fn get_job_state(&self, job_id: &str) -> Result<JobState, RedfishError> {
         self.s.get_job_state(job_id).await
     }
@@ -707,7 +714,43 @@ impl Redfish for Bmc {
         &self,
         mac_address: Option<String>,
     ) -> Result<(), RedfishError> {
-        self.s.set_boot_order_dpu_first(mac_address).await
+        let mac = match mac_address {
+            Some(mac) => mac,
+            None => {
+                let slot_name = self.dpu_slot().await?;
+                self.slot_mac(&slot_name).await?
+            }
+        };
+
+        // Now we have the MAC, make it the only boot option
+
+        let url = format!(
+            "Systems/{}/Oem/Lenovo/BootSettings/BootOrder.NetworkBootOrder",
+            self.s.system_id()
+        );
+        let (_status_code, mut net_boot_order): (_, LenovoBootOrder) =
+            self.s.client.get(&url).await?;
+
+        // We only check boot_order_next because that's what will happen when we reboot.
+        // boot_order_current has already happened.
+        let maybe_pos = net_boot_order
+            .boot_order_next
+            .iter()
+            .position(|s: &String| s.to_lowercase().contains(&mac.to_lowercase()));
+        let Some(dpu_pos) = maybe_pos else {
+            return Err(RedfishError::MissingBootOption(format!(
+                "Oem/Lenovo NetworkBootOrder BootOrderNext {mac}"
+            )));
+        };
+        if dpu_pos == 0 {
+            tracing::debug!("DPU will already be the first netboot option after reboot");
+            return Ok(());
+        }
+        net_boot_order.boot_order_next.swap(0, dpu_pos);
+
+        // Patch remote
+        let body = HashMap::from([("BootOrderNext", net_boot_order.boot_order_next.clone())]);
+        self.s.client.patch(&url, body).await.map(|_status_code| ())
     }
 
     async fn clear_uefi_password(
@@ -721,56 +764,48 @@ impl Redfish for Bmc {
 impl Bmc {
     /// Lock a Lenovo server to make it ready for tenants
     async fn enable_lockdown(&self) -> Result<(), RedfishError> {
-        self.set_kcs_lenovo(false).await.map_err(|e| {
-            debug!("Failed disabling 'IPMI over KCS Access'");
-            e
+        self.set_kcs_lenovo(false).await.inspect_err(|err| {
+            debug!(%err, "Failed disabling 'IPMI over KCS Access'");
         })?;
         self.set_firmware_rollback_lenovo(EnabledDisabled::Disabled)
             .await
-            .map_err(|e| {
-                debug!("Failed changing 'Prevent System Firmware Down-Level'");
-                e
+            .inspect_err(|err| {
+                debug!(%err, "Failed changing 'Prevent System Firmware Down-Level'");
             })?;
-        self.set_ethernet_over_usb(false).await.map_err(|e| {
-            debug!("Failed disabling Ethernet over USB");
-            e
+        self.set_ethernet_over_usb(false).await.inspect_err(|err| {
+            debug!(%err, "Failed disabling Ethernet over USB");
         })?;
         self.set_front_panel_usb_lenovo(
             lenovo::FrontPanelUSBMode::Server,
             lenovo::PortSwitchingMode::Server,
         )
         .await
-        .map_err(|e| {
-            debug!("Failed locking front panel USB to host-only.");
-            e
+        .inspect_err(|err| {
+            debug!(%err, "Failed locking front panel USB to host-only.");
         })?;
         Ok(())
     }
 
     /// Unlock a Lenovo server, restoring defaults
     pub async fn disable_lockdown(&self) -> Result<(), RedfishError> {
-        self.set_kcs_lenovo(true).await.map_err(|e| {
-            debug!("Failed enabling 'IPMI over KCS Access'");
-            e
+        self.set_kcs_lenovo(true).await.inspect_err(|err| {
+            debug!(%err, "Failed enabling 'IPMI over KCS Access'");
         })?;
         self.set_firmware_rollback_lenovo(EnabledDisabled::Enabled)
             .await
-            .map_err(|e| {
-                debug!("Failed changing 'Prevent System Firmware Down-Level'");
-                e
+            .inspect_err(|err| {
+                debug!(%err, "Failed changing 'Prevent System Firmware Down-Level'");
             })?;
-        self.set_ethernet_over_usb(true).await.map_err(|e| {
-            debug!("Failed disabling Ethernet over USB");
-            e
+        self.set_ethernet_over_usb(true).await.inspect_err(|err| {
+            debug!(%err, "Failed disabling Ethernet over USB");
         })?;
         self.set_front_panel_usb_lenovo(
             lenovo::FrontPanelUSBMode::Shared,
             lenovo::PortSwitchingMode::Server,
         )
         .await
-        .map_err(|e| {
-            debug!("Failed unlocking front panel USB to shared mode.");
-            e
+        .inspect_err(|err| {
+            debug!(%err, "Failed unlocking front panel USB to shared mode.");
         })?;
         Ok(())
     }
@@ -1116,6 +1151,58 @@ impl Bmc {
             self.s.client.get(&url).await?;
         let log_entries = log_entry_collection.members;
         Ok(log_entries)
+    }
+
+    // The name of the PCIe slot the DPU is in, usually "Slot15"
+    async fn dpu_slot(&self) -> Result<String, RedfishError> {
+        let pcie_devices = self.pcie_devices().await?;
+        for device in pcie_devices {
+            if device.slot.is_none() || device.pcie_functions.is_none() {
+                // we won't be able to locate it in the BIOS without a slot
+                // we won't be able to identify it as a DPU without pcie_functions
+                continue;
+            }
+            let pcie_functions: ResourceCollection<PCIeFunction> = self
+                .get_collection(device.pcie_functions.unwrap())
+                .await
+                .and_then(|r| r.try_get())?;
+            if pcie_functions.members.iter().any(|p| p.is_dpu()) {
+                // We found it
+                let pl = &device.slot.as_ref().unwrap().location.part_location;
+                let bios_slot_name = format!("{}{}", pl.location_type, pl.location_ordinal_value);
+                return Ok(bios_slot_name);
+            }
+        }
+        Err(RedfishError::MissingBootOption("DPU in slot".to_string()))
+    }
+
+    // The MAC address for a specific PCIeDevice slot. The slot name must look like "Slot15",
+    // get it with `dpu_slot()`.
+    // We are looking for a BIOS entry like this:
+    // "MellanoxNetworkAdapter_A088C2C36F6E__Slot15_MACAddress"
+    // That is the only currently known way to match a PCIeDevice slot to a MAC.
+    async fn slot_mac(&self, slot_name: &str) -> Result<String, RedfishError> {
+        let slot_mac_suffix = format!("{slot_name}_MACAddress");
+        let bios_attrs = self.s.bios_attributes().await?;
+        let Some(attrs_map) = bios_attrs.as_object() else {
+            return Err(RedfishError::InvalidKeyType {
+                key: "Attributes".to_string(),
+                expected_type: "Map".to_string(),
+                url: String::new(),
+            });
+        };
+        match attrs_map.keys().find(|k| k.ends_with(&slot_mac_suffix)) {
+            None => Err(RedfishError::MissingBootOption(format!(
+                "No BIOS entry ending '{slot_mac_suffix}'"
+            ))),
+            Some(key) => Ok(attrs_map
+                .get(key)
+                .unwrap()
+                .as_str() // json::Value -> &str
+                .unwrap_or_default()
+                .trim_matches('"')
+                .to_string()),
+        }
     }
 }
 

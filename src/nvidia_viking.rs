@@ -1048,15 +1048,6 @@ impl Bmc {
         &self,
         chassis_id: ODataId,
     ) -> Result<Vec<MachineNetworkAdapter>, RedfishError> {
-        let mellanox_vendor_id = "0X15B3".to_string();
-        let mellanox_dpu_device_ids = vec![
-            "0XA2DF".to_string(), // BF4 Family integrated network controller [BlueField-4 integrated network controller]
-            "0XA2D9".to_string(), // MT43162 BlueField-3 Lx integrated ConnectX-7 network controller
-            "0XA2DC".to_string(), // MT43244 BlueField-3 integrated ConnectX-7 network controller
-            "0XA2D2".to_string(), // MT416842 BlueField integrated ConnectX-5 network controller
-            "0XA2D6".to_string(), // MT42822 BlueField-2 integrated ConnectX-6 Dx network controller
-        ];
-
         let mut adapters: Vec<MachineNetworkAdapter> = Vec::new();
 
         let odgx: Chassis = self
@@ -1136,25 +1127,8 @@ impl Bmc {
                     Some(x) => x.mac_address,
                     None => None,
                 };
-                let mut is_dpu = false;
-                if pcie_func
-                    .vendor_id
-                    .clone()
-                    .unwrap_or("unknown-vendor".to_string())
-                    .to_uppercase()
-                    == mellanox_vendor_id
-                    && mellanox_dpu_device_ids.clone().into_iter().any(|d| {
-                        *d == pcie_func
-                            .device_id
-                            .clone()
-                            .unwrap_or("unknown-device".to_string())
-                            .to_uppercase()
-                    })
-                {
-                    is_dpu = true
-                }
                 adapters.push(MachineNetworkAdapter {
-                    is_dpu,
+                    is_dpu: pcie_func.is_dpu(),
                     mac_address,
                     network_device_function: nw_dev_func,
                     pcie_function: pcie_func,

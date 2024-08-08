@@ -36,7 +36,7 @@ pub struct NetworkDeviceFunction {
     pub id: Option<String>,
     pub ethernet: Option<Ethernet>,
     pub name: Option<String>,
-    pub net_dev_func_capabilities: Vec<String>,
+    pub net_dev_func_capabilities: Option<Vec<String>>,
     pub net_dev_func_type: Option<String>,
     pub links: Option<NetworkDeviceFunctionLinks>,
 }

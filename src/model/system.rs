@@ -22,8 +22,18 @@
  */
 use std::fmt;
 
-use super::{boot::Boot, oem::SystemExtensions, OData, ODataId, ODataLinks, RedfishSettings};
 use serde::{Deserialize, Serialize};
+
+use super::{boot::Boot, oem::SystemExtensions, OData, ODataId, ODataLinks, RedfishSettings};
+
+const MELLANOX_VENDOR_ID: &str = "0X15B3";
+const MELLANOX_DPU_DEVICE_IDS: [&str; 5] = [
+    "0XA2DF", // BF4 Family integrated network controller [BlueField-4 integrated network controller]
+    "0XA2D9", // MT43162 BlueField-3 Lx integrated ConnectX-7 network controller
+    "0XA2DC", // MT43244 BlueField-3 integrated ConnectX-7 network controller
+    "0XA2D2", // MT416842 BlueField integrated ConnectX-5 network controller
+    "0XA2D6", // MT42822 BlueField-2 integrated ConnectX-6 Dx network controller
+];
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone, Copy)]
 pub enum SystemPowerControl {
@@ -219,8 +229,31 @@ pub struct PCIeDevice {
     pub part_number: Option<String>,
     pub serial_number: Option<String>,
     pub status: Option<SystemStatus>,
+    pub slot: Option<Slot>,
     #[serde(default, rename = "PCIeFunctions")]
     pub pcie_functions: Option<ODataId>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
+pub struct Slot {
+    pub location: Location,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
+pub struct Location {
+    pub info: String,
+    pub info_format: String,
+    pub part_location: PartLocation,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
+pub struct PartLocation {
+    pub location_type: String,
+    pub location_ordinal_value: usize,
+    pub service_label: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -239,6 +272,23 @@ pub struct PCIeFunction {
     pub subsystem_id: Option<String>,
     pub subsystem_vendor_id: Option<String>,
     pub vendor_id: Option<String>,
+}
+
+impl PCIeFunction {
+    // Is this a Mellanox Bluefield DPU?
+    pub fn is_dpu(&self) -> bool {
+        let is_mellanox = self
+            .vendor_id
+            .as_ref()
+            .map_or(false, |v_id| v_id.to_uppercase() == MELLANOX_VENDOR_ID);
+        let is_bluefield = self.device_id.as_ref().map_or(false, |candidate_id| {
+            let u_candidate_id = candidate_id.to_uppercase();
+            MELLANOX_DPU_DEVICE_IDS
+                .iter()
+                .any(|good_id| u_candidate_id == *good_id)
+        });
+        is_mellanox && is_bluefield
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

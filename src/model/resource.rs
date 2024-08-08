@@ -20,12 +20,13 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use serde_json::{value::RawValue, Value};
 use std::{any::type_name, collections::HashMap};
 
-use crate::{Chassis, RedfishError};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde_json::{value::RawValue, Value};
 use tracing::debug;
+
+use crate::{Chassis, RedfishError};
 
 // A Resource is a single entity accessed at a specific URI. A resource collection is a
 // set of resources that share the same schema definition. Both are defined in Redfish Spec to have the
@@ -219,23 +220,11 @@ impl Collection {
         let count = extract_value(self.url.as_str(), "Members@odata.count", &mut self.body)?;
         let id = extract_value(self.url.as_str(), "@odata.id", &mut self.body)?;
         let etag =
-            match extract_value::<Option<String>>(self.url.as_str(), "@odata.etag", &mut self.body)
-            {
-                Ok(tag) => tag,
-                _ => None,
-            };
-        let context = match extract_value::<Option<String>>(
-            self.url.as_str(),
-            "@odata.context",
-            &mut self.body,
-        ) {
-            Ok(x) => x,
-            _ => None,
-        };
-        let description = match extract_value(self.url.as_str(), "Description", &mut self.body) {
-            Ok(desc) => Some(desc),
-            _ => None,
-        };
+            extract_value(self.url.as_str(), "@odata.etag", &mut self.body).unwrap_or_default();
+        let context =
+            extract_value(self.url.as_str(), "@odata.context", &mut self.body).unwrap_or_default();
+        let description =
+            extract_value(self.url.as_str(), "Description", &mut self.body).unwrap_or_default();
 
         let odata = OData {
             odata_id: id,
