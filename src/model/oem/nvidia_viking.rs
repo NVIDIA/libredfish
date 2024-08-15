@@ -1,7 +1,9 @@
+use std::fmt;
+
+use serde::{Deserialize, Serialize};
+
 use crate::model::EnableDisable;
 use crate::EnabledDisabled;
-use serde::{Deserialize, Serialize};
-use std::fmt;
 
 #[derive(Debug, Deserialize, Serialize, Copy, Clone, Eq, PartialEq)]
 #[allow(clippy::upper_case_acronyms)]

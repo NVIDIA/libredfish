@@ -111,6 +111,9 @@ pub enum RedfishError {
         resource_uri: String,
     },
 
+    #[error("DPU not found")]
+    NoDpu, // suport zero-dpu, but warn about it too
+
     #[error("Error: {error}")]
     GenericError { error: String },
 }

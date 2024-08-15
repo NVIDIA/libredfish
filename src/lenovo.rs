@@ -1178,7 +1178,10 @@ impl Bmc {
     async fn dpu_slot(&self) -> Result<String, RedfishError> {
         let pcie_devices = self.pcie_devices().await?;
         for device in pcie_devices {
-            if device.slot.is_none() || device.pcie_functions.is_none() {
+            if device.slot.is_none()
+                || device.pcie_functions.is_none()
+                || device.slot.as_ref().unwrap().location.is_none()
+            {
                 // we won't be able to locate it in the BIOS without a slot
                 // we won't be able to identify it as a DPU without pcie_functions
                 continue;
@@ -1189,12 +1192,26 @@ impl Bmc {
                 .and_then(|r| r.try_get())?;
             if pcie_functions.members.iter().any(|p| p.is_dpu()) {
                 // We found it
-                let pl = &device.slot.as_ref().unwrap().location.part_location;
-                let bios_slot_name = format!("{}{}", pl.location_type, pl.location_ordinal_value);
-                return Ok(bios_slot_name);
+                // Safety: we checked slot.is_none() and location.is_none() at start of loop
+                if let Some(pl) = &device
+                    .slot
+                    .as_ref()
+                    .unwrap()
+                    .location
+                    .as_ref()
+                    .unwrap()
+                    .part_location
+                {
+                    if let Some(loc_type) = pl.location_type.as_ref() {
+                        if let Some(ord_val) = pl.location_ordinal_value {
+                            let bios_slot_name = format!("{loc_type}{ord_val}");
+                            return Ok(bios_slot_name);
+                        }
+                    }
+                }
             }
         }
-        Err(RedfishError::MissingBootOption("DPU in slot".to_string()))
+        Err(RedfishError::NoDpu)
     }
 
     // The MAC address for a specific PCIeDevice slot. The slot name must look like "Slot15",

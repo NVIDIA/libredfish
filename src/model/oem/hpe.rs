@@ -1,12 +1,13 @@
-use crate::EnabledDisabled;
-use serde::{Deserialize, Serialize};
 use std::fmt;
+
+use serde::{Deserialize, Serialize};
 
 use crate::model::{
     Action, ActionsManagerReset, Availableaction, Commandshell, ResourceHealth, ResourceState,
     ResourceStatus, Status,
 };
 use crate::model::{Firmware, LinkType, ODataId, ODataLinks, StatusVec};
+use crate::EnabledDisabled;
 
 #[derive(Debug, Deserialize, Serialize, Copy, Clone, Eq, PartialEq)]
 #[allow(clippy::upper_case_acronyms)]

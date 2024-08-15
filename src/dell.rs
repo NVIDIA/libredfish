@@ -33,6 +33,7 @@ use crate::{
         network_device_function::NetworkDeviceFunction,
         oem::dell::{self, ShareParameters, SystemConfiguration},
         power::Power,
+        resource::ResourceCollection,
         secure_boot::SecureBoot,
         sel::{LogEntry, LogEntryCollection},
         sensor::GPUSensors,
@@ -52,6 +53,15 @@ use crate::{
 const UEFI_PASSWORD_NAME: &str = "SetupPassword";
 
 const MAX_ACCOUNT_ID: u8 = 16;
+
+const MELLANOX_DELL_VENDOR_ID: &str = "15b3";
+const MELLANOX_DELL_DPU_DEVICE_IDS: [&str; 5] = [
+    "a2df", // BF4 Family integrated network controller [BlueField-4 integrated network controller]
+    "a2d9", // MT43162 BlueField-3 Lx integrated ConnectX-7 network controller
+    "a2dc", // MT43244 BlueField-3 integrated ConnectX-7 network controller
+    "a2d2", // MT416842 BlueField integrated ConnectX-5 network controller
+    "a2d6", // MT42822 BlueField-2 integrated ConnectX-6 Dx network controller
+];
 
 pub struct Bmc {
     s: RedfishStandard,
@@ -167,8 +177,22 @@ impl Redfish for Bmc {
         let apply_time = dell::SetSettingsApplyTime {
             apply_time: dell::RedfishSettingsApplyTime::OnReset, // requires reboot to apply
         };
+
+        // Find the DPU
+        let mut has_dpu = true;
+        let nic_slot = match self.dpu_nic_slot(None).await {
+            Ok(slot) => slot,
+            Err(RedfishError::NoDpu) => {
+                has_dpu = false;
+                "".to_string()
+            }
+            Err(err) => {
+                return Err(err);
+            }
+        };
+
         // dell idrac requires applying all bios settings at once.
-        let machine_settings = self.machine_setup_attrs();
+        let machine_settings = self.machine_setup_attrs(&nic_slot);
         let set_machine_attrs = dell::SetBiosAttrs {
             redfish_settings_apply_time: apply_time,
             attributes: machine_settings,
@@ -184,14 +208,22 @@ impl Redfish for Bmc {
         self.machine_setup_oem().await?;
 
         self.setup_bmc_remote_access().await?;
-        Ok(())
+
+        if has_dpu {
+            Ok(())
+        } else {
+            // Usually a missing DPU is an error, but for zero-dpu it isn't
+            // Tell the caller and let them decide
+            Err(RedfishError::NoDpu)
+        }
     }
 
     async fn machine_setup_status(&self) -> Result<MachineSetupStatus, RedfishError> {
         let mut diffs = vec![];
 
         let bios = self.s.bios_attributes().await?;
-        let expected_attrs = self.machine_setup_attrs();
+        let nic_slot = self.dpu_nic_slot(None).await?;
+        let expected_attrs = self.machine_setup_attrs(&nic_slot);
 
         macro_rules! diff {
             ($key:literal, $exp:expr, $act:ty) => {
@@ -265,6 +297,21 @@ impl Redfish for Bmc {
             "Tpm2Hierarchy",
             expected_attrs.tpm2_hierarchy,
             dell::Tpm2HierarchySettings
+        );
+        diff!(
+            "HttpDev1EnDis",
+            expected_attrs.http_device_1_enabled_disabled,
+            EnabledDisabled
+        );
+        diff!(
+            "PxeDev1EnDis",
+            expected_attrs.pxe_device_1_enabled_disabled,
+            EnabledDisabled
+        );
+        diff!(
+            "HttpDev1Interface",
+            expected_attrs.http_device_1_interface,
+            String
         );
 
         let manager_attrs = self.manager_dell_oem_attributes().await?;
@@ -777,11 +824,13 @@ impl Redfish for Bmc {
         self.s.get_resource(id).await
     }
 
+    // machine_setup does this, but Dell requires all attributes to be sent at once so
+    // we do not support doing just this part, on a Dell.
     async fn set_boot_order_dpu_first(
         &self,
-        mac_address: Option<String>,
+        _mac_address: Option<String>,
     ) -> Result<(), RedfishError> {
-        self.s.set_boot_order_dpu_first(mac_address).await
+        Err(RedfishError::UnnecessaryOperation)
     }
 
     async fn clear_uefi_password(
@@ -1280,7 +1329,7 @@ impl Bmc {
         }
     }
 
-    fn machine_setup_attrs(&self) -> dell::MachineBiosAttrs {
+    fn machine_setup_attrs(&self, nic_slot: &str) -> dell::MachineBiosAttrs {
         dell::MachineBiosAttrs {
             in_band_manageability_interface: EnabledDisabled::Disabled,
             uefi_variable_access: dell::UefiVariableAccessSettings::Controlled,
@@ -1293,6 +1342,16 @@ impl Bmc {
             sriov_global_enable: EnabledDisabled::Enabled,
             tpm_security: OnOff::On,
             tpm2_hierarchy: dell::Tpm2HierarchySettings::Clear,
+            http_device_1_enabled_disabled: EnabledDisabled::Enabled,
+            pxe_device_1_enabled_disabled: EnabledDisabled::Disabled,
+            boot_mode: "Uefi".to_string(),
+            http_device_1_interface: nic_slot.to_string(),
+            set_boot_order_en: nic_slot.to_string(),
+            // Ona single DPU ordinary machine, this is correct
+            // On a single DPU machine with infiniband interfaces, this is correct
+            // On a two-DPU machine, this is also correct
+            // And there is no clean way to derive it
+            one_time_uefi_boot_seq_dev: "NIC.HttpDevice.1-1".to_string(),
         }
     }
 
@@ -1367,6 +1426,103 @@ impl Bmc {
             }
             None => Err(RedfishError::NoHeader),
         }
+    }
+
+    // Returns a string like "NIC.Slot.5-1"
+    async fn dpu_nic_slot(&self, mac_address: Option<String>) -> Result<String, RedfishError> {
+        let chassis = self.get_chassis(self.s.system_id()).await?;
+        let na_id = match chassis.network_adapters {
+            Some(id) => id,
+            None => {
+                return Err(RedfishError::MissingKey {
+                    key: "network_adapters".to_string(),
+                    url: chassis.odata.unwrap().odata_id,
+                })
+            }
+        };
+
+        let rc_nw_adapter: ResourceCollection<NetworkAdapter> = self
+            .s
+            .get_collection(na_id)
+            .await
+            .and_then(|r| r.try_get())?;
+
+        // Get nw_device_functions
+        for nw_adapter in rc_nw_adapter.members {
+            let nw_dev_func_oid = match nw_adapter.network_device_functions {
+                Some(x) => x,
+                None => {
+                    // TODO debug
+                    continue;
+                }
+            };
+
+            let rc_nw_func: ResourceCollection<NetworkDeviceFunction> = self
+                .get_collection(nw_dev_func_oid)
+                .await
+                .and_then(|r| r.try_get())?;
+
+            for nw_dev_func in rc_nw_func.members {
+                if mac_address.is_some() && nw_dev_func.ethernet.is_none() {
+                    // can match on a MAC the interface doesn't report
+                    continue;
+                }
+                if mac_address.is_none() && nw_dev_func.oem.is_none() {
+                    // The vendor and device ids are in the OEM section
+                    continue;
+                }
+                let oem = nw_dev_func.oem.unwrap();
+                let Some(oem_dell) = oem.get("Dell") else {
+                    continue;
+                };
+                let Some(oem_dell_map) = oem_dell.as_object() else {
+                    continue;
+                };
+                let Some(dell_nic) = oem_dell_map.get("DellNIC") else {
+                    continue;
+                };
+                let Some(dell_nic) = dell_nic.as_object() else {
+                    continue;
+                };
+                let Some(nic_slot) = dell_nic
+                    .get("Id")
+                    .and_then(|id| id.as_str())
+                    .map(|id| id.to_string())
+                else {
+                    continue;
+                };
+                match mac_address {
+                    // Caller wants to match a specific MAC address
+                    Some(ref want_mac) => {
+                        if nw_dev_func.ethernet.unwrap().mac_address.as_ref() == Some(want_mac) {
+                            // we found a match by MAC address
+                            return Ok(nic_slot);
+                        }
+                    }
+                    // Caller wants the first DPU
+                    None => {
+                        let Some(vendor_id) =
+                            dell_nic.get("PCIVendorID").and_then(|vid| vid.as_str())
+                        else {
+                            continue;
+                        };
+                        let Some(device_id) =
+                            dell_nic.get("PCIDeviceID").and_then(|did| did.as_str())
+                        else {
+                            continue;
+                        };
+                        if vendor_id == MELLANOX_DELL_VENDOR_ID
+                            && MELLANOX_DELL_DPU_DEVICE_IDS.contains(&device_id)
+                        {
+                            // we found a match by vendor and device id address
+                            return Ok(nic_slot);
+                        }
+                    }
+                }
+            }
+        }
+
+        Err(RedfishError::NoDpu)
     }
 }
 

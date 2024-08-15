@@ -270,6 +270,15 @@ pub struct MachineBiosAttrs {
     pub sriov_global_enable: EnabledDisabled,
     pub tpm_security: OnOff,
     pub tpm2_hierarchy: Tpm2HierarchySettings,
+    pub boot_mode: String,
+    pub one_time_uefi_boot_seq_dev: String,
+    #[serde(rename = "HttpDev1EnDis")]
+    pub http_device_1_enabled_disabled: EnabledDisabled,
+    #[serde(rename = "PxeDev1EnDis")]
+    pub pxe_device_1_enabled_disabled: EnabledDisabled,
+    #[serde(rename = "HttpDev1Interface")]
+    pub http_device_1_interface: String,
+    pub set_boot_order_en: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

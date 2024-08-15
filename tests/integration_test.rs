@@ -58,12 +58,18 @@ const LENOVO_PORT: &str = "8735";
 const NVIDIA_DPU_PORT: &str = "8736";
 const NVIDIA_VIKING_PORT: &str = "8737";
 const SUPERMICRO_PORT: &str = "8738";
+const DELL_MULTI_DPU_PORT: &str = "8739";
 
 static SETUP: Once = Once::new();
 
 #[tokio::test]
 async fn test_dell() -> Result<(), anyhow::Error> {
     run_integration_test("dell", DELL_PORT).await
+}
+
+#[tokio::test]
+async fn test_dell_multi_dpu() -> Result<(), anyhow::Error> {
+    run_integration_test("dell_multi_dpu", DELL_MULTI_DPU_PORT).await
 }
 
 #[tokio::test]

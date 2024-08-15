@@ -609,9 +609,7 @@ impl Redfish for RedfishStandard {
     }
 
     async fn lockdown_bmc(&self, _target: EnabledDisabled) -> Result<(), RedfishError> {
-        Err(RedfishError::NotSupported(
-            "lockdown_bmc".to_string(),
-        ))
+        Err(RedfishError::NotSupported("lockdown_bmc".to_string()))
     }
 }
 

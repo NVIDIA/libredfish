@@ -20,12 +20,13 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-use super::resource::OData;
-use super::{ODataId, ODataLinks, OnOff, PCIeFunction, ResourceStatus};
-use crate::NetworkDeviceFunction;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use tracing::debug;
+
+use super::resource::OData;
+use super::{ODataId, ODataLinks, OnOff, PCIeFunction, ResourceStatus};
+use crate::NetworkDeviceFunction;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ChassisActions {

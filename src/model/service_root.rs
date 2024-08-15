@@ -23,9 +23,10 @@
 use std::collections::HashMap;
 use std::fmt;
 
-use crate::model;
 use model::{OData, ODataId};
 use serde::{Deserialize, Serialize};
+
+use crate::model;
 
 /// https://redfish.dmtf.org/schemas/v1/ServiceRoot.v1_16_0.json
 /// This type shall contain information about deep operations that the service supports.

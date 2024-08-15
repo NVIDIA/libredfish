@@ -413,9 +413,11 @@ impl Redfish for Bmc {
                         || p.status.is_none()
                         || !p
                             .status
-                            .clone()
+                            .as_ref()
                             .unwrap()
                             .state
+                            .as_ref()
+                            .unwrap()
                             .to_lowercase()
                             .contains("enabled")
                     {
@@ -665,9 +667,7 @@ impl Redfish for Bmc {
 
                 debug!("dpu mac_address: {}", dpu_mac_addresses.join(","));
                 if dpu_mac_addresses.is_empty() {
-                    return Err(RedfishError::GenericError {
-                        error: "no dpu with a mac_address found".to_string(),
-                    });
+                    return Err(RedfishError::NoDpu);
                 }
                 dpu_mac_addresses.first().unwrap().to_owned()
             }
