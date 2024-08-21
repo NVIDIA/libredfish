@@ -43,6 +43,7 @@ pub mod account_service;
 pub mod chassis;
 pub mod error;
 pub mod ethernet_interface;
+pub mod manager_network_protocol;
 pub mod network_device_function;
 pub mod port;
 pub mod power;

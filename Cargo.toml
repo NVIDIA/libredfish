@@ -4,7 +4,7 @@ description = "A redfish library. Useful for querying server hardware from a BMC
 authors = ["Chris Holcombe <xfactor973@gmail.com>", "NVIDIA Engineering"]
 repository = "https://github.com/nvidia/libredfish"
 license = "MIT"
-version = "0.22.1"
+version = "0.22.2"
 edition = "2021"
 
 [dependencies]

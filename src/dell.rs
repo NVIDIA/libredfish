@@ -848,6 +848,17 @@ impl Redfish for Bmc {
             Disabled => self.disable_bmc_lockdown(dell::BootDevices::PXE).await,
         }
     }
+
+    async fn is_ipmi_over_lan_enabled(&self) -> Result<bool, RedfishError> {
+        self.s.is_ipmi_over_lan_enabled().await
+    }
+
+    async fn enable_ipmi_over_lan(
+        &self,
+        target: crate::EnabledDisabled,
+    ) -> Result<(), RedfishError> {
+        self.s.enable_ipmi_over_lan(target).await
+    }
 }
 
 impl Bmc {

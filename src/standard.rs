@@ -30,6 +30,7 @@ use std::{
 use reqwest::{Method, StatusCode};
 use tracing::debug;
 
+use crate::model::manager_network_protocol::ManagerNetworkProtocol;
 use crate::model::sel::LogEntry;
 use crate::model::serial_interface::SerialInterface;
 use crate::model::service_root::ServiceRoot;
@@ -611,6 +612,36 @@ impl Redfish for RedfishStandard {
     async fn lockdown_bmc(&self, _target: EnabledDisabled) -> Result<(), RedfishError> {
         Err(RedfishError::NotSupported("lockdown_bmc".to_string()))
     }
+
+    async fn is_ipmi_over_lan_enabled(&self) -> Result<bool, RedfishError> {
+        let network_protocol = self.get_manager_network_protocol().await?;
+        match network_protocol.ipmi {
+            Some(ipmi_status) => match ipmi_status.protocol_enabled {
+                Some(is_ipmi_enabled) => Ok(is_ipmi_enabled),
+                None => Err(RedfishError::GenericError {
+                    error: format!(
+                        "protocol_enabled is None in the server's ipmi status: {ipmi_status:#?}"
+                    ),
+                }),
+            },
+            None => Err(RedfishError::GenericError {
+                error: format!(
+                    "ipmi is None in the server's network service settings: {network_protocol:#?}"
+                ),
+            }),
+        }
+    }
+
+    async fn enable_ipmi_over_lan(&self, target: EnabledDisabled) -> Result<(), RedfishError> {
+        let url = format!("Managers/{}/NetworkProtocol", self.manager_id(),);
+        let mut ipmi_data = HashMap::new();
+        ipmi_data.insert("ProtocolEnabled", target.is_enabled());
+
+        let mut data = HashMap::new();
+        data.insert("IPMI", ipmi_data);
+
+        self.client.patch(&url, data).await.map(|_status_code| ())
+    }
 }
 
 impl RedfishStandard {
@@ -932,6 +963,15 @@ impl RedfishStandard {
         arg.insert("OldPassword", current_bios_password.to_string());
         arg.insert("NewPassword", new_bios_password.to_string());
         self.client.post(&url, arg).await.map(|_resp| Ok(None))?
+    }
+
+    /// Query the network service settings for the server
+    pub async fn get_manager_network_protocol(
+        &self,
+    ) -> Result<ManagerNetworkProtocol, RedfishError> {
+        let url = format!("Managers/{}/NetworkProtocol", self.manager_id(),);
+        let (_status_code, body) = self.client.get(&url).await?;
+        Ok(body)
     }
 }
 

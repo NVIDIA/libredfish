@@ -588,6 +588,17 @@ impl Redfish for Bmc {
     async fn lockdown_bmc(&self, target: crate::EnabledDisabled) -> Result<(), RedfishError> {
         self.s.lockdown_bmc(target).await
     }
+
+    async fn is_ipmi_over_lan_enabled(&self) -> Result<bool, RedfishError> {
+        self.s.is_ipmi_over_lan_enabled().await
+    }
+
+    async fn enable_ipmi_over_lan(
+        &self,
+        target: crate::EnabledDisabled,
+    ) -> Result<(), RedfishError> {
+        self.s.enable_ipmi_over_lan(target).await
+    }
 }
 
 impl Bmc {

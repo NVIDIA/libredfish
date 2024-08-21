@@ -349,6 +349,10 @@ pub trait Redfish: Send + Sync + 'static {
     async fn get_base_mac_address(&self) -> Result<Option<String>, RedfishError>;
 
     async fn lockdown_bmc(&self, target: EnabledDisabled) -> Result<(), RedfishError>;
+
+    async fn is_ipmi_over_lan_enabled(&self) -> Result<bool, RedfishError>;
+
+    async fn enable_ipmi_over_lan(&self, target: EnabledDisabled) -> Result<(), RedfishError>;
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
