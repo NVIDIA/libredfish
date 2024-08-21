@@ -160,7 +160,7 @@ impl Redfish for Bmc {
         self.get_system_event_log().await
     }
 
-    async fn machine_setup(&self) -> Result<(), RedfishError> {
+    async fn machine_setup(&self, _boot_interface_mac: Option<&str>) -> Result<(), RedfishError> {
         self.disable_secure_boot().await?;
         self.set_host_privilege_level(Restricted).await?;
         self.set_internal_cpu_model(Embedded).await?;
@@ -171,11 +171,11 @@ impl Redfish for Bmc {
         let mut diffs = vec![];
 
         let sb = self.get_secure_boot().await?;
-        if !sb.secure_boot_enable.unwrap_or(false) {
+        if sb.secure_boot_enable.unwrap_or(false) {
             diffs.push(MachineSetupDiff {
                 key: "SecureBoot".to_string(),
-                expected: "true".to_string(),
-                actual: "false".to_string(),
+                expected: "false".to_string(),
+                actual: "true".to_string(),
             });
         }
 
@@ -564,7 +564,7 @@ impl Redfish for Bmc {
 
     async fn set_boot_order_dpu_first(
         &self,
-        _mac_address: Option<String>,
+        _mac_address: Option<&str>,
     ) -> Result<(), RedfishError> {
         Err(RedfishError::NotSupported(
             "set_dpu_first_boot_order".to_string(),

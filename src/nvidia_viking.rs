@@ -162,12 +162,12 @@ impl Redfish for Bmc {
         self.s.bios().await
     }
 
-    async fn machine_setup(&self) -> Result<(), RedfishError> {
+    async fn machine_setup(&self, boot_interface_mac: Option<&str>) -> Result<(), RedfishError> {
         self.setup_serial_console().await?;
         self.clear_tpm().await?;
         self.set_virt_enable().await?;
         self.set_uefi_nic_boot().await?;
-        self.set_boot_order_dpu_first(None).await?;
+        self.set_boot_order_dpu_first(boot_interface_mac).await?;
         Ok(())
     }
 
@@ -630,7 +630,7 @@ impl Redfish for Bmc {
     // Details of changing boot order in DGX H100 can be found at
     // https://docs.nvidia.com/dgx/dgxh100-user-guide/redfish-api-supp.html#modifying-the-boot-order-on-dgx-h100-using-redfish.
 
-    async fn set_boot_order_dpu_first(&self, address: Option<String>) -> Result<(), RedfishError> {
+    async fn set_boot_order_dpu_first(&self, address: Option<&str>) -> Result<(), RedfishError> {
         let mut system: ComputerSystem = self.s.get_system().await?;
         let mac_address = match address {
             Some(x) => x.replace(':', "").to_uppercase(),

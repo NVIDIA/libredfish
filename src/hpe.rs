@@ -134,13 +134,13 @@ impl Redfish for Bmc {
         self.s.bios().await
     }
 
-    async fn machine_setup(&self) -> Result<(), RedfishError> {
+    async fn machine_setup(&self, boot_interface_mac: Option<&str>) -> Result<(), RedfishError> {
         self.setup_serial_console().await?;
         self.clear_tpm().await?;
         self.set_virt_enable().await?;
         self.set_uefi_nic_boot().await?;
         self.set_boot_order(BootDevices::Pxe).await?;
-        self.set_boot_order_dpu_first(None).await?;
+        self.set_boot_order_dpu_first(boot_interface_mac).await?;
         Ok(())
     }
 
@@ -510,11 +510,11 @@ impl Redfish for Bmc {
 
     async fn set_boot_order_dpu_first(
         &self,
-        mac_address: Option<String>,
+        mac_address: Option<&str>,
     ) -> Result<(), RedfishError> {
         let mac = {
             match mac_address {
-                Some(mac) => mac,
+                Some(mac) => mac.to_string(),
                 None => self.dpu_mac().await?,
             }
         }

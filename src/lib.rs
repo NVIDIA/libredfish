@@ -113,9 +113,6 @@ pub trait Redfish: Send + Sync + 'static {
     /// Change power state: on, off, reboot, etc
     async fn power(&self, action: SystemPowerControl) -> Result<(), RedfishError>;
 
-    /// call this to setup bios and bmc
-    async fn machine_setup(&self) -> Result<(), RedfishError>;
-
     /// Reboot the BMC itself
     async fn bmc_reset(&self) -> Result<(), RedfishError>;
 
@@ -140,6 +137,13 @@ pub trait Redfish: Send + Sync + 'static {
 
     /// Is everything that machine_setup does already done?
     async fn machine_setup_status(&self) -> Result<MachineSetupStatus, RedfishError>;
+
+    /// call this to setup bios and bmc for use
+    /// remember to call lockdown() afterwards to secure the server
+    /// - boot_interface_mac: MAC Address of the NIC you wish to boot from
+    ///   If not given we look for a Mellanox Bluefield DPU and use that.
+    ///   Not applicable to Supermicro and the DPU itself.
+    async fn machine_setup(&self, boot_interface_mac: Option<&str>) -> Result<(), RedfishError>;
 
     /// Apply a standard BMC password policy. This varies a lot by vendor,
     /// but at a minimum we want passwords to never expire, because our BMCs are
@@ -334,10 +338,8 @@ pub trait Redfish: Send + Sync + 'static {
     /// It will choose Uefi Http IPv4 option if any.
     /// If dpu's mac can be passed in as  mac_address to identify the dpu, otherwise method will attempt to find the dpu
     /// by enumeration NetworkAdapters and associated resources.
-    async fn set_boot_order_dpu_first(
-        &self,
-        mac_address: Option<String>,
-    ) -> Result<(), RedfishError>;
+    async fn set_boot_order_dpu_first(&self, mac_address: Option<&str>)
+        -> Result<(), RedfishError>;
 
     async fn clear_uefi_password(
         &self,

@@ -171,7 +171,7 @@ impl Redfish for Bmc {
         self.s.get_base_mac_address().await
     }
 
-    async fn machine_setup(&self) -> Result<(), RedfishError> {
+    async fn machine_setup(&self, boot_interface_mac: Option<&str>) -> Result<(), RedfishError> {
         self.delete_job_queue().await?;
 
         let apply_time = dell::SetSettingsApplyTime {
@@ -180,7 +180,7 @@ impl Redfish for Bmc {
 
         // Find the DPU
         let mut has_dpu = true;
-        let nic_slot = match self.dpu_nic_slot(None).await {
+        let nic_slot = match self.dpu_nic_slot(boot_interface_mac).await {
             Ok(slot) => slot,
             Err(RedfishError::NoDpu) => {
                 has_dpu = false;
@@ -828,7 +828,7 @@ impl Redfish for Bmc {
     // we do not support doing just this part, on a Dell.
     async fn set_boot_order_dpu_first(
         &self,
-        _mac_address: Option<String>,
+        _mac_address: Option<&str>,
     ) -> Result<(), RedfishError> {
         Err(RedfishError::UnnecessaryOperation)
     }
@@ -1239,6 +1239,7 @@ impl Bmc {
         attributes.insert("WebServer.1.HostHeaderCheck", "Disabled".to_string());
         // racadm set iDRAC.IPMILan.Enable 1
         attributes.insert("IPMILan.1.Enable", "Enabled".to_string());
+        attributes.insert("OS-BMC.1.AdminState", "Disabled".to_string());
 
         let body = HashMap::from([("Attributes", attributes)]);
         self.s.client.patch(&url, body).await.map(|_resp| ())
@@ -1440,7 +1441,7 @@ impl Bmc {
     }
 
     // Returns a string like "NIC.Slot.5-1"
-    async fn dpu_nic_slot(&self, mac_address: Option<String>) -> Result<String, RedfishError> {
+    async fn dpu_nic_slot(&self, mac_address: Option<&str>) -> Result<String, RedfishError> {
         let chassis = self.get_chassis(self.s.system_id()).await?;
         let na_id = match chassis.network_adapters {
             Some(id) => id,
@@ -1504,8 +1505,8 @@ impl Bmc {
                 };
                 match mac_address {
                     // Caller wants to match a specific MAC address
-                    Some(ref want_mac) => {
-                        if nw_dev_func.ethernet.unwrap().mac_address.as_ref() == Some(want_mac) {
+                    Some(want_mac) => {
+                        if nw_dev_func.ethernet.unwrap().mac_address.as_deref() == Some(want_mac) {
                             // we found a match by MAC address
                             return Ok(nic_slot);
                         }
