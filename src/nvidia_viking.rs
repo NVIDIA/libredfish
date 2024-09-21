@@ -23,11 +23,12 @@
 use reqwest::{
     header::{HeaderMap, HeaderName, IF_MATCH, IF_NONE_MATCH},
     Method,
+    StatusCode
 };
 use serde::Serialize;
 use std::{collections::HashMap, path::Path, time::Duration, vec};
 use tokio::fs::File;
-use tracing::debug;
+use tracing::{debug, warn, info, error};
 use version_compare::Version;
 
 use crate::{
@@ -36,7 +37,7 @@ use crate::{
         boot::{BootSourceOverrideEnabled, BootSourceOverrideTarget},
         chassis::{Chassis, MachineNetworkAdapter, NetworkAdapter},
         network_device_function::NetworkDeviceFunction,
-        oem::nvidia_viking,
+        oem::nvidia_viking::*,
         oem::nvidia_viking::{BootDevices, BootDevices::Pxe},
         power::Power,
         resource::{IsResource, ResourceCollection},
@@ -50,13 +51,13 @@ use crate::{
         thermal::Thermal,
         update_service::{ComponentType, TransferProtocolType, UpdateService},
         BootOption, ComputerSystem,
-        EnableDisable::Enable,
+        EnableDisable,
         Manager, ManagerResetType,
     },
     network::REDFISH_ENDPOINT,
     standard::RedfishStandard,
     Boot, BootOptions, Collection, EnabledDisabled,
-    EnabledDisabled::Enabled,
+    EnabledDisabled::{Enabled, Disabled},
     MachineSetupDiff, MachineSetupStatus, JobState, ODataId, PCIeDevice, PCIeFunction, PowerState,
     Redfish, RedfishError, Resource, RoleId, Status, StatusInternal, SystemPowerControl,
 };
@@ -170,16 +171,15 @@ impl Redfish for Bmc {
     }
 
     async fn machine_setup(&self, boot_interface_mac: Option<&str>) -> Result<(), RedfishError> {
-        self.setup_serial_console().await?;
-        self.clear_tpm().await?;
-        self.set_virt_enable().await?;
-        self.set_uefi_nic_boot().await?;
+        self.set_bios_attributes().await?;
         self.set_boot_order_dpu_first(boot_interface_mac).await?;
         Ok(())
     }
 
     async fn machine_setup_status(&self) -> Result<MachineSetupStatus, RedfishError> {
         let mut diffs = vec![];
+        // Get the current values
+        let bios = self.get_bios().await?;
 
         let sc = self.serial_console_status().await?;
         if !sc.is_fully_enabled() {
@@ -199,20 +199,18 @@ impl Redfish for Bmc {
             });
         }
 
-        let url = format!("Systems/{}/Bios/SD/", self.s.system_id());
-        let uefi: nvidia_viking::SetUefiHttpAttributes = self.s.client.get(&url).await?.1;
         let needed = [
-            ("Ipv4Http", uefi.attributes.ipv4_http),
-            ("Ipv4Pxe", uefi.attributes.ipv4_pxe),
-            ("Ipv6Http", uefi.attributes.ipv6_http),
-            ("Ipv6Pxe", uefi.attributes.ipv6_pxe),
+            ("Ipv4Http", bios.attributes.ipv4_http, DEFAULT_IPV4_HTTP),
+            ("Ipv4Pxe", bios.attributes.ipv4_pxe, DEFAULT_IPV4_PXE),
+            ("Ipv6Http", bios.attributes.ipv6_http, DEFAULT_IPV6_HTTP),
+            ("Ipv6Pxe", bios.attributes.ipv6_pxe, DEFAULT_IPV6_PXE),
         ];
-        for (name, val) in needed {
-            if !val.is_enabled() {
+        for (name, current_val, recommended_val) in needed {
+            if current_val.is_some() {
                 diffs.push(MachineSetupDiff {
                     key: name.to_string(),
-                    expected: "Enabled".to_string(),
-                    actual: val.to_string(),
+                    expected: recommended_val.to_string(),
+                    actual: current_val.unwrap().to_string(),
                 });
             }
         }
@@ -245,18 +243,18 @@ impl Redfish for Bmc {
 
     async fn set_machine_password_policy(&self) -> Result<(), RedfishError> {
         use serde_json::Value;
+        // TODO: these values are wrong.
+        // Setting to (0,0,0,false,0) causes account lockout. So set them to less harmful values
         let body = HashMap::from([
-            ("AccountLockoutThreshold", Value::Number(0.into())),
-            ("AccountLockoutDuration", Value::Number(0.into())),
-            ("AccountLockoutCounterResetAfter", Value::Number(0.into())),
-            ("AccountLockoutCounterResetEnabled", Value::Bool(false)),
-            ("AuthFailureLoggingThreshold", Value::Number(0.into())),
+            ("AccountLockoutThreshold", Value::Number(4.into())),
+            ("AccountLockoutDuration", Value::Number(20.into())),
+            ("AccountLockoutCounterResetAfter", Value::Number(20.into())),
+            ("AccountLockoutCounterResetEnabled", Value::Bool(true)),
+            ("AuthFailureLoggingThreshold", Value::Number(2.into())),
         ]);
-        self.s
-            .client
-            .patch("AccountService", body)
-            .await
-            .map(|_status_code| ())
+        return self
+            .patch_with_if_match("AccountService".to_string(), body)
+            .await;
     }
 
     async fn lockdown(&self, target: EnabledDisabled) -> Result<(), RedfishError> {
@@ -267,50 +265,50 @@ impl Redfish for Bmc {
         }
     }
 
+    // TODO: This needs rework
     async fn lockdown_status(&self) -> Result<Status, RedfishError> {
-        let url = &format!("Systems/{}/Bios", self.s.system_id());
-        let (_status_code, bios): (_, nvidia_viking::Bios) = self.s.client.get(url).await?;
+        let bios = self.get_bios().await?;
         let bios = bios.attributes;
-        let message = format!(
-            "ipmi_kcs_disable={}, redfish_enable={}.",
-            bios.kcs_interface_disable, bios.redfish_enable
-        );
+        // TODO: This is definitely not correct
+        let (message, status) = match (bios.kcs_interface_disable, bios.redfish_enable) {
+            (None, None) => ("missing".to_string(), StatusInternal::Disabled),
+            (None, Some(rf)) => (format!("redfish_enable={}.", rf), StatusInternal::Partial),
+            (Some(kcs), None) => (
+                format!("ipmi_kcs_disable={}.", kcs),
+                StatusInternal::Partial,
+            ),
+            (Some(kcs), Some(rf)) => {
+                let status = if kcs == KCS_INTERFACE_DISABLE_DENY_ALL.to_string()
+                /*&& bios.redfish_enable == Disabled */
+                {
+                    StatusInternal::Enabled
+                } else if kcs == KCS_INTERFACE_DISABLE_ALLOW_ALL && rf == EnabledDisabled::Enabled {
+                    StatusInternal::Disabled
+                } else {
+                    StatusInternal::Partial
+                };
+                (
+                    format!("ipmi_kcs_disable={}, redfish_enable={}.", kcs, rf),
+                    status,
+                )
+            }
+        };
         // todo: fix this once dgx viking team adds support
-        Ok(Status {
-            message,
-            status: if bios.kcs_interface_disable == "Deny All"
-            /*&& bios.redfish_enable == Disabled */
-            {
-                StatusInternal::Enabled
-            } else if bios.kcs_interface_disable == "Allow All" && bios.redfish_enable == Enabled {
-                StatusInternal::Disabled
-            } else {
-                StatusInternal::Partial
-            },
-        })
+        Ok(Status { message, status })
     }
 
     async fn setup_serial_console(&self) -> Result<(), RedfishError> {
-        let serial_console = nvidia_viking::BiosSerialConsoleAttributes {
-            acpi_spcr_baud_rate: "115200".to_string(),
-            baud_rate0: "115200".to_string(),
-            acpi_spcr_console_redirection_enable: true,
-            acpi_spcr_flow_control: "None".to_string(),
-            acpi_spcr_port: "COM0".to_string(),
-            acpi_spcr_terminal_type: "VT-UTF8".to_string(),
-            console_redirection_enable0: true,
-            terminal_type0: "ANSI".to_string(),
+        let serial_console = BiosAttributes {
+            acpi_spcr_baud_rate: DEFAULT_ACPI_SPCR_BAUD_RATE.to_string().into(),
+            baud_rate0: DEFAULT_BAUD_RATE0.to_string().into(),
+            acpi_spcr_console_redirection_enable: DEFAULT_ACPI_SPCR_CONSOLE_REDIRECTION_ENABLE.into(),
+            acpi_spcr_flow_control: DEFAULT_ACPI_SPCR_FLOW_CONTROL.to_string().into(),
+            acpi_spcr_port: DEFAULT_ACPI_SPCR_PORT.to_string().into(),
+            acpi_spcr_terminal_type: DEFAULT_ACPI_SPCR_TERMINAL_TYPE.to_string().into(),
+            console_redirection_enable0: DEFAULT_CONSOLE_REDIRECTION_ENABLE0.into(),
+            terminal_type0: DEFAULT_TERMINAL_TYPE0.to_string().into(),
+            ..Default::default()
         };
-        let set_serial_attrs = nvidia_viking::SetBiosSerialConsoleAttributes {
-            attributes: serial_console,
-        };
-        let url = format!("Systems/{}/Bios/SD/", self.s.system_id());
-        self.s
-            .client
-            .patch(&url, set_serial_attrs)
-            .await
-            .map(|_status_code| ())
-
         // TODO: need to figure out from viking team on patching this:
         // let bmc_serial = nvidia_viking::BmcSerialConsoleAttributes {
         //    bit_rate: "115200".to_string(),
@@ -320,6 +318,11 @@ impl Redfish for Bmc {
         //    parity: "None".to_string(),
         //    stop_bits: "1".to_string(),
         //};
+
+        let set_serial_attrs = SetBiosAttributes {
+            attributes: serial_console,
+        };
+        return self.patch_bios_attributes(set_serial_attrs).await;
     }
 
     async fn serial_console_status(&self) -> Result<Status, RedfishError> {
@@ -362,26 +365,22 @@ impl Redfish for Bmc {
     }
 
     async fn boot_first(&self, target: Boot) -> Result<(), RedfishError> {
-        // TODO: possibly remove this redundant matching, the enum is based on the bmc capabilities
         match target {
             Boot::Pxe => self.set_boot_order(BootDevices::Pxe).await,
             Boot::HardDisk => self.set_boot_order(BootDevices::Hdd).await,
-            Boot::UefiHttp => self.set_boot_order(BootDevices::UefiHttp).await,
+            Boot::UefiHttp => self.set_boot_order_dpu_first(None).await,
         }
     }
 
     async fn clear_tpm(&self) -> Result<(), RedfishError> {
-        let tpm = nvidia_viking::TpmAttributes {
-            tpm_support: Enable,
-            tpm_operation: "TPM Clear".to_string(),
+        let tpm = BiosAttributes {
+            tpm_operation: Some(DEFAULT_TPM_OPERATION.to_string()),
+            tpm_support: Some(DEFAULT_TPM_SUPPORT),
+            ..Default::default()
         };
-        let set_tpm_attrs = nvidia_viking::SetTpmAttributes { attributes: tpm };
-        let url = format!("Systems/{}/Bios/SD/", self.s.system_id());
-        self.s
-            .client
-            .patch(&url, set_tpm_attrs)
-            .await
-            .map(|_status_code| ())
+
+        let set_tpm_attrs = SetBiosAttributes { attributes: tpm };
+        return self.patch_bios_attributes(set_tpm_attrs).await;
     }
 
     async fn pending(&self) -> Result<HashMap<String, serde_json::Value>, RedfishError> {
@@ -527,11 +526,17 @@ impl Redfish for Bmc {
     }
 
     async fn enable_secure_boot(&self) -> Result<(), RedfishError> {
-        self.s.enable_secure_boot().await
+        let mut data = HashMap::new();
+        data.insert("SecureBootEnable", true);
+        let url = format!("Systems/{}/SecureBoot", self.s.system_id());
+        return self.patch_with_if_match(url, data).await;
     }
 
     async fn disable_secure_boot(&self) -> Result<(), RedfishError> {
-        self.s.disable_secure_boot().await
+        let mut data = HashMap::new();
+        data.insert("SecureBootEnable", false);
+        let url = format!("Systems/{}/SecureBoot", self.s.system_id());
+        return self.patch_with_if_match(url, data).await;
     }
 
     async fn get_network_device_function(
@@ -890,15 +895,22 @@ impl Bmc {
         &self,
         firmware_id: String,
         minimum_version: String,
+        recommended_version: String,
     ) -> Result<(), RedfishError> {
         let firmware = self.get_firmware(&firmware_id).await?;
         if let Some(version) = firmware.version {
             let current = Version::from(&version);
+            info!("{firmware_id} is {version} ");
             let minimum = Version::from(&minimum_version);
+            let recommended = Version::from(&recommended_version);
             if current < minimum {
+                error!("{firmware_id} is below minimum version. {version} < {minimum_version}");
                 return Err(RedfishError::NotSupported(format!(
                     "{firmware_id} {version} < {minimum_version}"
                 )));
+            }
+            if current < recommended {
+                warn!("{firmware_id} is below recommended version. {version} < {recommended_version}");
             }
             return Ok(());
         }
@@ -909,84 +921,51 @@ impl Bmc {
 
     async fn enable_lockdown(&self) -> Result<(), RedfishError> {
         // assuming that the viking bmc does not modify the suffixes
-        self.check_firmware_version("HostBIOS_0".to_string(), "1.01.03".to_string())
+        self.check_firmware_version("HostBIOS_0".to_string(), MINIMUM_BIOS_VERSION.to_string(), RECOMMENDED_BIOS_VERSION.to_string())
             .await?;
-        self.check_firmware_version("HostBMC_0".to_string(), "23.11.09".to_string())
+        self.check_firmware_version("HostBMC_0".to_string(), MINIMUM_BMC_FW_VERSION.to_string(), RECOMMENDED_BMC_FW_VERSION.to_string())
             .await?;
 
-        let lockdown_attrs = nvidia_viking::BiosLockdownAttributes {
-            kcs_interface_disable: "Deny All".to_string(),
-            redfish_enable: Enabled, // todo: this should be disabled for the virtual usb nic, not yet implemented by dgx team
+        let lockdown_attrs = BiosAttributes {
+            kcs_interface_disable: DEFAULT_KCS_INTERFACE_DISABLE.to_string().into(),
+            redfish_enable: Disabled.into(), // todo: this should be disabled for the virtual usb nic, not yet implemented by dgx team
+            ..Default::default()
         };
-        let set_lockdown = nvidia_viking::SetBiosLockdownAttributes {
+        let set_lockdown = SetBiosAttributes {
             attributes: lockdown_attrs,
         };
-        let url = format!("Systems/{}/Bios/SD/", self.s.system_id());
-        self.s
-            .client
-            .patch(&url, set_lockdown)
-            .await
-            .map(|_status_code| ())
+        return self.patch_bios_attributes(set_lockdown).await;
     }
 
     async fn disable_lockdown(&self) -> Result<(), RedfishError> {
-        let lockdown_attrs = nvidia_viking::BiosLockdownAttributes {
-            kcs_interface_disable: "Allow All".to_string(),
-            redfish_enable: Enabled,
+        let lockdown_attrs = BiosAttributes {
+            kcs_interface_disable: KCS_INTERFACE_DISABLE_ALLOW_ALL.to_string().into(),
+            redfish_enable: Enabled.into(),
+            ..Default::default()
         };
-        let set_lockdown = nvidia_viking::SetBiosLockdownAttributes {
+        let set_lockdown = SetBiosAttributes {
             attributes: lockdown_attrs,
         };
-        let url = format!("Systems/{}/Bios/SD/", self.s.system_id());
-        self.s
-            .client
-            .patch(&url, set_lockdown)
-            .await
-            .map(|_status_code| ())
+        return self.patch_bios_attributes(set_lockdown).await;
     }
-
-    async fn set_virt_enable(&self) -> Result<(), RedfishError> {
-        let virt_attrs = nvidia_viking::VirtAttributes {
-            sriov_enable: Enable,
-            vtd_support: Enable,
-        };
-        let set_virt_attrs = nvidia_viking::SetVirtAttributes {
-            attributes: virt_attrs,
-        };
-        let url = format!("Systems/{}/Bios/SD/", self.s.system_id());
-        self.s
-            .client
-            .patch(&url, set_virt_attrs)
-            .await
-            .map(|_status_code| ())
-    }
-
     async fn get_virt_enabled(&self) -> Result<EnabledDisabled, RedfishError> {
-        let url = format!("Systems/{}/Bios/SD/", self.s.system_id());
-        let virt: nvidia_viking::SetVirtAttributes = self.s.client.get(&url).await?.1;
-        if virt.attributes.sriov_enable.is_enabled() && virt.attributes.vtd_support.is_enabled() {
+        let bios = self.get_bios().await?;
+        // We are told if the attribute is missing it is Enabled by default
+        if bios
+            .attributes
+            .sriov_enable
+            .unwrap_or_else(|| EnableDisable::Enable)
+            == DEFAULT_SRIOV_ENABLE
+            && bios
+                .attributes
+                .vtd_support
+                .unwrap_or_else(|| EnableDisable::Enable)
+                == DEFAULT_VTD_SUPPORT
+        {
             Ok(EnabledDisabled::Enabled)
         } else {
             Ok(EnabledDisabled::Disabled)
         }
-    }
-
-    async fn set_uefi_nic_boot(&self) -> Result<(), RedfishError> {
-        let uefi_nic_boot = nvidia_viking::UefiHttpAttributes {
-            ipv4_http: Enabled,
-            ipv4_pxe: Enabled,
-            ipv6_http: Enabled,
-            ipv6_pxe: Enabled,
-        };
-        let set_uefi_nic_boot = nvidia_viking::SetUefiHttpAttributes {
-            attributes: uefi_nic_boot,
-        };
-        let url = format!("Systems/{}/Bios/SD/", self.s.system_id());
-        self.s
-            .client
-            .patch(&url, set_uefi_nic_boot)
-            .await
-            .map(|_status_code| ())
     }
 
     async fn bios_serial_console_status(&self) -> Result<Status, RedfishError> {
@@ -995,61 +974,67 @@ impl Bmc {
         let mut enabled = true;
         let mut disabled = true;
 
-        let url = &format!("Systems/{}/Bios", self.s.system_id());
-        let (_status_code, bios): (_, nvidia_viking::Bios) = self.s.client.get(url).await?;
+        let bios = self.get_bios().await?;
         let bios = bios.attributes;
 
-        let val = bios.acpi_spcr_console_redirection_enable;
-        message.push_str(&format!("acpi_spcr_console_redirection_enable={val} "));
-        match val {
-            true => {
-                // enabled
-                disabled = false;
-            }
-            false => {
-                // disabled
-                enabled = false;
-            }
-        }
-
-        let val = bios.console_redirection_enable0;
-        message.push_str(&format!("console_redirection_enable0={val} "));
-        match val {
-            true => {
-                disabled = false;
-            }
-            false => {
-                enabled = false;
+        if bios.acpi_spcr_console_redirection_enable.is_some() {
+            let val = bios.acpi_spcr_console_redirection_enable.unwrap();
+            message.push_str(&format!("acpi_spcr_console_redirection_enable={val} "));
+            match val {
+                true => {
+                    // enabled
+                    disabled = false;
+                }
+                false => {
+                    // disabled
+                    enabled = false;
+                }
             }
         }
-
+        if bios.console_redirection_enable0.is_some() {
+            let val = bios.console_redirection_enable0.unwrap();
+            message.push_str(&format!("console_redirection_enable0={val} "));
+            match val {
+                true => {
+                    disabled = false;
+                }
+                false => {
+                    enabled = false;
+                }
+            }
+        }
         // All of these need a specific value for serial console access to work.
         // Any other value counts as correctly disabled.
 
-        let val = bios.acpi_spcr_port;
-        message.push_str(&format!("acpi_spcr_port={val} "));
-        if &val != "COM0" {
-            enabled = false;
+        if bios.acpi_spcr_port.is_some() {
+            let val = bios.acpi_spcr_port.unwrap();
+            message.push_str(&format!("acpi_spcr_port={val} "));
+            if val != DEFAULT_ACPI_SPCR_PORT {
+                enabled = false;
+            }
+        }
+        if bios.acpi_spcr_flow_control.is_some() {
+            let val = bios.acpi_spcr_flow_control.unwrap();
+            message.push_str(&format!("acpi_spcr_flow_control={val} "));
+            if val != DEFAULT_ACPI_SPCR_FLOW_CONTROL {
+                enabled = false;
+            }
+        }
+        if bios.acpi_spcr_baud_rate.is_some() {
+            let val = bios.acpi_spcr_baud_rate.unwrap();
+            message.push_str(&format!("acpi_spcr_baud_rate={val} "));
+            if val != DEFAULT_ACPI_SPCR_BAUD_RATE {
+                enabled = false;
+            }
         }
 
-        let val = bios.acpi_spcr_flow_control;
-        message.push_str(&format!("acpi_spcr_flow_control={val} "));
-        if &val != "None" {
-            enabled = false;
+        if bios.baud_rate0.is_some() {
+            let val = bios.baud_rate0.unwrap();
+            message.push_str(&format!("baud_rate0={val} "));
+            if val != DEFAULT_BAUD_RATE0 {
+                enabled = false;
+            }
         }
-
-        let val = bios.acpi_spcr_baud_rate;
-        message.push_str(&format!("acpi_spcr_baud_rate={val} "));
-        if &val != "115200" {
-            enabled = false;
-        }
-
-        let val = bios.baud_rate0;
-        message.push_str(&format!("baud_rate0={val} "));
-        if &val != "115200" {
-            enabled = false;
-        }
-
         Ok(Status {
             message,
             status: match (enabled, disabled) {
@@ -1126,7 +1111,7 @@ impl Bmc {
             })?;
 
         let headers: Vec<(HeaderName, String)> = vec![(IF_MATCH, etag.to_string())];
-        let timeout = Duration::from_secs(10);
+        let timeout = Duration::from_secs(60);
         let (_status_code, _resp_body, _resp_headers): (
             _,
             Option<HashMap<String, serde_json::Value>>,
@@ -1283,7 +1268,7 @@ impl Bmc {
         };
 
         let headers: Vec<(HeaderName, String)> = vec![(IF_NONE_MATCH, etag.to_string())];
-        let timeout = Duration::from_secs(10);
+        let timeout = Duration::from_secs(60);
         let (_status_code, _resp_body, _resp_headers): (
             _,
             Option<HashMap<String, serde_json::Value>>,
@@ -1301,6 +1286,104 @@ impl Bmc {
             )
             .await?;
         Ok(())
+    }
+    ///
+    /// Returns current BIOS attributes that are used/modified by us
+    ///
+    async fn get_bios(&self) -> Result<Bios, RedfishError> {
+        let url = &format!("Systems/{}/Bios", self.s.system_id());
+        let (_status_code, bios): (_, Bios) = self.s.client.get(url).await?;
+        Ok(bios)
+    }
+
+    async fn set_bios_attributes(&self) -> Result<(), RedfishError> {
+        let url = &format!("Systems/{}/Bios", self.s.system_id());
+        let (_status_code, bios): (_, Bios) = self.s.client.get(url).await?;
+        let current_values = bios.attributes;
+
+        let new_values = BiosAttributes {
+            acpi_spcr_baud_rate: current_values
+                .acpi_spcr_baud_rate
+                .and(DEFAULT_ACPI_SPCR_BAUD_RATE.to_string().into()),
+            baud_rate0: current_values
+                .baud_rate0
+                .and(DEFAULT_BAUD_RATE0.to_string().into()),
+            acpi_spcr_console_redirection_enable: current_values
+                .acpi_spcr_console_redirection_enable
+                .and(DEFAULT_ACPI_SPCR_CONSOLE_REDIRECTION_ENABLE.into()),
+            acpi_spcr_flow_control: current_values
+                .acpi_spcr_flow_control
+                .and(DEFAULT_ACPI_SPCR_FLOW_CONTROL.to_string().into()),
+            acpi_spcr_port: current_values
+                .acpi_spcr_port
+                .and(DEFAULT_ACPI_SPCR_PORT.to_string().into()),
+            acpi_spcr_terminal_type: current_values
+                .acpi_spcr_terminal_type
+                .and(DEFAULT_ACPI_SPCR_TERMINAL_TYPE.to_string().into()),
+            console_redirection_enable0: current_values
+                .console_redirection_enable0
+                .and(DEFAULT_ACPI_SPCR_CONSOLE_REDIRECTION_ENABLE.into()),
+            terminal_type0: current_values
+                .terminal_type0
+                .and(DEFAULT_TERMINAL_TYPE0.to_string().into()),
+            tpm_support: current_values.tpm_support.and(DEFAULT_TPM_SUPPORT.into()),
+            kcs_interface_disable: None,
+            tpm_operation: current_values
+                .tpm_operation
+                .and(DEFAULT_TPM_OPERATION.to_string().into()),
+            sriov_enable: current_values.sriov_enable.and(DEFAULT_SRIOV_ENABLE.into()),
+            vtd_support: current_values.vtd_support.and(DEFAULT_VTD_SUPPORT.into()),
+            ipv4_http: current_values.ipv4_http.and(DEFAULT_IPV4_HTTP.into()),
+            ipv4_pxe: current_values.ipv4_pxe.and(DEFAULT_IPV4_PXE.into()),
+            ipv6_http: current_values.ipv6_http.and(DEFAULT_IPV6_HTTP.into()),
+            ipv6_pxe: current_values.ipv6_pxe.and(DEFAULT_IPV6_PXE.into()),
+            redfish_enable: None,
+        };
+
+        self.patch_bios_attributes(SetBiosAttributes {
+            attributes: new_values,
+        })
+        .await
+    }
+
+    async fn patch_bios_attributes<B>(&self, data: B) -> Result<(), RedfishError>
+    where
+        B: Serialize + ::std::fmt::Debug,
+    {
+        let url = format!("Systems/{}/Bios/SD", self.s.system_id());
+        return self.patch_with_if_match(url, data).await;
+    }
+    
+    async fn patch_with_if_match<B>(&self, url: String, data: B) -> Result<(), RedfishError>
+    where
+        B: Serialize + ::std::fmt::Debug,
+    {
+        let timeout = Duration::from_secs(60);
+        let headers: Vec<(HeaderName, String)> = vec![(IF_MATCH, "*".to_string())];
+        let (status_code, resp_body, _): (
+            _,
+            Option<HashMap<String, serde_json::Value>>,
+            Option<HeaderMap>,
+        ) = self
+            .s
+            .client
+            .req(
+                Method::PATCH,
+                &url,
+                Some(data),
+                Some(timeout),
+                None,
+                headers,
+            )
+            .await?;
+        return match status_code {
+            StatusCode::NO_CONTENT => Ok(()),
+            _ => Err(RedfishError::HTTPErrorCode {
+                url,
+                status_code,
+                response_body: format!("{:?}", resp_body.unwrap_or_default()),
+            }),
+        };
     }
 }
 
