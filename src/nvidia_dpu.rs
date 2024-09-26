@@ -28,7 +28,7 @@ use tokio::fs::File;
 use crate::model::account_service::ManagerAccount;
 use crate::model::sensor::GPUSensors;
 use crate::model::task::Task;
-use crate::model::update_service::{TransferProtocolType, UpdateService};
+use crate::model::update_service::{ComponentType, TransferProtocolType, UpdateService};
 use crate::Boot::UefiHttp;
 use crate::HostPrivilegeLevel::Restricted;
 use crate::InternalCPUModel::Embedded;
@@ -326,6 +326,7 @@ impl Redfish for Bmc {
         filename: &Path,
         _reboot: bool,
         timeout: Duration,
+        _component_type: ComponentType,
     ) -> Result<String, RedfishError> {
         let firmware = File::open(&filename)
             .await

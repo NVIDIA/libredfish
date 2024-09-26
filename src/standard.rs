@@ -36,6 +36,7 @@ use crate::model::service_root::ServiceRoot;
 use crate::model::software_inventory::SoftwareInventory;
 use crate::model::task::Task;
 use crate::model::thermal::Thermal;
+use crate::model::update_service::ComponentType;
 use crate::model::{account_service::ManagerAccount, service_root::RedfishVendor};
 use crate::model::{
     manager_network_protocol::ManagerNetworkProtocol, update_service::TransferProtocolType,
@@ -305,6 +306,7 @@ impl Redfish for RedfishStandard {
         _filename: &Path,
         _reboot: bool,
         _timeout: Duration,
+        _component_type: ComponentType,
     ) -> Result<String, RedfishError> {
         Err(RedfishError::NotSupported(
             "Multipart firmware updates not currently supported on this platform".to_string(),

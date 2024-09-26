@@ -13,7 +13,7 @@ use model::service_root::ServiceRoot;
 use model::software_inventory::SoftwareInventory;
 pub use model::system::{BootOptions, PCIeDevice, PowerState, SystemPowerControl, Systems};
 use model::task::Task;
-use model::update_service::{TransferProtocolType, UpdateService};
+use model::update_service::{ComponentType, TransferProtocolType, UpdateService};
 pub use model::EnabledDisabled;
 use model::Manager;
 use model::{secure_boot::SecureBoot, BootOption, ComputerSystem, ODataId, PCIeFunction};
@@ -192,6 +192,7 @@ pub trait Redfish: Send + Sync + 'static {
         firmware: &Path,
         reboot: bool,
         timeout: Duration,
+        component_type: ComponentType,
     ) -> Result<String, RedfishError>;
 
     /// This action shall update installed software components in a software image file located at an ImageURI parameter-specified URI.

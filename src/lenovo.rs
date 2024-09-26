@@ -34,7 +34,7 @@ use crate::model::resource::ResourceCollection;
 use crate::model::sel::LogService;
 use crate::model::service_root::ServiceRoot;
 use crate::model::task::Task;
-use crate::model::update_service::{TransferProtocolType, UpdateService};
+use crate::model::update_service::{ComponentType, TransferProtocolType, UpdateService};
 use crate::model::{secure_boot::SecureBoot, ComputerSystem};
 use crate::model::{Manager, PCIeFunction};
 use crate::{
@@ -481,6 +481,7 @@ impl Redfish for Bmc {
         filename: &Path,
         _reboot: bool,
         timeout: Duration,
+        _component_type: ComponentType,
     ) -> Result<String, RedfishError> {
         let firmware = File::open(&filename)
             .await

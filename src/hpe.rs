@@ -38,7 +38,7 @@ use crate::{
         storage,
         task::Task,
         thermal::Thermal,
-        update_service::{TransferProtocolType, UpdateService},
+        update_service::{ComponentType, TransferProtocolType, UpdateService},
         BootOption, ComputerSystem, Manager, PCIeFunction,
     },
     standard::RedfishStandard,
@@ -323,9 +323,10 @@ impl Redfish for Bmc {
         filename: &Path,
         reboot: bool,
         timeout: Duration,
+        component_type: ComponentType,
     ) -> Result<String, RedfishError> {
         self.s
-            .update_firmware_multipart(filename, reboot, timeout)
+            .update_firmware_multipart(filename, reboot, timeout, component_type)
             .await
     }
 
