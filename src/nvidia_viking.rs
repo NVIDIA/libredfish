@@ -275,7 +275,7 @@ impl Redfish for Bmc {
                 StatusInternal::Partial,
             ),
             (Some(kcs), Some(rf)) => {
-                let status = if kcs == KCS_INTERFACE_DISABLE_DENY_ALL.to_string()
+                let status = if kcs == *KCS_INTERFACE_DISABLE_DENY_ALL
                 /*&& bios.redfish_enable == Disabled */
                 {
                     StatusInternal::Enabled
@@ -966,7 +966,7 @@ impl Bmc {
         let set_lockdown = SetBiosAttributes {
             attributes: lockdown_attrs,
         };
-        return self.patch_bios_attributes(set_lockdown).await;
+        self.patch_bios_attributes(set_lockdown).await
     }
 
     async fn disable_lockdown(&self) -> Result<(), RedfishError> {
@@ -978,7 +978,7 @@ impl Bmc {
         let set_lockdown = SetBiosAttributes {
             attributes: lockdown_attrs,
         };
-        return self.patch_bios_attributes(set_lockdown).await;
+        self.patch_bios_attributes(set_lockdown).await
     }
     async fn get_virt_enabled(&self) -> Result<EnabledDisabled, RedfishError> {
         let bios = self.get_bios().await?;
@@ -986,13 +986,9 @@ impl Bmc {
         if bios
             .attributes
             .sriov_enable
-            .unwrap_or_else(|| EnableDisable::Enable)
+            .unwrap_or(EnableDisable::Enable)
             == DEFAULT_SRIOV_ENABLE
-            && bios
-                .attributes
-                .vtd_support
-                .unwrap_or_else(|| EnableDisable::Enable)
-                == DEFAULT_VTD_SUPPORT
+            && bios.attributes.vtd_support.unwrap_or(EnableDisable::Enable) == DEFAULT_VTD_SUPPORT
         {
             Ok(EnabledDisabled::Enabled)
         } else {
@@ -1383,7 +1379,7 @@ impl Bmc {
         B: Serialize + ::std::fmt::Debug,
     {
         let url = format!("Systems/{}/Bios/SD", self.s.system_id());
-        return self.patch_with_if_match(url, data).await;
+        self.patch_with_if_match(url, data).await
     }
 
     async fn patch_with_if_match<B>(&self, url: String, data: B) -> Result<(), RedfishError>
@@ -1408,14 +1404,14 @@ impl Bmc {
                 headers,
             )
             .await?;
-        return match status_code {
+        match status_code {
             StatusCode::NO_CONTENT => Ok(()),
             _ => Err(RedfishError::HTTPErrorCode {
                 url,
                 status_code,
                 response_body: format!("{:?}", resp_body.unwrap_or_default()),
             }),
-        };
+        }
     }
 }
 

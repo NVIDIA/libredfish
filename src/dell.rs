@@ -395,8 +395,11 @@ impl Redfish for Bmc {
         let url = format!("Systems/{}/Bios", self.s.system_id());
         let (_status_code, bios): (_, dell::Bios) = self.s.client.get(&url).await?;
 
-        let in_band = bios.attributes.in_band_manageability_interface;
-        let uefi_var = bios.attributes.uefi_variable_access;
+        let in_band = bios
+            .attributes
+            .in_band_manageability_interface
+            .unwrap_or_default();
+        let uefi_var = bios.attributes.uefi_variable_access.unwrap_or_default();
         message.push_str(&format!(
             "BIOS: in_band_manageability_interface={in_band}, uefi_variable_access={uefi_var}. "
         ));
@@ -1141,39 +1144,49 @@ impl Bmc {
         let bios = bios.attributes;
 
         let val = bios.serial_comm;
-        message.push_str(&format!("serial_comm={val} "));
-        match val.parse().map_err(|err| RedfishError::InvalidValue {
-            err,
-            url: url.to_string(),
-            field: "serial_comm".to_string(),
-        })? {
-            dell::SerialCommSettings::OnConRedir | dell::SerialCommSettings::OnConRedirAuto => {
-                // enabled
-                disabled = false;
-            }
-            dell::SerialCommSettings::Off => {
-                // disabled
-                enabled = false;
-            }
-            _ => {
-                // someone messed with it manually
-                enabled = false;
-                disabled = false;
+        message.push_str(&format!(
+            "serial_comm={} ",
+            val.as_ref().unwrap_or(&"unknown".to_string())
+        ));
+        if let Some(x) = &val {
+            match x.parse().map_err(|err| RedfishError::InvalidValue {
+                err,
+                url: url.to_string(),
+                field: "serial_comm".to_string(),
+            })? {
+                dell::SerialCommSettings::OnConRedir | dell::SerialCommSettings::OnConRedirAuto => {
+                    // enabled
+                    disabled = false;
+                }
+                dell::SerialCommSettings::Off => {
+                    // disabled
+                    enabled = false;
+                }
+                _ => {
+                    // someone messed with it manually
+                    enabled = false;
+                    disabled = false;
+                }
             }
         }
 
         let val = bios.redir_after_boot;
-        message.push_str(&format!("redir_after_boot={val} "));
-        match val.parse().map_err(|err| RedfishError::InvalidValue {
-            err,
-            url: url.to_string(),
-            field: "redir_after_boot".to_string(),
-        })? {
-            EnabledDisabled::Enabled => {
-                disabled = false;
-            }
-            EnabledDisabled::Disabled => {
-                enabled = false;
+        message.push_str(&format!(
+            "redir_after_boot={} ",
+            val.as_ref().unwrap_or(&"unknown".to_string())
+        ));
+        if let Some(x) = &val {
+            match x.parse().map_err(|err| RedfishError::InvalidValue {
+                err,
+                url: url.to_string(),
+                field: "redir_after_boot".to_string(),
+            })? {
+                EnabledDisabled::Enabled => {
+                    disabled = false;
+                }
+                EnabledDisabled::Disabled => {
+                    enabled = false;
+                }
             }
         }
 
@@ -1181,27 +1194,47 @@ impl Bmc {
         // Any other value counts as correctly disabled.
 
         let val = bios.serial_port_address;
-        message.push_str(&format!("serial_port_address={val} "));
-        if val != dell::SerialPortSettings::Com1.to_string() {
-            enabled = false;
+        message.push_str(&format!(
+            "serial_port_address={} ",
+            val.as_ref().unwrap_or(&"unknown".to_string())
+        ));
+        if let Some(x) = &val {
+            if *x != dell::SerialPortSettings::Com1.to_string() {
+                enabled = false;
+            }
         }
 
         let val = bios.ext_serial_connector;
-        message.push_str(&format!("ext_serial_connector={val} "));
-        if val != dell::SerialPortExtSettings::Serial1.to_string() {
-            enabled = false;
+        message.push_str(&format!(
+            "ext_serial_connector={} ",
+            val.as_ref().unwrap_or(&"unknown".to_string())
+        ));
+        if let Some(x) = &val {
+            if *x != dell::SerialPortExtSettings::Serial1.to_string() {
+                enabled = false;
+            }
         }
 
         let val = bios.fail_safe_baud;
-        message.push_str(&format!("fail_safe_baud={val} "));
-        if &val != "115200" {
-            enabled = false;
+        message.push_str(&format!(
+            "fail_safe_baud={} ",
+            val.as_ref().unwrap_or(&"unknown".to_string())
+        ));
+        if let Some(x) = &val {
+            if x != "115200" {
+                enabled = false;
+            }
         }
 
         let val = bios.con_term_type;
-        message.push_str(&format!("con_term_type={val} "));
-        if val != dell::SerialPortTermSettings::Vt100Vt220.to_string() {
-            enabled = false;
+        message.push_str(&format!(
+            "con_term_type={} ",
+            val.as_ref().unwrap_or(&"unknown".to_string())
+        ));
+        if let Some(x) = &val {
+            if *x != dell::SerialPortTermSettings::Vt100Vt220.to_string() {
+                enabled = false;
+            }
         }
 
         Ok(Status {

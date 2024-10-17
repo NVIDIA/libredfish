@@ -57,7 +57,7 @@ impl fmt::Display for BootDevices {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct BiosAttributes {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -98,31 +98,6 @@ pub struct BiosAttributes {
     pub kcs_interface_disable: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub redfish_enable: Option<EnabledDisabled>,
-}
-
-impl Default for BiosAttributes {
-    fn default() -> Self {
-        BiosAttributes {
-            acpi_spcr_baud_rate: None,
-            acpi_spcr_console_redirection_enable: None,
-            acpi_spcr_flow_control: None,
-            acpi_spcr_port: None,
-            acpi_spcr_terminal_type: None,
-            baud_rate0: None,
-            console_redirection_enable0: None,
-            terminal_type0: None,
-            sriov_enable: None,
-            vtd_support: None,
-            ipv4_http: None,
-            ipv4_pxe: None,
-            ipv6_http: None,
-            ipv6_pxe: None,
-            tpm_operation: None,
-            tpm_support: None,
-            kcs_interface_disable: None,
-            redfish_enable: None,
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
