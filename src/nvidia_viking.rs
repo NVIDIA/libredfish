@@ -169,8 +169,7 @@ impl Redfish for Bmc {
 
     async fn machine_setup(&self, boot_interface_mac: Option<&str>) -> Result<(), RedfishError> {
         self.set_bios_attributes().await?;
-        self.set_boot_order_dpu_first(boot_interface_mac).await?;
-        Ok(())
+        self.set_boot_order_dpu_first(boot_interface_mac).await
     }
 
     async fn machine_setup_status(&self) -> Result<MachineSetupStatus, RedfishError> {
@@ -203,11 +202,11 @@ impl Redfish for Bmc {
             ("Ipv6Pxe", bios.attributes.ipv6_pxe, DEFAULT_IPV6_PXE),
         ];
         for (name, current_val, recommended_val) in needed {
-            if current_val.is_some() {
+            if let Some(current_val) = current_val {
                 diffs.push(MachineSetupDiff {
                     key: name.to_string(),
                     expected: recommended_val.to_string(),
-                    actual: current_val.unwrap().to_string(),
+                    actual: current_val.to_string(),
                 });
             }
         }
@@ -692,7 +691,7 @@ impl Redfish for Bmc {
                     if let Some(chassis_links) = links.chassis {
                         if !chassis_links.is_empty() {
                             // We will select only the first
-                            chassis_id = chassis_links.first().unwrap().to_owned();
+                            chassis_links.first().unwrap().clone_into(&mut chassis_id)
                         }
                     }
                 }

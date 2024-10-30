@@ -292,18 +292,22 @@ impl RedfishHttpClient {
         }
     }
 
-    pub async fn patch<T>(&self, api: &str, data: T) -> Result<StatusCode, RedfishError>
+    pub async fn patch<T>(
+        &self,
+        api: &str,
+        data: T,
+    ) -> Result<(StatusCode, Option<HeaderMap>), RedfishError>
     where
         T: Serialize + ::std::fmt::Debug,
     {
-        let (status_code, _resp_body, _resp_headers): (
+        let (status_code, _resp_body, resp_headers): (
             _,
             Option<HashMap<String, serde_json::Value>>,
             Option<HeaderMap>,
         ) = self
             .req(Method::PATCH, api, Some(data), None, None, Vec::new())
             .await?;
-        Ok(status_code)
+        Ok((status_code, resp_headers))
     }
 
     // Various parts of Redfish do use DELETE, but we don't implement any of those yet,

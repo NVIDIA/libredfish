@@ -199,14 +199,9 @@ impl Redfish for Bmc {
         };
 
         let url = format!("Systems/{}/Bios/Settings/", self.s.system_id());
-        self.s
-            .client
-            .patch(&url, set_machine_attrs)
-            .await
-            .map(|_status_code| ())?;
+        self.s.client.patch(&url, set_machine_attrs).await?;
 
         self.machine_setup_oem().await?;
-
         self.setup_bmc_remote_access().await?;
 
         if has_dpu {
@@ -270,11 +265,6 @@ impl Redfish for Bmc {
             "SerialPortAddress",
             expected_attrs.serial_port_address,
             dell::SerialPortSettings
-        );
-        diff!(
-            "ExtSerialConnector",
-            expected_attrs.ext_serial_connector,
-            dell::SerialPortExtSettings
         );
         diff!("FailSafeBaud", expected_attrs.fail_safe_baud, String);
         diff!(
@@ -1295,7 +1285,8 @@ impl Bmc {
         attributes.insert("OS-BMC.1.AdminState", "Disabled".to_string());
 
         let body = HashMap::from([("Attributes", attributes)]);
-        self.s.client.patch(&url, body).await.map(|_resp| ())
+        self.s.client.patch(&url, body).await?;
+        Ok(())
     }
 
     async fn manager_dell_oem_attributes(&self) -> Result<serde_json::Value, RedfishError> {
@@ -1400,7 +1391,6 @@ impl Bmc {
             uefi_variable_access: dell::UefiVariableAccessSettings::Controlled,
             serial_comm: dell::SerialCommSettings::OnConRedir,
             serial_port_address: dell::SerialPortSettings::Com1,
-            ext_serial_connector: dell::SerialPortExtSettings::Serial1,
             fail_safe_baud: "115200".to_string(),
             con_term_type: dell::SerialPortTermSettings::Vt100Vt220,
             redir_after_boot: EnabledDisabled::Enabled,
@@ -1412,11 +1402,7 @@ impl Bmc {
             boot_mode: "Uefi".to_string(),
             http_device_1_interface: nic_slot.to_string(),
             set_boot_order_en: nic_slot.to_string(),
-            // Ona single DPU ordinary machine, this is correct
-            // On a single DPU machine with infiniband interfaces, this is correct
-            // On a two-DPU machine, this is also correct
-            // And there is no clean way to derive it
-            one_time_uefi_boot_seq_dev: "NIC.HttpDevice.1-1".to_string(),
+            http_device_1_tls_mode: dell::TlsMode::None,
         }
     }
 

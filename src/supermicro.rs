@@ -152,8 +152,7 @@ impl Redfish for Bmc {
             .await
             .map(|_status_code| ())?;
 
-        self.boot_first(Boot::Pxe).await?;
-        Ok(())
+        self.boot_first(Boot::Pxe).await
     }
 
     async fn machine_setup_status(&self) -> Result<MachineSetupStatus, RedfishError> {

@@ -263,7 +263,6 @@ pub struct MachineBiosAttrs {
     pub uefi_variable_access: UefiVariableAccessSettings,
     pub serial_comm: SerialCommSettings,
     pub serial_port_address: SerialPortSettings,
-    pub ext_serial_connector: SerialPortExtSettings,
     pub fail_safe_baud: String,
     pub con_term_type: SerialPortTermSettings,
     pub redir_after_boot: EnabledDisabled,
@@ -271,7 +270,6 @@ pub struct MachineBiosAttrs {
     pub tpm_security: OnOff,
     pub tpm2_hierarchy: Tpm2HierarchySettings,
     pub boot_mode: String,
-    pub one_time_uefi_boot_seq_dev: String,
     #[serde(rename = "HttpDev1EnDis")]
     pub http_device_1_enabled_disabled: EnabledDisabled,
     #[serde(rename = "PxeDev1EnDis")]
@@ -279,6 +277,8 @@ pub struct MachineBiosAttrs {
     #[serde(rename = "HttpDev1Interface")]
     pub http_device_1_interface: String,
     pub set_boot_order_en: String,
+    #[serde(rename = "HttpDev1TlsMode")]
+    pub http_device_1_tls_mode: TlsMode,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -433,6 +433,18 @@ pub enum Tpm2HierarchySettings {
 }
 
 impl fmt::Display for Tpm2HierarchySettings {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(self, f)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
+pub enum TlsMode {
+    None,
+    OneWay,
+}
+
+impl fmt::Display for TlsMode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(self, f)
     }

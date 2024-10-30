@@ -140,8 +140,7 @@ impl Redfish for Bmc {
         self.set_virt_enable().await?;
         self.set_uefi_nic_boot().await?;
         self.set_boot_order(BootDevices::Pxe).await?;
-        self.set_boot_order_dpu_first(boot_interface_mac).await?;
-        Ok(())
+        self.set_boot_order_dpu_first(boot_interface_mac).await
     }
 
     async fn machine_setup_status(&self) -> Result<MachineSetupStatus, RedfishError> {
