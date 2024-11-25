@@ -32,8 +32,8 @@ pub use error::RedfishError;
 
 use crate::model::power::Power;
 use crate::model::sel::LogEntry;
-use crate::model::thermal::Thermal;
 use crate::model::storage::Drives;
+use crate::model::thermal::Thermal;
 
 /// Interface to a BMC Redfish server. All calls will include one or more HTTP network calls.
 #[async_trait::async_trait]

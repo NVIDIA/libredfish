@@ -39,9 +39,9 @@ use crate::{
         sensor::GPUSensors,
         service_root::ServiceRoot,
         software_inventory::SoftwareInventory,
+        storage::Drives,
         task::Task,
         thermal::Thermal,
-        storage::Drives,
         update_service::{ComponentType, TransferProtocolType, UpdateService},
         BootOption, ComputerSystem, InvalidValueError, Manager, OnOff,
     },
@@ -204,7 +204,37 @@ impl Redfish for Bmc {
         };
 
         let url = format!("Systems/{}/Bios/Settings/", self.s.system_id());
-        self.s.client.patch(&url, set_machine_attrs).await?;
+        match self.s.client.patch(&url, set_machine_attrs).await? {
+            (_, Some(headers)) => {
+                let key = "location";
+                // return the job_id to the caller in the future
+                // for now, make sure to return an error if a BIOS config job is not created
+                let _job_id = headers
+                    .get(key)
+                    .ok_or_else(|| RedfishError::MissingKey {
+                        key: key.to_string(),
+                        url: url.to_string(),
+                    })?
+                    .to_str()
+                    .map_err(|e| RedfishError::InvalidValue {
+                        url: url.to_string(),
+                        field: key.to_string(),
+                        err: InvalidValueError(e.to_string()),
+                    })?
+                    .split('/')
+                    .last()
+                    .ok_or_else(|| RedfishError::InvalidValue {
+                        url: url.to_string(),
+                        field: key.to_string(),
+                        err: InvalidValueError(
+                            "unable to parse job_id from location string".to_string(),
+                        ),
+                    })?
+                    .to_string();
+                Ok(())
+            }
+            (_, None) => Err(RedfishError::NoHeader),
+        }?;
 
         self.machine_setup_oem().await?;
         self.setup_bmc_remote_access().await?;

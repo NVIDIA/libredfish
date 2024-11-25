@@ -36,7 +36,6 @@ use crate::model::service_root::ServiceRoot;
 use crate::model::software_inventory::SoftwareInventory;
 use crate::model::task::Task;
 use crate::model::thermal::Thermal;
-use crate::model::{storage::StorageSubsystem, storage::Storage, storage::Drives};
 use crate::model::update_service::ComponentType;
 use crate::model::{account_service::ManagerAccount, service_root::RedfishVendor};
 use crate::model::{
@@ -46,6 +45,7 @@ use crate::model::{power, thermal, BootOption, InvalidValueError, Manager, Manag
 use crate::model::{power::Power, update_service::UpdateService};
 use crate::model::{secure_boot::SecureBoot, sensor::GPUSensors};
 use crate::model::{sel::LogEntry, ManagerResetType};
+use crate::model::{storage::Drives, storage::Storage, storage::StorageSubsystem};
 use crate::network::{RedfishHttpClient, REDFISH_ENDPOINT};
 use crate::{
     model, Boot, EnabledDisabled, JobState, NetworkDeviceFunction, NetworkPort, PowerState,
@@ -998,11 +998,10 @@ impl RedfishStandard {
                 let storage: Storage = self.client.get(&url).await?.1;
                 if !storage.drives.is_none() {
                     for drive in storage.drives.unwrap() {
-                        let url = drive
-                            .odata_id
-                            .replace(&format!("/{REDFISH_ENDPOINT}/"), "");
+                        let url = drive.odata_id.replace(&format!("/{REDFISH_ENDPOINT}/"), "");
                         let drive: Drives = self.client.get(&url).await?.1;
-                        if drive.id.contains("USB") {   // Viking server puts USB things to storage, need to be ignored
+                        if drive.id.contains("USB") {
+                            // Viking server puts USB things to storage, need to be ignored
                             continue;
                         }
                         drives.push(drive);

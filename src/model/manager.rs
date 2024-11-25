@@ -57,7 +57,7 @@ pub struct Manager {
     pub status: Status,
     #[serde(rename = "UUID")]
     pub uuid: String,
-    pub oem: ManagerExtensions,
+    pub oem: Option<ManagerExtensions>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -120,25 +120,23 @@ mod test {
     fn test_manager_parser_dell() {
         let test_data2 = include_str!("testdata/manager_dell.json");
         let m: super::Manager = serde_json::from_str(test_data2).unwrap();
-        assert!(m.oem.dell.is_some());
-        assert!(m.oem.lenovo.is_none());
+        assert!(m.oem.is_some());
+        let oem = m.oem.unwrap();
+        assert!(oem.dell.is_some());
+        assert!(oem.lenovo.is_none());
     }
 
     #[test]
     fn test_manager_parser_lenovo() {
         let test_data2 = include_str!("testdata/manager_lenovo.json");
         let m: super::Manager = serde_json::from_str(test_data2).unwrap();
-        assert!(m.oem.dell.is_none());
-        assert!(m.oem.lenovo.is_some());
-        assert_eq!(
-            m.oem
-                .lenovo
-                .as_ref()
-                .unwrap()
-                .recipients_settings
-                .retry_count,
-            5
-        );
+        assert!(m.oem.is_some());
+        let oem = m.oem.unwrap();
+        assert!(oem.dell.is_none());
+        assert!(oem.lenovo.is_some());
+        if let Some(lenovo) = oem.lenovo {
+            assert_eq!(lenovo.recipients_settings.retry_count, 5);
+        }
     }
 
     #[test]
