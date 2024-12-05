@@ -431,16 +431,16 @@ pub struct Oem {
 pub struct Drives {
     #[serde(flatten)]
     pub odata: ODataLinks,
-    pub capacity_bytes: i64,
-    pub failure_predicted: bool,
+    pub capacity_bytes: Option<i64>,
+    pub failure_predicted: Option<bool>,
     pub predicted_media_life_left_percent: Option<f64>,
     pub oem: Option<Oem>,
-    pub id: String,
+    pub id: Option<String>,
     pub manufacturer: Option<String>,
-    pub model: String,
-    pub name: String,
+    pub model: Option<String>,
+    pub name: Option<String>,
     pub revision: Option<String>,
-    pub serial_number: String,
+    pub serial_number: Option<String>,
     pub status: Option<ResourceStatus>,
 }
 

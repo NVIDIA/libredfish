@@ -989,9 +989,9 @@ impl RedfishStandard {
     pub async fn get_drives_metrics(&self) -> Result<Vec<Drives>, RedfishError> {
         let mut drives: Vec<Drives> = Vec::new();
         let url = format!("Systems/{}/Storage/", self.system_id());
-        let storagesubsystem: StorageSubsystem = self.client.get(&url).await?.1;
-        if !storagesubsystem.members.is_none() {
-            for member in storagesubsystem.members.unwrap() {
+        let storage_subsystem: StorageSubsystem = self.client.get(&url).await?.1;
+        if !storage_subsystem.members.is_none() {
+            for member in storage_subsystem.members.unwrap() {
                 let url = member
                     .odata_id
                     .replace(&format!("/{REDFISH_ENDPOINT}/"), "");
@@ -1000,9 +1000,10 @@ impl RedfishStandard {
                     for drive in storage.drives.unwrap() {
                         let url = drive.odata_id.replace(&format!("/{REDFISH_ENDPOINT}/"), "");
                         let drive: Drives = self.client.get(&url).await?.1;
-                        if drive.id.contains("USB") {
-                            // Viking server puts USB things to storage, need to be ignored
-                            continue;
+                        if let Some(ref id) = drive.id {
+                            if id.contains("USB"){
+                                continue;
+                            }
                         }
                         drives.push(drive);
                     }
