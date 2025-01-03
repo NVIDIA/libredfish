@@ -1384,7 +1384,7 @@ impl UpdateParameters {
     fn new() -> Self {
         Self {
             targets: vec![],
-            operation_apply_time: "OnStartUpdateRequest".to_string(),
+            operation_apply_time: "Immediate".to_string(),
         }
     }
 }

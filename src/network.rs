@@ -538,7 +538,7 @@ impl RedfishHttpClient {
         Ok((status_code, res, res_headers))
     }
 
-    // req_multipart_firmware_upload does a Refish request for a multipart based firmware upload.
+    // req_multipart_firmware_upload does a Redfish request for a multipart based firmware upload.
     pub async fn req_update_firmware_multipart(
         &self,
         filename: &Path,

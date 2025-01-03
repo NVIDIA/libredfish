@@ -31,6 +31,7 @@ use reqwest::{header::HeaderName, Method, StatusCode};
 use serde_json::json;
 use tracing::debug;
 
+use crate::model::job::Job;
 use crate::model::serial_interface::SerialInterface;
 use crate::model::service_root::ServiceRoot;
 use crate::model::software_inventory::SoftwareInventory;
@@ -326,7 +327,26 @@ impl Redfish for RedfishStandard {
     /// http://redfish.dmtf.org/schemas/v1/TaskCollection.json
     async fn get_task(&self, id: &str) -> Result<Task, RedfishError> {
         let url = format!("TaskService/Tasks/{}", id);
-        let (_status_code, body) = self.client.get(&url).await?;
+        let (_status_code, body) = self.client.get::<Task>(&url).await?;
+
+        if let Some(msg) = body
+            .messages
+            .iter()
+            .find(|x| x.message_id == "Update.1.0.OperationTransitionedToJob")
+        {
+            if let Some(message_arg) = msg.message_args.first() {
+                // The task is redirecting us to a JobService.  Look at that instead, and make a fake task from it.
+                let (_, job): (_, Job) = self
+                    .client
+                    .get(
+                        message_arg
+                            .strip_prefix("/redfish/v1/")
+                            .unwrap_or("wrong_prefix"),
+                    )
+                    .await?;
+                return Ok(job.as_task());
+            }
+        }
         Ok(body)
     }
     
