@@ -24,6 +24,7 @@ mod hpe;
 mod lenovo;
 mod network;
 mod nvidia_dpu;
+mod nvidia_gbx00;
 mod nvidia_viking;
 mod supermicro;
 pub use network::{Endpoint, RedfishClientPool, RedfishClientPoolBuilder, REDFISH_ENDPOINT};
@@ -271,10 +272,10 @@ pub trait Redfish: Send + Sync + 'static {
     ) -> Result<NetworkAdapter, RedfishError>;
 
     // List all High Speed Ports of a given Chassis
-    async fn get_ports(&self, chassis_id: &str) -> Result<Vec<String>, RedfishError>;
+    async fn get_ports(&self, chassis_id: &str, network_adapter: &str) -> Result<Vec<String>, RedfishError>;
 
     // Get High Speed Port details
-    async fn get_port(&self, chassis_id: &str, id: &str) -> Result<NetworkPort, RedfishError>;
+    async fn get_port(&self, chassis_id: &str, network_adapter: &str, id: &str) -> Result<NetworkPort, RedfishError>;
 
     // List all Ethernet Interfaces for the default `Manager`
     async fn get_manager_ethernet_interfaces(&self) -> Result<Vec<String>, RedfishError>;

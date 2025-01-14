@@ -631,16 +631,17 @@ impl Redfish for Bmc {
         self.s.get_base_network_adapter(system_id, id).await
     }
 
-    async fn get_ports(&self, chassis_id: &str) -> Result<Vec<String>, RedfishError> {
-        self.s.get_ports(chassis_id).await
+    async fn get_ports(&self, chassis_id: &str, network_adapter: &str) -> Result<Vec<String>, RedfishError> {
+        self.s.get_ports(chassis_id, network_adapter).await
     }
 
     async fn get_port(
         &self,
         chassis_id: &str,
+        network_adapter: &str,
         id: &str,
     ) -> Result<crate::NetworkPort, RedfishError> {
-        self.s.get_port(chassis_id, id).await
+        self.s.get_port(chassis_id, network_adapter, id).await
     }
 
     async fn get_manager_ethernet_interfaces(&self) -> Result<Vec<String>, RedfishError> {

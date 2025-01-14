@@ -59,6 +59,7 @@ const NVIDIA_DPU_PORT: &str = "8736";
 const NVIDIA_VIKING_PORT: &str = "8737";
 const SUPERMICRO_PORT: &str = "8738";
 const DELL_MULTI_DPU_PORT: &str = "8739";
+const NVIDIA_GB200_PORT: &str = "8741";
 
 static SETUP: Once = Once::new();
 
@@ -97,6 +98,11 @@ async fn test_supermicro() -> Result<(), anyhow::Error> {
     run_integration_test("supermicro", SUPERMICRO_PORT).await
 }
 
+#[tokio::test]
+async fn test_nvidia_gb200() -> Result<(), anyhow::Error> {
+    run_integration_test("nvidia_gb200", NVIDIA_GB200_PORT).await
+}
+
 async fn nvidia_dpu_integration_test(redfish: &dyn Redfish) -> Result<(), anyhow::Error> {
     let vendor = redfish.get_service_root().await?.vendor;
     assert!(vendor.is_some() && vendor.unwrap() == "Nvidia");
@@ -127,10 +133,11 @@ async fn nvidia_dpu_integration_test(redfish: &dyn Redfish) -> Result<(), anyhow
     assert!(!chassis.is_empty());
     assert!(redfish.get_chassis(&chassis[0]).await?.name.is_some());
 
-    let ports = redfish.get_ports(&chassis[0]).await?;
+    let network_adapters = redfish.get_chassis_network_adapters(&chassis[0]).await?;
+    let ports = redfish.get_ports(&chassis[0], &network_adapters[0]).await?;
     assert!(!ports.is_empty());
     assert!(redfish
-        .get_port(&chassis[0], &ports[0])
+        .get_port(&chassis[0], &network_adapters[0], &ports[0])
         .await?
         .current_speed_gbps
         .is_some());
@@ -225,6 +232,7 @@ async fn run_integration_test(
         manager_eth_interface_states.push(state);
     }
 
+<<<<<<< HEAD
     let system_eth_interfaces = redfish.get_system_ethernet_interfaces().await?;
     assert!(!system_eth_interfaces.is_empty());
     let mut system_eth_interface_states: Vec<libredfish::EthernetInterface> = Vec::new();
@@ -233,6 +241,19 @@ async fn run_integration_test(
         let mac = state.mac_address.clone().unwrap();
         if !all_macs.insert(mac.clone()) {
             panic!("Duplicate MAC address {} on interface {}", mac, iface);
+=======
+    if vendor_dir != "nvidia_gh200" && vendor_dir != "nvidia_gb200" {
+        let system_eth_interfaces = redfish.get_system_ethernet_interfaces().await?;
+        assert!(!system_eth_interfaces.is_empty());
+        let mut system_eth_interface_states: Vec<libredfish::EthernetInterface> = Vec::new();
+        for iface in &system_eth_interfaces {
+            let state = redfish.get_system_ethernet_interface(iface).await?;
+            let mac = state.mac_address.clone().unwrap();
+            if !all_macs.insert(mac.clone()) {
+                panic!("Duplicate MAC address {} on interface {}", mac, iface);
+            }
+            system_eth_interface_states.push(state);
+>>>>>>> 82bc799f1 (feat: add gb200 bianca compute board bmc support)
         }
         system_eth_interface_states.push(state);
     }
@@ -285,13 +306,15 @@ async fn run_integration_test(
         assert!(redfish.lockdown_status().await?.is_fully_disabled());
     }
 
-    redfish.setup_serial_console().await?;
-    redfish
-        .power(libredfish::SystemPowerControl::ForceRestart)
-        .await?;
-    assert!(redfish.serial_console_status().await?.is_fully_enabled());
+    if vendor_dir != "nvidia_gb200" {
+        redfish.setup_serial_console().await?;
+        redfish
+            .power(libredfish::SystemPowerControl::ForceRestart)
+            .await?;
+        assert!(redfish.serial_console_status().await?.is_fully_enabled());
+    }
 
-    if vendor_dir != "supermicro" {
+    if vendor_dir != "supermicro" && vendor_dir != "nvidia_gb200" {
         redfish.clear_tpm().await?;
         // The mockup includes TPM clear pending operation
         assert!(!redfish.pending().await?.is_empty());
@@ -418,13 +441,13 @@ async fn resource_tests(redfish: &Box<dyn Redfish>) -> Result<(), anyhow::Error>
     )
     .await?;
 
-    let chassis_id: &str;
-    match vendor {
-        RedfishVendor::Lenovo | RedfishVendor::Supermicro | RedfishVendor::Hpe => chassis_id = "1",
-        RedfishVendor::AMI => chassis_id = "DGX",
-        RedfishVendor::Nvidia => chassis_id = "Card1",
-        RedfishVendor::Dell => chassis_id = "System.Embedded.1",
-        _ => return Err(anyhow!("Unknown vendor")),
+    let chassis_id = match vendor {
+        RedfishVendor::Lenovo | RedfishVendor::Supermicro | RedfishVendor::Hpe => "1",
+        RedfishVendor::AMI => "DGX",
+        RedfishVendor::NvidiaDpu => "Card1",
+        RedfishVendor::Dell => "System.Embedded.1",
+        RedfishVendor::NvidiaGBx00 => "Chassis_0", // this is not the catch-all chassis id, gb200 redfish is not structured to aggregate into one chassis id
+        _ => return Err(anyhow!("Unknown vendor could not identify chassis")),
     };
     if vendor != RedfishVendor::Nvidia {
         let ch = match chassis_rc

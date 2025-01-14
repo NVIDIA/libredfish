@@ -24,6 +24,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{ODataLinks, ResourceStatus, StatusVec};
 use crate::model::ODataId;
+use crate::model::sensor::Sensor;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
@@ -41,8 +42,20 @@ pub struct FansOem {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
+pub struct FanThresholdReading {
+    reading: Option<f64>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
+pub struct FanThresholds {
+    pub lower_critical: FanThresholdReading,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
 pub struct Fan {
-    pub reading: Option<i64>,
+    pub reading: Option<f64>,
     pub reading_units: String,
     pub fan_name: Option<String>, // Dell, Lenovo, NVIDIA DPU
     pub name: Option<String>,     // Supermicro
@@ -53,6 +66,27 @@ pub struct Fan {
     pub status: ResourceStatus,
     pub upper_threshold_critical: Option<i64>,
     pub upper_threshold_fatal: Option<i64>,
+    pub thresholds: Option<FanThresholds>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
+pub struct TemperatureOemNvidia {
+    #[serde(rename = "@odata.id")]
+    pub odata_id: String,
+    pub device_name: Option<String>,
+    pub physical_context: Option<String>,
+    pub reading: Option<f64>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
+pub struct TemperaturesOemNvidia {
+    #[serde(flatten)]
+    pub odata: ODataLinks,
+    pub id: String,
+    pub name: String,
+    pub temperature_readings_celsius: Option<Vec<TemperatureOemNvidia>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -84,6 +118,53 @@ pub struct Temperature {
     pub upper_threshold_fatal: Option<f64>,
 }
 
+impl Default for Temperature {
+    fn default() -> Self {
+        Self {
+            name: "".to_string(),
+            sensor_number: None,
+            lower_threshold_critical: None,
+            lower_threshold_fatal: None,
+            physical_context: None,
+            reading_celsius: None,
+            status: Default::default(),
+            upper_threshold_critical: None,
+            upper_threshold_fatal: None,
+        }
+    }
+}
+
+impl From<TemperatureOemNvidia> for Temperature {
+    fn from(temp: TemperatureOemNvidia) -> Self {
+        Self {
+                name: temp.device_name.unwrap_or("Unknown".to_string()),
+                reading_celsius: temp.reading,
+                physical_context: temp.physical_context,
+                ..Default::default()
+            }
+    }
+}
+
+impl From<Sensor> for Temperature {
+    fn from(sensor: Sensor) -> Self {
+        let physical_context = match sensor.physical_context {
+            Some(physical_context) => Some(physical_context.to_string()),
+            None => None,
+        };
+        Self {
+            name: sensor.name.unwrap_or("".to_string()),
+            sensor_number: None,
+            lower_threshold_critical: None,
+            lower_threshold_fatal: None,
+            physical_context,
+            reading_celsius: sensor.reading,
+            status: sensor.status.unwrap_or_default(),
+            upper_threshold_critical: None,
+            upper_threshold_fatal: None,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct Redundancy {
@@ -99,6 +180,16 @@ pub struct Redundancy {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
+pub struct LeakDetector {
+    pub name: String,
+    pub id: String,
+    pub leak_detector_type: Option<String>,
+    pub detector_state: Option<String>,
+    pub status: ResourceStatus,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
 pub struct Thermal {
     #[serde(flatten)]
     pub odata: ODataLinks,
@@ -107,6 +198,21 @@ pub struct Thermal {
     pub fans: Vec<Fan>,
     pub temperatures: Vec<Temperature>,
     pub redundancy: Option<Vec<Redundancy>>,
+    pub leak_detectors: Option<Vec<LeakDetector>>,
+}
+
+impl Default for Thermal {
+    fn default() -> Self {
+        Self {
+            odata: Default::default(),
+            id: "".to_string(),
+            name: "".to_string(),
+            fans: vec![],
+            temperatures: vec![],
+            redundancy: None,
+            leak_detectors: None,
+        }
+    }
 }
 
 impl StatusVec for Thermal {

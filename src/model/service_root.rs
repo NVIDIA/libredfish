@@ -59,10 +59,11 @@ pub struct ServiceRoot {
 pub enum RedfishVendor {
     Lenovo,
     Dell,
-    Nvidia,
+    NvidiaDpu,
     Supermicro,
-    AMI,
+    AMI, // Viking DGX H100
     Hpe,
+    NvidiaGBx00, // all Grace-Blackwell combinations 200, .. since openbmc fw and redfish schema are the same
     Unknown,
 }
 
@@ -85,13 +86,16 @@ impl ServiceRoot {
 
     pub fn vendor(&self) -> Option<RedfishVendor> {
         let v = self.vendor_string()?;
-        Some(match v.as_str() {
-            "AMI" => RedfishVendor::AMI,
-            "Dell" => RedfishVendor::Dell,
-            "HPE" => RedfishVendor::Hpe,
-            "Lenovo" => RedfishVendor::Lenovo,
-            "Nvidia" => RedfishVendor::Nvidia,
-            "Supermicro" => RedfishVendor::Supermicro,
+        Some(match v.to_lowercase().as_str() {
+            "ami" => RedfishVendor::AMI,
+            "dell" => RedfishVendor::Dell,
+            "hpe" => RedfishVendor::Hpe,
+            "lenovo" => RedfishVendor::Lenovo,
+            "nvidia" => match self.product.as_deref() {
+                Some("GB200 NVL") => RedfishVendor::NvidiaGBx00,
+                _ => RedfishVendor::NvidiaDpu,
+            },
+            "supermicro" => RedfishVendor::Supermicro,
             _ => RedfishVendor::Unknown,
         })
     }

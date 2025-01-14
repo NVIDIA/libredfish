@@ -57,7 +57,7 @@ const MAX_ACCOUNT_ID: u8 = 16;
 
 const MELLANOX_DELL_VENDOR_ID: &str = "15b3";
 const MELLANOX_DELL_DPU_DEVICE_IDS: [&str; 5] = [
-    "a2df", // BF4 Family integrated network controller [BlueField-4 integrated network controller]
+    "a2df", // BF3 Family integrated network controller [BlueField-3 integrated network controller]
     "a2d9", // MT43162 BlueField-3 Lx integrated ConnectX-7 network controller
     "a2dc", // MT43244 BlueField-3 integrated ConnectX-7 network controller
     "a2d2", // MT416842 BlueField integrated ConnectX-5 network controller
@@ -756,16 +756,17 @@ impl Redfish for Bmc {
         self.s.get_base_network_adapter(system_id, id).await
     }
 
-    async fn get_ports(&self, chassis_id: &str) -> Result<Vec<String>, RedfishError> {
-        self.s.get_ports(chassis_id).await
+    async fn get_ports(&self, chassis_id: &str, network_adapter: &str) -> Result<Vec<String>, RedfishError> {
+        self.s.get_ports(chassis_id, network_adapter).await
     }
 
     async fn get_port(
         &self,
         chassis_id: &str,
+        network_adapter: &str,
         id: &str,
     ) -> Result<crate::NetworkPort, RedfishError> {
-        self.s.get_port(chassis_id, id).await
+        self.s.get_port(chassis_id, network_adapter, id).await
     }
 
     async fn get_manager_ethernet_interfaces(&self) -> Result<Vec<String>, RedfishError> {

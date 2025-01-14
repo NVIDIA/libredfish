@@ -1,5 +1,6 @@
+use std::fmt::Display;
 use serde::{Deserialize, Serialize};
-
+use crate::model::{ODataId, ResourceStatus};
 use crate::OData;
 
 #[derive(Debug, Clone)]
@@ -18,6 +19,20 @@ pub struct Sensor {
     pub physical_context: Option<PhysicalContext>,
     pub reading: Option<f64>,
     pub reading_type: Option<ReadingType>,
+    pub reading_units: Option<String>,
+    pub reading_range_max: Option<f64>,
+    pub reading_range_min: Option<f64>,
+    pub status: Option<ResourceStatus>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
+pub struct Sensors {
+    #[serde(flatten)]
+    pub odata: OData,
+    pub members: Vec<ODataId>,
+    pub name: String,
+    pub description: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Copy, Clone, Eq, PartialEq)]
@@ -99,4 +114,10 @@ pub enum ReadingType {
     Percent,
     AbsoluteHumidity,
     Heat,
+}
+
+impl Display for PhysicalContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(&self, f)
+    }
 }

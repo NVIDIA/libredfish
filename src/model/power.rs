@@ -21,7 +21,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 use serde::{Deserialize, Serialize};
-
+use crate::model::sensor::Sensor;
 use super::{LinkType, ODataId, ODataLinks, ResourceStatus, StatusVec};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -115,21 +115,23 @@ pub struct InputRanges {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct PowerSupply {
-    pub firmware_version: String,
+    pub firmware_version: Option<String>,
     // we need to track this metric
     pub last_power_output_watts: Option<f64>, // not in Supermicro or NVIDIA DPU
     // we need to track this metric
-    pub line_input_voltage: Option<i64>,
-    pub line_input_voltage_type: String,
+    pub line_input_voltage: Option<f64>,
+    pub line_input_voltage_type: Option<String>,
     pub efficiency_percent: Option<f64>, // not in Supermicro or NVIDIA DPU
     pub hot_pluggable: Option<bool>,
+    pub manufacturer: Option<String>,
     pub model: String,
     pub name: String,
     pub input_ranges: Option<Vec<InputRanges>>, // only present sometimes on Supermicro
-    pub power_capacity_watts: Option<i64>,      // present but 'null' on Supermicro
+    pub power_output_amps: Option<f64>,
+    pub power_capacity_watts: Option<f64>,      // present but 'null' on Supermicro
     pub power_input_watts: Option<f64>,
     pub power_output_watts: Option<f64>,
-    pub power_supply_type: String,
+    pub power_supply_type: Option<String>,
     pub serial_number: String,
     pub spare_part_number: Option<String>,
     pub part_number: Option<String>, // Supermicro
@@ -158,11 +160,28 @@ pub struct Voltages {
     pub status: ResourceStatus,
 }
 
+impl From<Sensor> for Voltages {
+    fn from(sensor: Sensor) -> Self {
+        let physical_context = match sensor.physical_context {
+            Some(physical_context) => Some(physical_context.to_string()),
+            None => None,
+        };
+        Self {
+            name: sensor.name.unwrap_or_default(),
+            physical_context,
+            reading_volts: sensor.reading,
+            lower_threshold_critical: None,
+            upper_threshold_critical: None,
+            status: sensor.status.unwrap_or_default(),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct Power {
     #[serde(flatten)]
-    pub odata: ODataLinks,
+    pub odata: Option<ODataLinks>,
     pub id: String,
     pub name: String,
     pub power_control: Vec<PowerControl>,
