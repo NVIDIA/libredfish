@@ -7,22 +7,10 @@ on:
       - "pull-request/[0-9]+"
 
 jobs:
-  build-job:
+  ci-job:
     runs-on: linux-amd64-cpu4
     container:
       image: rust:1.90.0
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Build
-        run: cargo build
-
-  unit-test-job:
-    runs-on: linux-amd64-cpu4
-    container:
-      image: rust:1.90.0
-    needs: build-job
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,23 +19,12 @@ jobs:
         run: |
           apt-get update
           apt-get install -y python3-full python3-pip
-      
-      - name: Run tests
-        run: cargo test
 
-  lint-test-job:
-    runs-on: linux-amd64-cpu4
-    container:
-      image: rust:1.90.0
-    needs: build-job
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
       - name: Install Clippy
         run: rustup component add clippy
       
-      - name: Run Clippy
-        run: cargo clippy
-
-
+      - name: Build, Lint, and Test
+        run: |
+          cargo build
+          cargo clippy
+          cargo test
