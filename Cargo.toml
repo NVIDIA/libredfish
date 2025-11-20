@@ -7,7 +7,7 @@ authors = [
 ]
 repository = "https://github.com/NVIDIA/libredfish"
 license = "MIT"
-version = "0.31.5"
+version = "0.32.0"
 edition = "2021"
 publish = [ "internal" ]
 
