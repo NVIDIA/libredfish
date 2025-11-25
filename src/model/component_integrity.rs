@@ -87,9 +87,10 @@ pub struct SPDMGetSignedMeasurements {
 pub struct CaCertificate {
     pub certificate_string: String,
     pub certificate_type: String,
-    pub certificate_uses_types: Vec<String>,
+    pub certificate_usage_types: Vec<String>,
     pub id: String,
     pub name: String,
+    #[serde(rename = "SPDM")]
     pub spdm: SlotInfo,
 }
 
@@ -112,4 +113,36 @@ pub struct RegexToFirmwareIdOptions {
     pub pattern: Regex,
     pub id_prefix: &'static str,
     // if suffix is needed, add another member `id_suffix` here.
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::model::component_integrity::CaCertificate;
+
+    #[test]
+    fn test_ca_certificate_serialization_deserialization() {
+        let ca_certificate = r#"{
+    "@odata.id": "/redfish/v1/Chassis/HGX_IRoT_GPU_0/Certificates/CertChain",
+    "@odata.type": " #Certificate.v1_5_0.Certificate",
+    "CertificateString": "-----BEGIN CERTIFICATE-----\nMIIDdDCCAvqgAwZ0UBCk+3B6JuSijznMdCaX+lwxJ0Eq7V\nSFpkQATVveySG/Qo8NreDDAfu5dAcVBr\n-----END CERTIFICATE-----\n",
+    "CertificateType": "PEMchain",
+    "CertificateUsageTypes": [
+        "Device"
+    ],
+    "Id": "CertChain",
+    "Name": "HGX_IRoT_GPU_0 Certificate Chain",
+    "SPDM": {
+        "SlotId": 0
+    }
+}"#;
+
+        // test Deserialization
+        let parsed_certificate: CaCertificate = serde_json::from_str(ca_certificate).unwrap();
+        assert_eq!(parsed_certificate.id, "CertChain");
+        assert_eq!(parsed_certificate.spdm.slot_id, 0);
+        assert_eq!(parsed_certificate.certificate_usage_types.len(), 1);
+
+        // test simple serialization
+        serde_json::to_string(&parsed_certificate).unwrap();
+    }
 }
