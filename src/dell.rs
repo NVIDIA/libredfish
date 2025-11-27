@@ -1921,10 +1921,14 @@ impl Bmc {
         let na_id = match chassis.network_adapters {
             Some(id) => id,
             None => {
+                let chassis_odata_url = chassis
+                    .odata
+                    .map(|o| o.odata_id)
+                    .unwrap_or_else(|| "empty_odata_id_url".to_string());
                 return Err(RedfishError::MissingKey {
                     key: "network_adapters".to_string(),
-                    url: chassis.odata.unwrap().odata_id,
-                })
+                    url: chassis_odata_url,
+                });
             }
         };
 

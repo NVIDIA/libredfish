@@ -1226,8 +1226,7 @@ impl Bmc {
         let bios = self.get_bios().await?;
         let bios = bios.attributes;
 
-        if bios.acpi_spcr_console_redirection_enable.is_some() {
-            let val = bios.acpi_spcr_console_redirection_enable.unwrap();
+        if let Some(val) = bios.acpi_spcr_console_redirection_enable {
             message.push_str(&format!("acpi_spcr_console_redirection_enable={val} "));
             match val {
                 true => {
@@ -1240,8 +1239,7 @@ impl Bmc {
                 }
             }
         }
-        if bios.console_redirection_enable0.is_some() {
-            let val = bios.console_redirection_enable0.unwrap();
+        if let Some(val) = bios.console_redirection_enable0 {
             message.push_str(&format!("console_redirection_enable0={val} "));
             match val {
                 true => {
@@ -1255,30 +1253,26 @@ impl Bmc {
         // All of these need a specific value for serial console access to work.
         // Any other value counts as correctly disabled.
 
-        if bios.acpi_spcr_port.is_some() {
-            let val = bios.acpi_spcr_port.unwrap();
+        if let Some(val) = &bios.acpi_spcr_port {
             message.push_str(&format!("acpi_spcr_port={val} "));
             if val != DEFAULT_ACPI_SPCR_PORT {
                 enabled = false;
             }
         }
-        if bios.acpi_spcr_flow_control.is_some() {
-            let val = bios.acpi_spcr_flow_control.unwrap();
+        if let Some(val) = &bios.acpi_spcr_flow_control {
             message.push_str(&format!("acpi_spcr_flow_control={val} "));
             if val != DEFAULT_ACPI_SPCR_FLOW_CONTROL {
                 enabled = false;
             }
         }
-        if bios.acpi_spcr_baud_rate.is_some() {
-            let val = bios.acpi_spcr_baud_rate.unwrap();
+        if let Some(val) = &bios.acpi_spcr_baud_rate {
             message.push_str(&format!("acpi_spcr_baud_rate={val} "));
             if val != DEFAULT_ACPI_SPCR_BAUD_RATE {
                 enabled = false;
             }
         }
 
-        if bios.baud_rate0.is_some() {
-            let val = bios.baud_rate0.unwrap();
+        if let Some(val) = &bios.baud_rate0 {
             message.push_str(&format!("baud_rate0={val} "));
             if val != DEFAULT_BAUD_RATE0 {
                 enabled = false;
@@ -1318,7 +1312,7 @@ impl Bmc {
             //
             // TODO: Many BootOptions have Alias="Pxe". This probably isn't doing what we want.
             //
-            if b.alias.is_some() && b.alias.unwrap() == with_name_str {
+            if b.alias.as_deref() == Some(&with_name_str) {
                 ordered.insert(0, format!("Boot{}", b.id).to_string());
                 continue;
             }

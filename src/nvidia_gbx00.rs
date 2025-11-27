@@ -109,13 +109,19 @@ impl Display for BootOptionMatchField {
 // Supported component to firmware mapping.
 // GPU, Source: HGX_IRoT_GPU_X Target: HGX_FW_GPU_X
 fn get_component_integrity_id_to_firmware_inventory_id_options(
-) -> &'static Vec<RegexToFirmwareIdOptions> {
-    static RE: OnceLock<Vec<RegexToFirmwareIdOptions>> = OnceLock::new();
+) -> Result<&'static Vec<RegexToFirmwareIdOptions>, RedfishError> {
+    static RE: OnceLock<Result<Vec<RegexToFirmwareIdOptions>, String>> = OnceLock::new();
     RE.get_or_init(|| {
-        vec![RegexToFirmwareIdOptions {
+        Ok(vec![RegexToFirmwareIdOptions {
             id_prefix: "HGX_FW_",
-            pattern: Regex::new(r"HGX_IRoT_(GPU_\d+)").unwrap(),
-        }]
+            // Assuming our static pattern is good, this is probably
+            // safe, but still check for an error instead of unwrapping.
+            pattern: Regex::new(r"HGX_IRoT_(GPU_\d+)").map_err(|e| e.to_string())?,
+        }])
+    })
+    .as_ref()
+    .map_err(|e| RedfishError::GenericError {
+        error: format!("Failed to compile regex: {}", e),
     })
 }
 
@@ -1039,7 +1045,7 @@ impl Redfish for Bmc {
     ) -> Result<crate::model::software_inventory::SoftwareInventory, RedfishError> {
         let mut id = None;
 
-        for value in get_component_integrity_id_to_firmware_inventory_id_options() {
+        for value in get_component_integrity_id_to_firmware_inventory_id_options()? {
             if let Some(capture) = value.pattern.captures(component_integrity_id) {
                 id = Some(format!(
                     "{}{}",

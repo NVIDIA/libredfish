@@ -87,7 +87,9 @@ impl RedfishClientPoolBuilder {
             .connect_timeout(self.connect_timeout)
             .timeout(self.timeout)
             .build()
-            .unwrap();
+            .map_err(|e| RedfishError::GenericError {
+                error: format!("Failed to build RedfishClientPool HTTP client: {}", e),
+            })?;
         let pool = RedfishClientPool { http_client };
 
         Ok(pool)
@@ -162,8 +164,12 @@ impl RedfishClientPool {
         let service_root = s.get_service_root().await?;
         let systems = s.get_systems().await?;
         let managers = s.get_managers().await?;
-        let system_id = systems.first().unwrap();
-        let manager_id = managers.first().unwrap();
+        let system_id = systems.first().ok_or_else(|| RedfishError::GenericError {
+            error: "No systems found in service root".to_string(),
+        })?;
+        let manager_id = managers.first().ok_or_else(|| RedfishError::GenericError {
+            error: "No managers found in service root".to_string(),
+        })?;
         let chassis = s.get_chassis_all().await?;
 
         s.set_system_id(system_id)?;
@@ -626,14 +632,27 @@ impl RedfishHttpClient {
                     .part(
                         "UpdateParameters",
                         reqwest::multipart::Part::text(parameters)
+                            // mime_str_to_part parses the MIME type. Technically this is
+                            // infallible for known MIME types, including application/json,
+                            // but still check for an error instead of unwrapping.
                             .mime_str("application/json")
-                            .unwrap(),
+                            .map_err(|e| RedfishError::GenericError {
+                                error: format!("Invalid MIME type 'application/json': {}", e),
+                            })?,
                     )
                     .part(
                         "UpdateFile",
                         Part::stream_with_length(file, length)
+                            // mime_str_to_part parses the MIME type. Technically this is
+                            // infallible for known MIME types, including application/octet-stream,
+                            // but still check for an error instead of unwrapping.
                             .mime_str("application/octet-stream")
-                            .unwrap()
+                            .map_err(|e| RedfishError::GenericError {
+                                error: format!(
+                                    "Invalid MIME type 'application/octet-stream': {}",
+                                    e
+                                ),
+                            })?
                             // Yes, the filename passed does matter for some reason, at least for Dells, and it has to be the basename.
                             .file_name(basename.clone()),
                     ),

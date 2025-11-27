@@ -806,4 +806,3 @@ fn get_tmp_dir() -> PathBuf {
     let temp_dir = format!("{}-{}-{}", PYTHON_VENV_DIR, std::process::id(), nanos);
     env::temp_dir().join(&temp_dir)
 }
-

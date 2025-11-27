@@ -191,9 +191,9 @@ pub struct Power {
 impl StatusVec for Power {
     fn get_vec(&self) -> Vec<ResourceStatus> {
         let mut v: Vec<ResourceStatus> = Vec::new();
-        if self.power_supplies.is_some() {
-            for res in self.power_supplies.clone().unwrap() {
-                v.push(res.status)
+        if let Some(power_supplies) = &self.power_supplies {
+            for res in power_supplies {
+                v.push(res.status);
             }
         }
         v

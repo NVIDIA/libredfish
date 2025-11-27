@@ -615,7 +615,7 @@ impl Redfish for RedfishStandard {
         if systems.members.is_empty() {
             return Ok(vec!["1".to_string()]); // default to DMTF standard suggested
         }
-        let v = systems
+        let v: Result<Vec<String>, RedfishError> = systems
             .members
             .into_iter()
             .map(|d| {
@@ -623,12 +623,14 @@ impl Redfish for RedfishStandard {
                     .trim_matches('/')
                     .split('/')
                     .next_back()
-                    .unwrap()
-                    .to_string()
+                    .map(|s| s.to_string())
+                    .ok_or_else(|| RedfishError::GenericError {
+                        error: format!("Invalid odata_id format: {}", d.odata_id),
+                    })
             })
             .collect();
 
-        Ok(v)
+        v
     }
 
     async fn get_manager(&self) -> Result<Manager, RedfishError> {
@@ -644,7 +646,7 @@ impl Redfish for RedfishStandard {
         if bmcs.members.is_empty() {
             return Ok(vec!["1".to_string()]);
         }
-        let v: Vec<String> = bmcs
+        let v: Result<Vec<String>, RedfishError> = bmcs
             .members
             .into_iter()
             .map(|d| {
@@ -652,11 +654,13 @@ impl Redfish for RedfishStandard {
                     .trim_matches('/')
                     .split('/')
                     .next_back()
-                    .unwrap()
-                    .to_string()
+                    .map(|s| s.to_string())
+                    .ok_or_else(|| RedfishError::GenericError {
+                        error: format!("Invalid odata_id format: {}", d.odata_id),
+                    })
             })
             .collect();
-        Ok(v)
+        v
     }
 
     async fn bmc_reset_to_defaults(&self) -> Result<(), RedfishError> {
@@ -1369,7 +1373,7 @@ impl RedfishStandard {
             devices.extend(chassis_devices);
         }
 
-        devices.sort_unstable_by(|a, b| a.manufacturer.partial_cmp(&b.manufacturer).unwrap());
+        devices.sort_unstable_by(|a, b| a.manufacturer.cmp(&b.manufacturer));
         Ok(devices)
     }
 }

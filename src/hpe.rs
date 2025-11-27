@@ -338,22 +338,19 @@ impl Redfish for Bmc {
         let (_status, bmc): (_, hpe::SetOemHpeLockdown) = self.s.client.get(url.as_str()).await?;
         let message = format!(
             "usb_boot={}, virtual_nic_enabled={}",
-            bios.usb_boot.clone().unwrap_or("Unknown".to_string()),
+            bios.usb_boot.as_deref().unwrap_or("Unknown"),
             bmc.oem.hpe.virtual_nic_enabled
         );
         // todo: kcs_enabled
         Ok(Status {
             message,
-            status: if bios.usb_boot.is_some()
-                && bios.usb_boot.clone().unwrap() == "Disabled"
+            status: if bios.usb_boot.as_deref() == Some("Disabled")
                 && !bmc.oem.hpe.virtual_nic_enabled
-            //&& bios.kcs_enabled.is_some() && bios.kcs_enabled.unwrap() == "false"
+            // todo: && bios.kcs_enabled.as_deref() == Some("false")
             {
                 StatusInternal::Enabled
-            } else if bios.usb_boot.is_some()
-                && bios.usb_boot.clone().unwrap() == "Enabled"
-                && bmc.oem.hpe.virtual_nic_enabled
-            // if bios.usb_boot == "Enabled" && bios.kcs_enabled.clone().is_some() && bios.kcs_enabled.clone().unwrap() == "true"
+            // todo: if bios.usb_boot.as_deref() == Some("Enabled") && bios.kcs_enabled.as_deref() == Some("true")
+            } else if bios.usb_boot.as_deref() == Some("Enabled") && bmc.oem.hpe.virtual_nic_enabled
             {
                 StatusInternal::Disabled
             } else {
@@ -436,16 +433,15 @@ impl Redfish for Bmc {
     async fn pcie_devices(&self) -> Result<Vec<PCIeDevice>, RedfishError> {
         let mut out = Vec::new();
         let chassis = self.get_chassis(self.s.system_id()).await?;
-        if chassis.pcie_devices.is_none() {
-            return Ok(vec![]);
-        }
-        let mut devices: Vec<HpePCIeDevice> = Vec::new();
-        let url = chassis
-            .pcie_devices
-            .unwrap()
+        let pcie_devices_odata = match chassis.pcie_devices {
+            Some(odata) => odata,
+            None => return Ok(vec![]),
+        };
+        let url = pcie_devices_odata
             .odata_id
             .replace(&format!("/{REDFISH_ENDPOINT}/"), "");
         let pcie_devices = self.s.get_members(&url).await?;
+        let mut devices: Vec<HpePCIeDevice> = Vec::new();
         for pcie_oid in pcie_devices {
             let dev_url = format!("{}/{}", &url, pcie_oid);
             let (_, hpe_pcie) = self.s.client.get(&dev_url).await?;
@@ -481,7 +477,7 @@ impl Redfish for Bmc {
             }
             out.push(pcie);
         }
-        out.sort_unstable_by(|a, b| a.manufacturer.partial_cmp(&b.manufacturer).unwrap());
+        out.sort_unstable_by(|a, b| a.manufacturer.cmp(&b.manufacturer));
 
         Ok(out)
     }
@@ -595,12 +591,9 @@ impl Redfish for Bmc {
         &self,
         chassis_id: &str,
     ) -> Result<Vec<String>, RedfishError> {
-        // self.s.get_chassis_network_adapters(chassis_id).await
         let chassis = self.s.get_chassis(chassis_id).await?;
-        if chassis.network_adapters.is_some() {
-            let url = chassis
-                .network_adapters
-                .unwrap()
+        if let Some(network_adapters_odata) = chassis.network_adapters {
+            let url = network_adapters_odata
                 .odata_id
                 .replace(&format!("/{REDFISH_ENDPOINT}/"), "");
             // let url = format!("Chassis/{}/NetworkAdapters", chassis_id);

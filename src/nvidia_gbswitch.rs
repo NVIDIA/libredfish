@@ -358,25 +358,23 @@ impl Redfish for Bmc {
                 for id in devices.members {
                     url = id.odata_id.replace(&format!("/{REDFISH_ENDPOINT}/"), "");
                     let p: PCIeDevice = self.s.client.get(&url).await?.1;
-                    if p.id.is_none()
-                        || p.status.is_none()
-                        || !p
-                            .status
-                            .as_ref()
-                            .unwrap()
-                            .state
-                            .as_ref()
-                            .unwrap()
-                            .to_lowercase()
-                            .contains("enabled")
-                    {
+                    // To be considered enabled, the PCIE device needs to have
+                    // an ID, a status, and the status needs to be enabled.
+                    let is_device_enabled = p.id.is_some()
+                        && p.status.as_ref().is_some_and(|s| {
+                            s.state
+                                .as_ref()
+                                .is_some_and(|state| state.to_lowercase().contains("enabled"))
+                        });
+                    if !is_device_enabled {
                         continue;
                     }
                     out.push(p);
                 }
             }
         }
-        out.sort_unstable_by(|a, b| a.manufacturer.partial_cmp(&b.manufacturer).unwrap());
+
+        out.sort_unstable_by(|a, b| a.manufacturer.cmp(&b.manufacturer));
         Ok(out)
     }
 
