@@ -42,6 +42,7 @@ use serde::{Deserialize, Serialize};
 mod dell;
 mod error;
 mod hpe;
+pub mod jsonmap;
 mod lenovo;
 mod network;
 mod nvidia_dpu;

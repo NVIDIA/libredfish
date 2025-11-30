@@ -28,6 +28,7 @@ use serde_json::Value;
 use tokio::fs::File;
 
 use crate::{
+    jsonmap,
     model::{
         account_service::ManagerAccount,
         certificate::Certificate,
@@ -377,36 +378,9 @@ impl Redfish for Bmc {
         let disabled = EnabledDisabled::Disabled.to_string();
 
         // BMC lockdown
-
         let (attrs, url) = self.manager_attributes().await?;
-
-        let key = "Lockdown.1.SystemLockdown";
-        let system_lockdown = attrs
-            .get(key)
-            .ok_or_else(|| RedfishError::MissingKey {
-                key: key.to_string(),
-                url: url.to_string(),
-            })?
-            .as_str()
-            .ok_or_else(|| RedfishError::InvalidKeyType {
-                key: key.to_string(),
-                expected_type: "&str".to_string(),
-                url: url.to_string(),
-            })?;
-
-        let key = "Racadm.1.Enable";
-        let racadm = attrs
-            .get(key)
-            .ok_or_else(|| RedfishError::MissingKey {
-                key: key.to_string(),
-                url: url.to_string(),
-            })?
-            .as_str()
-            .ok_or_else(|| RedfishError::InvalidKeyType {
-                key: key.to_string(),
-                expected_type: "&str".to_string(),
-                url: url.to_string(),
-            })?;
+        let system_lockdown = jsonmap::get_str(&attrs, "Lockdown.1.SystemLockdown", &url)?;
+        let racadm = jsonmap::get_str(&attrs, "Racadm.1.Enable", &url)?;
 
         message.push_str(&format!(
             "BMC: system_lockdown={system_lockdown}, racadm={racadm}."
@@ -802,35 +776,11 @@ impl Redfish for Bmc {
         let url = format!("Managers/iDRAC.Embedded.1/Jobs/{}", job_id);
         let (_status_code, body): (_, HashMap<String, serde_json::Value>) =
             self.s.client.get(&url).await?;
-        let job_state_key = "JobState";
-        let job_state_value = body
-            .get(job_state_key)
-            .ok_or_else(|| RedfishError::MissingKey {
-                key: job_state_key.to_string(),
-                url: url.to_string(),
-            })?
-            .as_str()
-            .ok_or_else(|| RedfishError::InvalidKeyType {
-                key: job_state_key.to_string(),
-                expected_type: "&str".to_string(),
-                url: url.to_string(),
-            })?;
+        let job_state_value = jsonmap::get_str(&body, "JobState", &url)?;
 
         let job_state = match JobState::from_str(job_state_value) {
             JobState::Scheduled => {
-                let message_key = "Message";
-                let message_value = body
-                    .get(message_key)
-                    .ok_or_else(|| RedfishError::MissingKey {
-                        key: message_key.to_string(),
-                        url: url.to_string(),
-                    })?
-                    .as_str()
-                    .ok_or_else(|| RedfishError::InvalidKeyType {
-                        key: message_key.to_string(),
-                        expected_type: "&str".to_string(),
-                        url: url.to_string(),
-                    })?;
+                let message_value = jsonmap::get_str(&body, "Message", &url)?;
                 match message_value {
                     /* Example JSON response body for a job that is Scheduled but will never complete: the job remains stuck in a Scheduled state indefinitely.
                     {
@@ -981,24 +931,11 @@ impl Redfish for Bmc {
     }
 
     async fn is_infinite_boot_enabled(&self) -> Result<Option<bool>, RedfishError> {
+        let url = format!("Systems/{}/Bios", self.s.system_id());
         let bios = self.bios().await?;
-        let bios_attributes = match bios.get("Attributes") {
-            Some(attributes) => attributes,
-            None => {
-                return Err(RedfishError::MissingKey {
-                    key: "Attributes".to_owned(),
-                    url: format!("Systems/{}/Bios", self.s.system_id()),
-                })
-            }
-        };
-
-        let infinite_boot_status = bios_attributes
-            .get("BootSeqRetry")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| RedfishError::MissingKey {
-                key: "BootSeqRetry".to_string(),
-                url: "Bios attributes".to_string(),
-            })?;
+        let bios_attributes = jsonmap::get_object(&bios, "Attributes", &url)?;
+        let infinite_boot_status =
+            jsonmap::get_str(bios_attributes, "BootSeqRetry", "Bios Attributes")?;
 
         Ok(Some(
             infinite_boot_status == EnabledDisabled::Enabled.to_string(),
@@ -1295,23 +1232,10 @@ impl Bmc {
         self.s.client.post(&url, body).await.map(|_resp| ())
     }
 
-    // Is system lockdown enabled?
+    // is_lockdown checks if system lockdown is enabled.
     async fn is_lockdown(&self) -> Result<bool, RedfishError> {
         let (attrs, url) = self.manager_attributes().await?;
-
-        let key = "Lockdown.1.SystemLockdown";
-        let system_lockdown = attrs
-            .get(key)
-            .ok_or_else(|| RedfishError::MissingKey {
-                key: key.to_string(),
-                url: url.to_string(),
-            })?
-            .as_str()
-            .ok_or_else(|| RedfishError::InvalidKeyType {
-                key: key.to_string(),
-                expected_type: "&str".to_string(),
-                url: url.to_string(),
-            })?;
+        let system_lockdown = jsonmap::get_str(&attrs, "Lockdown.1.SystemLockdown", &url)?;
 
         let enabled = EnabledDisabled::Enabled.to_string();
         Ok(system_lockdown == enabled)
@@ -1519,18 +1443,7 @@ impl Bmc {
         let mut enabled = true;
         let mut disabled = true;
         for (key, val_enabled, val_disabled) in expected {
-            let val_current = attrs
-                .get(key)
-                .ok_or_else(|| RedfishError::MissingKey {
-                    key: key.to_string(),
-                    url: url.to_string(),
-                })?
-                .as_str()
-                .ok_or_else(|| RedfishError::InvalidKeyType {
-                    key: key.to_string(),
-                    expected_type: "&str".to_string(),
-                    url: url.to_string(),
-                })?;
+            let val_current = jsonmap::get_str(&attrs, key, url)?;
             message.push_str(&format!("{key}={val_current} "));
             if val_current != val_enabled {
                 enabled = false;
@@ -1678,29 +1591,17 @@ impl Bmc {
         Ok(log_entries)
     }
 
-    // Second value in tuple is URL we used to fetch attributes, for diagnostics
+    // manager_attributes fetches Dell manager attributes and returns them as a JSON Map.
+    // Second value in tuple is URL we used to fetch attributes, for diagnostics.
     async fn manager_attributes(
         &self,
     ) -> Result<(serde_json::Map<String, serde_json::Value>, String), RedfishError> {
         let manager_id = self.s.manager_id();
-        let url = &format!("Managers/{manager_id}/Oem/Dell/DellAttributes/{manager_id}");
+        let url = format!("Managers/{manager_id}/Oem/Dell/DellAttributes/{manager_id}");
         let (_status_code, mut body): (_, HashMap<String, serde_json::Value>) =
-            self.s.client.get(url).await?;
-        let key = "Attributes";
-        let v = match body.remove(key).ok_or_else(|| RedfishError::MissingKey {
-            key: key.to_string(),
-            url: url.to_string(),
-        })? {
-            serde_json::Value::Object(obj) => obj,
-            _ => {
-                return Err(RedfishError::InvalidKeyType {
-                    key: key.to_string(),
-                    expected_type: "Object".to_string(),
-                    url: url.to_string(),
-                });
-            }
-        };
-        Ok((v, url.to_string()))
+            self.s.client.get(&url).await?;
+        let attrs = jsonmap::extract_object(&mut body, "Attributes", &url)?;
+        Ok((attrs, url))
     }
 
     /// Extra Dell-specific attributes we need to set that are not BIOS attributes
@@ -2062,14 +1963,7 @@ impl Bmc {
         let url = format!("Systems/System.Embedded.1/Storage/{controller_id}");
         let (_status_code, body): (_, HashMap<String, serde_json::Value>) =
             self.s.client.get(&url).await?;
-
-        let key = "Drives";
-        body.get(key)
-            .ok_or_else(|| RedfishError::MissingKey {
-                key: key.to_string(),
-                url: url.to_string(),
-            })
-            .cloned()
+        jsonmap::get_value(&body, "Drives", &url).cloned()
     }
 
     async fn create_storage_volume(

@@ -46,6 +46,7 @@ use crate::model::{sel::LogEntry, ManagerResetType};
 use crate::model::{sel::LogEntryCollection, serial_interface::SerialInterface};
 use crate::model::{storage::Drives, storage::Storage};
 use crate::network::{RedfishHttpClient, REDFISH_ENDPOINT};
+use crate::{jsonmap, BootOptions, Collection, PCIeDevice, RedfishError, Resource};
 use crate::{
     model, BiosProfileType, Boot, EnabledDisabled, JobState, NetworkDeviceFunction, NetworkPort,
     PowerState, Redfish, RoleId, Status, Systems,
@@ -54,7 +55,6 @@ use crate::{
     model::chassis::{Chassis, NetworkAdapter},
     MachineSetupStatus,
 };
-use crate::{BootOptions, Collection, PCIeDevice, RedfishError, Resource};
 
 const UEFI_PASSWORD_NAME: &str = "AdministratorPassword";
 
@@ -938,18 +938,7 @@ impl RedfishStandard {
         url: &str,
         mut body: HashMap<String, serde_json::Value>,
     ) -> Result<Vec<String>, RedfishError> {
-        let key = "Members";
-        let members_json = body.remove(key).ok_or_else(|| RedfishError::MissingKey {
-            key: key.to_string(),
-            url: url.to_string(),
-        })?;
-        let Ok(members) = serde_json::from_value::<Vec<ODataId>>(members_json) else {
-            return Err(RedfishError::InvalidKeyType {
-                key: key.to_string(),
-                expected_type: "Vec<ODataId>".to_string(),
-                url: url.to_string(),
-            });
-        };
+        let members: Vec<ODataId> = jsonmap::extract(&mut body, "Members", url)?;
         let member_ids: Vec<String> = members
             .into_iter()
             .filter_map(|d| d.odata_id_get().map(|id| id.to_string()).ok())
@@ -1145,40 +1134,25 @@ impl RedfishStandard {
         Ok(member)
     }
 
-    // BIOS attributes that will be applied on next restart
+    // pending_attributes returns BIOS attributes that will be applied on next restart.
     pub async fn pending_attributes(
         &self,
         pending_url: &str,
     ) -> Result<serde_json::Map<String, serde_json::Value>, RedfishError> {
         let (_sc, mut body): (reqwest::StatusCode, HashMap<String, serde_json::Value>) =
             self.client.get(pending_url).await?;
-        let mut attrs = body
-            .remove("Attributes")
-            .ok_or_else(|| RedfishError::MissingKey {
-                key: "Attributes".to_string(),
-                url: pending_url.to_string(),
-            })?;
-        let attrs_map = match attrs.as_object_mut() {
-            Some(m) => m,
-            None => {
-                return Err(RedfishError::InvalidKeyType {
-                    key: "Attributes".to_string(),
-                    expected_type: "Map".to_string(),
-                    url: pending_url.to_string(),
-                })
-            }
-        };
-        Ok(core::mem::take(attrs_map))
+        jsonmap::extract_object(&mut body, "Attributes", pending_url)
     }
 
-    // Current BIOS attributes
+    // bios_attributes returns the current BIOS attributes.
     pub async fn bios_attributes(&self) -> Result<serde_json::Value, RedfishError> {
+        let url = format!("Systems/{}/Bios", self.system_id());
         let mut b = self.bios().await?;
 
         b.remove("Attributes")
             .ok_or_else(|| RedfishError::MissingKey {
                 key: "Attributes".to_string(),
-                url: format!("Systems/{}/Bios", self.system_id()),
+                url,
             })
     }
 

@@ -40,6 +40,7 @@ use crate::model::task::Task;
 use crate::model::thermal::Fan;
 use crate::model::update_service::{ComponentType, TransferProtocolType, UpdateService};
 use crate::{
+    jsonmap,
     model::{
         boot::{BootSourceOverrideEnabled, BootSourceOverrideTarget},
         chassis::{Assembly, NetworkAdapter},
@@ -1268,35 +1269,32 @@ impl Bmc {
         Ok(bios_attrs)
     }
 
-    // Get the current status of the EmbeddedUefiShell BIOS attribute
+    // get_embedded_uefi_shell_status returns the current status of the EmbeddedUefiShell BIOS attribute.
     async fn get_embedded_uefi_shell_status(&self) -> Result<EnabledDisabled, RedfishError> {
-        if let Some(bios_attributes) = self.s.bios_attributes().await?.as_object() {
-            let embedded_uefi_shell = bios_attributes
-                .get("EmbeddedUefiShell")
-                .and_then(|v| v.as_str())
-                .ok_or_else(|| RedfishError::MissingKey {
-                    key: "EmbeddedUefiShell".to_string(),
-                    url: format!("Systems/{}/Bios", self.s.system_id()),
+        let url = format!("Systems/{}/Bios", self.s.system_id());
+        let bios_value = self.s.bios_attributes().await?;
+        let bios_attributes =
+            bios_value
+                .as_object()
+                .ok_or_else(|| RedfishError::InvalidKeyType {
+                    key: "Attributes".to_string(),
+                    expected_type: "object".to_string(),
+                    url: url.clone(),
                 })?;
 
-            match embedded_uefi_shell {
-                "Enabled" => Ok(EnabledDisabled::Enabled),
-                "Disabled" => Ok(EnabledDisabled::Disabled),
-                _ => Err(RedfishError::InvalidValue {
-                    url: format!("Systems/{}/Bios", self.s.system_id()),
-                    field: "EmbeddedUefiShell".to_string(),
-                    err: crate::model::InvalidValueError(format!(
-                        "Expected 'Enabled' or 'Disabled', got '{}'",
-                        embedded_uefi_shell
-                    )),
-                }),
-            }
-        } else {
-            Err(RedfishError::InvalidKeyType {
-                key: "Attributes".to_string(),
-                expected_type: "Object".to_string(),
-                url: format!("Systems/{}/Bios", self.s.system_id()),
-            })
+        let embedded_uefi_shell = jsonmap::get_str(bios_attributes, "EmbeddedUefiShell", &url)?;
+
+        match embedded_uefi_shell {
+            "Enabled" => Ok(EnabledDisabled::Enabled),
+            "Disabled" => Ok(EnabledDisabled::Disabled),
+            _ => Err(RedfishError::InvalidValue {
+                url,
+                field: "EmbeddedUefiShell".to_string(),
+                err: crate::model::InvalidValueError(format!(
+                    "Expected 'Enabled' or 'Disabled', got '{}'",
+                    embedded_uefi_shell
+                )),
+            }),
         }
     }
 }

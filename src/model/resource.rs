@@ -26,7 +26,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::{value::RawValue, Value};
 use tracing::debug;
 
-use crate::{Chassis, RedfishError};
+use crate::{jsonmap, Chassis, RedfishError};
 
 // A Resource is a single entity accessed at a specific URI. A resource collection is a
 // set of resources that share the same schema definition. Both are defined in Redfish Spec to have the
@@ -167,45 +167,15 @@ pub struct Collection {
 
 impl Collection {
     // Attempts to desrialize raw JSON to ResourceCollection<T>
-    // Verifies types do match.
+    // try_get verifies types do match.
     // Make sure that all mandatory properties of redfish resource collections are present
-    // First will attepemt to deserialize mambers json into Vec<T>. If it fails we will try
+    // First will attempt to deserialize members json into Vec<T>. If it fails we will try
     // deserializing individually.
     pub fn try_get<T: DeserializeOwned + IsResource>(
         mut self,
     ) -> Result<ResourceCollection<T>, RedfishError> {
-        fn extract_value<T>(
-            url: &str,
-            k: &str,
-            m: &mut HashMap<String, serde_json::Value>,
-        ) -> Result<T, RedfishError>
-        where
-            T: DeserializeOwned,
-        {
-            let json = m.remove(k).ok_or_else(|| RedfishError::MissingKey {
-                key: k.to_string(),
-                url: url.to_string(),
-            })?;
-            debug!(
-                "extract_value: json {} ==== >{}<",
-                k.to_string(),
-                json.to_string()
-            );
-            match serde_json::from_value::<T>(json) {
-                Ok(ret) => Ok(ret),
-                Err(e) => {
-                    debug!("json err {}", e);
-                    Err(RedfishError::InvalidKeyType {
-                        key: k.to_string(),
-                        expected_type: type_name::<T>().to_string(),
-                        url: url.to_string(),
-                    })
-                }
-            }
-        }
-
-        let otype: String = extract_value(self.url.as_str(), "@odata.type", &mut self.body)?;
-        //Make sure that we have a collection.
+        let otype: String = jsonmap::extract(&mut self.body, "@odata.type", &self.url)?;
+        // Make sure that we have a collection.
         if !otype.ends_with("Collection") {
             return Err(RedfishError::TypeMismatch {
                 expected: "Collection".to_string(),
@@ -222,15 +192,14 @@ impl Collection {
                 url: self.url.clone(),
             })?;
 
-        let name = extract_value(self.url.as_str(), "Name", &mut self.body)?;
-        let count = extract_value(self.url.as_str(), "Members@odata.count", &mut self.body)?;
-        let id = extract_value(self.url.as_str(), "@odata.id", &mut self.body)?;
-        let etag =
-            extract_value(self.url.as_str(), "@odata.etag", &mut self.body).unwrap_or_default();
+        let name = jsonmap::extract(&mut self.body, "Name", &self.url)?;
+        let count = jsonmap::extract(&mut self.body, "Members@odata.count", &self.url)?;
+        let id = jsonmap::extract(&mut self.body, "@odata.id", &self.url)?;
+        let etag = jsonmap::extract(&mut self.body, "@odata.etag", &self.url).unwrap_or_default();
         let context =
-            extract_value(self.url.as_str(), "@odata.context", &mut self.body).unwrap_or_default();
+            jsonmap::extract(&mut self.body, "@odata.context", &self.url).unwrap_or_default();
         let description =
-            extract_value(self.url.as_str(), "Description", &mut self.body).unwrap_or_default();
+            jsonmap::extract(&mut self.body, "Description", &self.url).unwrap_or_default();
 
         let odata = OData {
             odata_id: id,

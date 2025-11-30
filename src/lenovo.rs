@@ -44,6 +44,7 @@ use crate::model::update_service::{ComponentType, TransferProtocolType, UpdateSe
 use crate::model::{secure_boot::SecureBoot, ComputerSystem};
 use crate::model::{InvalidValueError, Manager};
 use crate::{
+    jsonmap,
     model::{
         chassis::{Assembly, Chassis, NetworkAdapter},
         network_device_function::NetworkDeviceFunction,
@@ -407,19 +408,9 @@ impl Redfish for Bmc {
     }
 
     async fn serial_console_status(&self) -> Result<Status, RedfishError> {
+        let url = format!("Systems/{}/Bios", self.s.system_id());
         let bios = self.bios().await?;
-        let attrs = bios
-            .get("Attributes")
-            .ok_or_else(|| RedfishError::MissingKey {
-                key: "Attributes".to_string(),
-                url: format!("Systems/{}/Bios", self.s.system_id()),
-            })?
-            .as_object()
-            .ok_or_else(|| RedfishError::InvalidKeyType {
-                key: "Attributes".to_string(),
-                expected_type: "Object".to_string(),
-                url: format!("Systems/{}/Bios", self.s.system_id()),
-            })?;
+        let attrs = jsonmap::get_object(&bios, "Attributes", &url)?;
 
         let expected = vec![
             // "any" means any value counts as correctly disabled
@@ -441,20 +432,8 @@ impl Redfish for Bmc {
         let mut message = String::new();
         let mut enabled = true;
         let mut disabled = true;
-        let url = format!("Systems/{}/Bios", self.s.system_id()); // url for debug only
         for (key, val_enabled, val_disabled) in expected {
-            let val_current = attrs
-                .get(key)
-                .ok_or_else(|| RedfishError::MissingKey {
-                    key: key.to_string(),
-                    url: url.to_string(),
-                })?
-                .as_str()
-                .ok_or_else(|| RedfishError::InvalidKeyType {
-                    key: key.to_string(),
-                    expected_type: "&str".to_string(),
-                    url: url.to_string(),
-                })?;
+            let val_current = jsonmap::get_str(attrs, key, &url)?;
             message.push_str(&format!("{key}={val_current} "));
             if val_current != val_enabled {
                 enabled = false;
@@ -948,24 +927,15 @@ impl Redfish for Bmc {
     }
 
     async fn is_infinite_boot_enabled(&self) -> Result<Option<bool>, RedfishError> {
+        let url = format!("Systems/{}/Bios", self.s.system_id());
         let bios = self.bios().await?;
-        let bios_attributes = match bios.get("Attributes") {
-            Some(attributes) => attributes,
-            None => {
-                return Err(RedfishError::MissingKey {
-                    key: "Attributes".to_owned(),
-                    url: format!("Systems/{}/Bios", self.s.system_id()),
-                })
-            }
-        };
+        let bios_attributes = jsonmap::get_object(&bios, "Attributes", &url)?;
+        let infinite_boot_status = jsonmap::get_str(
+            bios_attributes,
+            "BootModes_InfiniteBootRetry",
+            "Bios Attributes",
+        )?;
 
-        let infinite_boot_status = bios_attributes
-            .get("BootModes_InfiniteBootRetry")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| RedfishError::MissingKey {
-                key: "BootModes_InfiniteBootRetry".to_string(),
-                url: "Bios attributes".to_string(),
-            })?;
         Ok(Some(
             infinite_boot_status == EnabledDisabled::Enabled.to_string(),
         ))
@@ -1169,41 +1139,9 @@ impl Bmc {
         let url = format!("Managers/{}", self.s.manager_id());
         let (_, body): (_, HashMap<String, serde_json::Value>) = self.s.client.get(&url).await?;
 
-        let key = "Oem";
-        let oem_obj = body
-            .get(key)
-            .ok_or_else(|| RedfishError::MissingKey {
-                key: key.to_string(),
-                url: url.to_string(),
-            })?
-            .as_object()
-            .ok_or_else(|| RedfishError::InvalidKeyType {
-                key: key.to_string(),
-                expected_type: "Object".to_string(),
-                url: url.to_string(),
-            })?;
-
-        let key = "Lenovo";
-        let lenovo_obj = oem_obj
-            .get(key)
-            .ok_or_else(|| RedfishError::MissingKey {
-                key: key.to_string(),
-                url: url.to_string(),
-            })?
-            .as_object()
-            .ok_or_else(|| RedfishError::InvalidKeyType {
-                key: key.to_string(),
-                expected_type: "Object".to_string(),
-                url: url.to_string(),
-            })?;
-
-        let key = "KCSEnabled";
-        let is_kcs_enabled = lenovo_obj
-            .get(key)
-            .ok_or_else(|| RedfishError::MissingKey {
-                key: key.to_string(),
-                url: url.to_string(),
-            })?;
+        let oem_obj = jsonmap::get_object(&body, "Oem", &url)?;
+        let lenovo_obj = jsonmap::get_object(oem_obj, "Lenovo", &url)?;
+        let is_kcs_enabled = jsonmap::get_value(lenovo_obj, "KCSEnabled", &url)?;
 
         Ok(is_kcs_enabled.clone())
     }
@@ -1268,38 +1206,13 @@ impl Bmc {
         let url = format!("Managers/{}/Oem/Lenovo/Security", self.s.manager_id());
         let (_, body): (_, HashMap<String, serde_json::Value>) = self.s.client.get(&url).await?;
 
-        let key = "Configurator";
-        let configurator = body
-            .get(key)
-            .ok_or_else(|| RedfishError::MissingKey {
-                key: key.to_string(),
-                url: url.to_string(),
-            })?
-            .as_object()
-            .ok_or_else(|| RedfishError::InvalidKeyType {
-                key: key.to_string(),
-                expected_type: "Object".to_string(),
-                url: url.to_string(),
-            })?;
-
-        let key = "FWRollback";
-        let fw_rollback = configurator
-            .get(key)
-            .ok_or_else(|| RedfishError::MissingKey {
-                key: key.to_string(),
-                url: url.to_string(),
-            })?
-            .as_str()
-            .ok_or_else(|| RedfishError::InvalidKeyType {
-                key: key.to_string(),
-                expected_type: "&str".to_string(),
-                url: url.to_string(),
-            })?;
+        let configurator = jsonmap::get_object(&body, "Configurator", &url)?;
+        let fw_rollback = jsonmap::get_str(configurator, "FWRollback", &url)?;
 
         let fw_typed = fw_rollback
             .parse()
             .map_err(|_| RedfishError::InvalidKeyType {
-                key: key.to_string(),
+                key: "FWRollback".to_string(),
                 expected_type: "EnabledDisabled".to_string(),
                 url: url.to_string(),
             })?;
@@ -1310,33 +1223,8 @@ impl Bmc {
         let url = format!("Systems/{}", self.s.system_id());
         let (_, body): (_, HashMap<String, serde_json::Value>) = self.s.client.get(&url).await?;
 
-        let key = "Oem";
-        let oem_obj = body
-            .get(key)
-            .ok_or_else(|| RedfishError::MissingKey {
-                key: key.to_string(),
-                url: url.to_string(),
-            })?
-            .as_object()
-            .ok_or_else(|| RedfishError::InvalidKeyType {
-                key: key.to_string(),
-                expected_type: "Object".to_string(),
-                url: url.to_string(),
-            })?;
-
-        let key = "Lenovo";
-        let lenovo_obj = oem_obj
-            .get(key)
-            .ok_or_else(|| RedfishError::MissingKey {
-                key: key.to_string(),
-                url: url.to_string(),
-            })?
-            .as_object()
-            .ok_or_else(|| RedfishError::InvalidKeyType {
-                key: key.to_string(),
-                expected_type: "Object".to_string(),
-                url: url.to_string(),
-            })?;
+        let oem_obj = jsonmap::get_object(&body, "Oem", &url)?;
+        let lenovo_obj = jsonmap::get_object(oem_obj, "Lenovo", &url)?;
 
         let mut front_panel_usb_key = "FrontPanelUSB";
         let val = match lenovo_obj.get(front_panel_usb_key) {
@@ -1405,20 +1293,7 @@ impl Bmc {
         let url = format!("Managers/{}/EthernetInterfaces/ToHost", self.s.manager_id());
         let (_, body): (_, HashMap<String, serde_json::Value>) = self.s.client.get(&url).await?;
 
-        let key = "InterfaceEnabled";
-        let is_allowed = body
-            .get(key)
-            .ok_or_else(|| RedfishError::MissingKey {
-                key: key.to_string(),
-                url: url.to_string(),
-            })?
-            .as_bool()
-            .ok_or_else(|| RedfishError::InvalidKeyType {
-                key: key.to_string(),
-                expected_type: "bool".to_string(),
-                url: url.to_string(),
-            })?;
-        Ok(is_allowed)
+        jsonmap::get_bool(&body, "InterfaceEnabled", &url)
     }
 
     /// Both Intel and AMD have virtualization technologies that help fix the issue of x86 instruction
