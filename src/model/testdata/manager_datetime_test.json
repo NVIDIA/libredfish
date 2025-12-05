@@ -1,0 +1,30 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#Manager.Manager",
+  "@odata.id": "/redfish/v1/Managers/Test.1",
+  "@odata.type": "#Manager.v1_9_0.Manager",
+  "Actions": {
+    "#Manager.Reset": {
+      "target": "/redfish/v1/Managers/Test.1/Actions/Manager.Reset"
+    }
+  },
+  "DateTime": "2025-12-05T21:07:58Z",
+  "Description": "Test Manager",
+  "EthernetInterfaces": {
+    "@odata.id": "/redfish/v1/Managers/Test.1/EthernetInterfaces"
+  },
+  "FirmwareVersion": "1.0.0",
+  "Id": "Test.1",
+  "LogServices": {
+    "@odata.id": "/redfish/v1/Managers/Test.1/LogServices"
+  },
+  "ManagerType": "BMC",
+  "Name": "Test Manager",
+  "NetworkProtocol": {
+    "@odata.id": "/redfish/v1/Managers/Test.1/NetworkProtocol"
+  },
+  "Status": {
+    "State": "Enabled"
+  },
+  "UUID": "12345678-1234-1234-1234-123456789012"
+}
+

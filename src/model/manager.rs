@@ -21,6 +21,7 @@
  */
 use std::fmt;
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::oem::ManagerExtensions;
@@ -43,6 +44,7 @@ pub struct Manager {
     pub odata: ODataLinks,
     pub actions: Action,
     pub command_shell: Option<Commandshell>,
+    pub date_time: Option<DateTime<Utc>>,
     pub description: Option<String>,
     pub ethernet_interfaces: ODataId,
     pub firmware_version: String,
@@ -107,6 +109,8 @@ impl fmt::Display for ManagerResetType {
 
 #[cfg(test)]
 mod test {
+    use chrono::{Datelike, Timelike};
+
     use crate::model::oem::{dell, hpe};
 
     #[test]
@@ -124,6 +128,12 @@ mod test {
         let oem = m.oem.unwrap();
         assert!(oem.dell.is_some());
         assert!(oem.lenovo.is_none());
+        // Verify DateTime field is parsed correctly
+        assert!(m.date_time.is_some());
+        let dt = m.date_time.unwrap();
+        assert_eq!(dt.year(), 2022);
+        assert_eq!(dt.month(), 11);
+        assert_eq!(dt.day(), 30);
     }
 
     #[test]
@@ -137,6 +147,12 @@ mod test {
         if let Some(lenovo) = oem.lenovo {
             assert_eq!(lenovo.recipients_settings.retry_count, 5);
         }
+        // Verify DateTime field is parsed correctly
+        assert!(m.date_time.is_some());
+        let dt = m.date_time.unwrap();
+        assert_eq!(dt.year(), 2023);
+        assert_eq!(dt.month(), 2);
+        assert_eq!(dt.day(), 7);
     }
 
     #[test]
@@ -144,5 +160,26 @@ mod test {
         let test_data3 = include_str!("testdata/manager_dell_attrs.json");
         let result3: dell::AttributesResult = serde_json::from_str(test_data3).unwrap();
         println!("result3: {result3:#?}");
+    }
+
+    #[test]
+    fn test_manager_datetime_parsing() {
+        // Test parsing RFC3339 datetime format
+        let json_data = include_str!("testdata/manager_datetime_test.json");
+
+        let manager: super::Manager = serde_json::from_str(json_data).unwrap();
+        assert!(manager.date_time.is_some());
+        
+        let dt = manager.date_time.unwrap();
+        assert_eq!(dt.year(), 2025);
+        assert_eq!(dt.month(), 12);
+        assert_eq!(dt.day(), 5);
+        assert_eq!(dt.hour(), 21);
+        assert_eq!(dt.minute(), 7);
+        assert_eq!(dt.second(), 58);
+        
+        // Verify the datetime string format
+        let dt_str = dt.to_rfc3339();
+        assert_eq!(dt_str, "2025-12-05T21:07:58+00:00");
     }
 }
