@@ -727,27 +727,23 @@ impl Redfish for Bmc {
         // Some supermicro models don't support the set_mellanox_first method, so we fall back to this method
         let mut fbo = self.get_boot_order().await?;
 
-        // The network name is not consistent because it includes the interface name
-        let Some(network) = fbo
+        // The network name is not consistent because it includes the interface name.
+        // Falls back to 'UEFI Network' if no specific entry is found to enable network boot options.
+        let network = fbo
             .fixed_boot_order
             .iter()
             .find(|entry| entry.starts_with(NETWORK))
-        else {
-            return Err(RedfishError::NotSupported(format!(
-                "No match for {NETWORK} in top level boot order"
-            )));
-        };
+            .map(|s| s.as_str())
+            .unwrap_or(NETWORK);
 
-        // The hard disk name is also not consistent because it includes the device specifics
-        let Some(hard_disk) = fbo
+        // The hard disk name is also not consistent because it includes the device specifics.
+        // Falls back to 'UEFI Hard Disk' if no specific entry is found to enable hard disk boot options.
+        let hard_disk = fbo
             .fixed_boot_order
             .iter()
             .find(|entry| entry.starts_with(HARD_DISK))
-        else {
-            return Err(RedfishError::NotSupported(format!(
-                "No match for {HARD_DISK} in top level boot order"
-            )));
-        };
+            .map(|s| s.as_str())
+            .unwrap_or(HARD_DISK);
 
         // Make network the first option, hard disk second, and everything else disabled
         let mut order = ["Disabled"].repeat(fbo.fixed_boot_order.len());
@@ -1285,16 +1281,14 @@ impl Bmc {
     async fn set_boot_order(&self, target: Boot) -> Result<(), RedfishError> {
         let mut fbo = self.get_boot_order().await?;
 
-        // The network name is not consistent because it includes the interface name
-        let Some(network) = fbo
+        // The network name is not consistent because it includes the interface name.
+        // Falls back to 'UEFI Network' if no specific entry is found to enable network boot options.
+        let network = fbo
             .fixed_boot_order
             .iter()
             .find(|entry| entry.starts_with(NETWORK))
-        else {
-            return Err(RedfishError::NotSupported(format!(
-                "No match for {NETWORK} in top level boot order"
-            )));
-        };
+            .map(|s| s.as_str())
+            .unwrap_or(NETWORK);
 
         // Make our option the first option, the other one second, and everything else (CD/ROM,
         // USB, etc) disabled.
