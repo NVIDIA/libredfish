@@ -1282,7 +1282,7 @@ impl Bmc {
         let mut fbo = self.get_boot_order().await?;
 
         // The network name is not consistent because it includes the interface name.
-        // Fall back to just NETWORK if no specific entry is found to enable that boot option.
+        // Falls back to 'UEFI Network' if no specific entry is found to enable network boot options.
         let network = fbo
             .fixed_boot_order
             .iter()
