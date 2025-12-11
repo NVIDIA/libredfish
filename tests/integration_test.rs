@@ -471,6 +471,14 @@ async fn run_integration_test(
 
         let firmware = redfish.get_firmware_for_component("ERoT_BMC_0").await;
         assert!(firmware.is_err());
+
+        let chassis_cbc0 = redfish.get_chassis("CBC_0").await.unwrap();
+        let vendor = chassis_cbc0.oem.unwrap();
+        let nvidia = vendor.nvidia.unwrap();
+        assert_eq!(nvidia.chassis_physical_slot_number.unwrap(), 1);
+        assert_eq!(nvidia.compute_tray_index.unwrap(), 3);
+        assert_eq!(nvidia.revision_id.unwrap(), 2);
+        assert_eq!(nvidia.topology_id.unwrap(), 4);
     }
 
     if vendor_dir == "dell" {

@@ -39,9 +39,9 @@
         "Nvidia": {
             "@odata.type": "#NvidiaChassis.v1_4_0.NvidiaCBCChassis",
             "ChassisPhysicalSlotNumber": 1,
-            "ComputeTrayIndex": 0,
+            "ComputeTrayIndex": 3,
             "RevisionId": 2,
-            "TopologyId": 0
+            "TopologyId": 4
         }
     },
     "PCIeDevices": {
