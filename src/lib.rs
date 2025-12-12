@@ -26,7 +26,7 @@ use model::account_service::ManagerAccount;
 pub use model::chassis::{Assembly, Chassis, NetworkAdapter};
 pub use model::ethernet_interface::EthernetInterface;
 pub use model::network_device_function::NetworkDeviceFunction;
-use model::oem::nvidia_dpu::{HostPrivilegeLevel, InternalCPUModel, NicMode};
+use model::oem::nvidia_openbmc::{HostPrivilegeLevel, InternalCPUModel, NicMode};
 pub use model::port::NetworkPort;
 pub use model::resource::{Collection, OData, Resource};
 use model::sensor::GPUSensors;

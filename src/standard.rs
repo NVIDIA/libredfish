@@ -35,7 +35,7 @@ use crate::model::task::Task;
 use crate::model::thermal::Thermal;
 use crate::model::update_service::ComponentType;
 use crate::model::{account_service::ManagerAccount, service_root::RedfishVendor};
-use crate::model::{job::Job, oem::nvidia_dpu::NicMode};
+use crate::model::{job::Job, oem::nvidia_openbmc::NicMode};
 use crate::model::{
     manager_network_protocol::ManagerNetworkProtocol, update_service::TransferProtocolType,
 };

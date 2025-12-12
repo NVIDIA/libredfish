@@ -33,7 +33,7 @@ use crate::{
         network_device_function::NetworkDeviceFunction,
         oem::{
             hpe::{self, BootDevices},
-            nvidia_dpu::NicMode,
+            nvidia_openbmc::NicMode,
         },
         power::Power,
         secure_boot::SecureBoot,

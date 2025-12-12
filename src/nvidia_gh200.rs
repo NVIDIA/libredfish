@@ -5,7 +5,7 @@ use tokio::fs::File;
 use crate::model::account_service::ManagerAccount;
 use crate::model::certificate::Certificate;
 use crate::model::component_integrity::ComponentIntegrities;
-use crate::model::oem::nvidia_dpu::NicMode;
+use crate::model::oem::nvidia_openbmc::NicMode;
 use crate::model::sensor::GPUSensors;
 use crate::model::service_root::RedfishVendor;
 use crate::model::task::Task;

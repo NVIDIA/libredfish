@@ -37,7 +37,7 @@ use crate::{
         network_device_function::NetworkDeviceFunction,
         oem::{
             dell::{self, ShareParameters, StorageCollection, SystemConfiguration},
-            nvidia_dpu::NicMode,
+            nvidia_openbmc::NicMode,
         },
         power::Power,
         resource::ResourceCollection,

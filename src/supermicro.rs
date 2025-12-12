@@ -35,7 +35,7 @@ use crate::{
         component_integrity::ComponentIntegrities,
         network_device_function::NetworkDeviceFunction,
         oem::{
-            nvidia_dpu::NicMode,
+            nvidia_openbmc::NicMode,
             supermicro::{self, FixedBootOrder},
         },
         power::Power,
