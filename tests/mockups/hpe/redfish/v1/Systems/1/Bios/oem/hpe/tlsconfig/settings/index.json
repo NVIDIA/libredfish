@@ -1,7 +1,7 @@
 {
   "@odata.context": "/redfish/v1/$metadata#HpeTlsConfig.HpeTlsConfig",
   "@odata.etag": "W/\"232BE31B46AC494949B10E80334FBD02\"",
-  "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/tlsconfig/settings/",
+  "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/tlsconfig/settings/",
   "@odata.type": "#HpeTlsConfig.v1_0_0.HpeTlsConfig",
   "Certificates": [],
   "Ciphers": "AES128-SHA256:AES256-SHA256:AES128-GCM-SHA256:AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-ARIA128-GCM-SHA256:DHE-RSA-ARIA256-GCM-SHA384:DHE-RSA-AES128-CCM8:DHE-RSA-AES256-CCM8",

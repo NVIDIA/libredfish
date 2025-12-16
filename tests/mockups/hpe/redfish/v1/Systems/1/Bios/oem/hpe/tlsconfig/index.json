@@ -8,13 +8,13 @@
       }
     ],
     "SettingsObject": {
-      "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/tlsconfig/settings/"
+      "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/tlsconfig/settings/"
     },
     "Time": null
   },
   "@odata.context": "/redfish/v1/$metadata#HpeTlsConfig.HpeTlsConfig",
   "@odata.etag": "W/\"F48323138E3DC7C7C7F9ECC67D18ECFC\"",
-  "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/tlsconfig/",
+  "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/tlsconfig/",
   "@odata.type": "#HpeTlsConfig.v1_0_0.HpeTlsConfig",
   "Certificates": [],
   "Ciphers": "AES128-SHA256:AES256-SHA256:AES128-GCM-SHA256:AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-ARIA128-GCM-SHA256:DHE-RSA-ARIA256-GCM-SHA384:DHE-RSA-AES128-CCM8:DHE-RSA-AES256-CCM8",
@@ -28,7 +28,7 @@
       "@odata.type": "#HpeBiosExt.v2_0_0.HpeBiosExt",
       "Links": {
         "BaseConfigs": {
-          "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/tlsconfig/baseconfigs/"
+          "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/tlsconfig/baseconfigs/"
         }
       },
       "SettingsObject": {

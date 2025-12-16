@@ -1,7 +1,7 @@
 {
   "@odata.context": "/redfish/v1/$metadata#HpeKmsConfig.HpeKmsConfig",
   "@odata.etag": "W/\"A6A5128F2F03080808E00797569D11A6\"",
-  "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/kmsconfig/settings/",
+  "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/kmsconfig/settings/",
   "@odata.type": "#HpeKmsConfig.v1_0_0.HpeKmsConfig",
   "DeleteUnusedEncryptionKeys": "Disabled",
   "EncryptableDevices": [],

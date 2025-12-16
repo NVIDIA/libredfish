@@ -8,13 +8,13 @@
       }
     ],
     "SettingsObject": {
-      "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/boot/settings/"
+      "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/boot/settings/"
     },
     "Time": "2024-06-10T20:01:29+00:00"
   },
   "@odata.context": "/redfish/v1/$metadata#HpeServerBootSettings.HpeServerBootSettings",
   "@odata.etag": "W/\"07A47CA4428130303096DF5A9C600A51\"",
-  "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/boot/",
+  "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/boot/",
   "@odata.type": "#HpeServerBootSettings.v2_0_0.HpeServerBootSettings",
   "BootSources": [
     {
@@ -277,7 +277,7 @@
       "@odata.type": "#HpeBiosExt.v2_0_0.HpeBiosExt",
       "Links": {
         "BaseConfigs": {
-          "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/boot/baseconfigs/"
+          "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/boot/baseconfigs/"
         }
       },
       "SettingsObject": {

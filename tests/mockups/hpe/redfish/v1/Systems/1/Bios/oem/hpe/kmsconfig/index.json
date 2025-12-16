@@ -8,13 +8,13 @@
       }
     ],
     "SettingsObject": {
-      "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/kmsconfig/settings/"
+      "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/kmsconfig/settings/"
     },
     "Time": null
   },
   "@odata.context": "/redfish/v1/$metadata#HpeKmsConfig.HpeKmsConfig",
   "@odata.etag": "W/\"8B61C715BD8FCDCDCDBA7522391F27EC\"",
-  "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/kmsconfig/",
+  "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/kmsconfig/",
   "@odata.type": "#HpeKmsConfig.v1_0_0.HpeKmsConfig",
   "DeleteUnusedEncryptionKeys": "Disabled",
   "EncryptableDevices": [],
@@ -26,7 +26,7 @@
       "@odata.type": "#HpeBiosExt.v2_0_0.HpeBiosExt",
       "Links": {
         "BaseConfigs": {
-          "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/kmsconfig/baseconfigs/"
+          "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/kmsconfig/baseconfigs/"
         }
       },
       "SettingsObject": {

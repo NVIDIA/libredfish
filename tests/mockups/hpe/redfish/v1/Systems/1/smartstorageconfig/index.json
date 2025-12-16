@@ -8,13 +8,13 @@
       }
     ],
     "SettingsObject": {
-      "@odata.id": "/redfish/v1/systems/1/smartstorageconfig/settings/"
+      "@odata.id": "/redfish/v1/Systems/1/smartstorageconfig/settings/"
     },
     "Time": null
   },
   "@odata.context": "/redfish/v1/$metadata#SmartStorageConfig.SmartStorageConfig",
   "@odata.etag": "W/\"188B52EB8F834040408BCD518B378243\"",
-  "@odata.id": "/redfish/v1/systems/1/smartstorageconfig/",
+  "@odata.id": "/redfish/v1/Systems/1/smartstorageconfig/",
   "@odata.type": "#SmartStorageConfig.v2_0_2.SmartStorageConfig",
   "CurrentParallelSurfaceScanCount": 1,
   "DataGuard": "Strict",

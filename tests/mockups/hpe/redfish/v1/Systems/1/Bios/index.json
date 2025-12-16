@@ -8,20 +8,20 @@
       }
     ],
     "SettingsObject": {
-      "@odata.id": "/redfish/v1/systems/1/bios/settings/"
+      "@odata.id": "/redfish/v1/Systems/1/bios/settings/"
     },
     "Time": "2024-06-10T20:01:29+00:00"
   },
   "@odata.context": "/redfish/v1/$metadata#Bios.Bios",
   "@odata.etag": "W/\"2C3F7FBA70233F3F3F2DDB69FEF35ED1\"",
-  "@odata.id": "/redfish/v1/systems/1/bios/",
+  "@odata.id": "/redfish/v1/Systems/1/bios/",
   "@odata.type": "#Bios.v1_0_4.Bios",
   "Actions": {
     "#Bios.ChangePassword": {
-      "target": "/redfish/v1/systems/1/bios/settings/Actions/Bios.ChangePasswords/"
+      "target": "/redfish/v1/Systems/1/bios/settings/Actions/Bios.ChangePasswords/"
     },
     "#Bios.ResetBios": {
-      "target": "/redfish/v1/systems/1/bios/settings/Actions/Bios.ResetBios/"
+      "target": "/redfish/v1/Systems/1/bios/settings/Actions/Bios.ResetBios/"
     }
   },
   "AttributeRegistry": "BiosAttributeRegistryA42.v1_2_60",
@@ -311,25 +311,25 @@
       "@odata.type": "#HpeBiosExt.v2_0_0.HpeBiosExt",
       "Links": {
         "BaseConfigs": {
-          "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/baseconfigs/"
+          "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/baseconfigs/"
         },
         "Boot": {
-          "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/boot/"
+          "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/boot/"
         },
         "KmsConfig": {
-          "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/kmsconfig/"
+          "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/kmsconfig/"
         },
         "Mappings": {
-          "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/mappings/"
+          "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/mappings/"
         },
         "ServerConfigLock": {
-          "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/serverconfiglock/"
+          "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/serverconfiglock/"
         },
         "TlsConfig": {
-          "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/tlsconfig/"
+          "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/tlsconfig/"
         },
         "iScsi": {
-          "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/iscsi/"
+          "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/iscsi/"
         }
       },
       "SettingsObject": {

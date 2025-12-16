@@ -1,7 +1,7 @@
 {
   "@odata.context": "/redfish/v1/$metadata#Bios.Bios",
   "@odata.etag": "W/\"0C5479D434EEDDDDDD151ED9058F8497\"",
-  "@odata.id": "/redfish/v1/systems/1/bios/settings/",
+  "@odata.id": "/redfish/v1/Systems/1/bios/settings/",
   "@odata.type": "#Bios.v1_0_4.Bios",
   "AttributeRegistry": "BiosAttributeRegistryA42.v1_2_60",
   "Attributes": {

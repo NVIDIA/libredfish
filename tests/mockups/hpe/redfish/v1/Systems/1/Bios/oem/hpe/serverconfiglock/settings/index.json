@@ -1,7 +1,7 @@
 {
   "@odata.context": "/redfish/v1/$metadata#HpeServerConfigLock.HpeServerConfigLock",
   "@odata.etag": "W/\"38D6FCD3F5C05F5F5FA4075B84BC26B2\"",
-  "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/serverconfiglock/settings/",
+  "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/serverconfiglock/settings/",
   "@odata.type": "#HpeServerConfigLock.v1_0_0.HpeServerConfigLock",
   "Id": "settings",
   "Name": "Server Configuration Lock Pending Settings",

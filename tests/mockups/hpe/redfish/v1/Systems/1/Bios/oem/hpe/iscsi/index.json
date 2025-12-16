@@ -8,13 +8,13 @@
       }
     ],
     "SettingsObject": {
-      "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/iscsi/settings/"
+      "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/iscsi/settings/"
     },
     "Time": null
   },
   "@odata.context": "/redfish/v1/$metadata#HpeiSCSISoftwareInitiator.HpeiSCSISoftwareInitiator",
   "@odata.etag": "W/\"581D742DFF4C09090980F44B1CCBB80A\"",
-  "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/iscsi/",
+  "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/iscsi/",
   "@odata.type": "#HpeiSCSISoftwareInitiator.v2_0_0.HpeiSCSISoftwareInitiator",
   "Id": "iscsi",
   "Name": "iSCSI Software Initiator Current Settings",
@@ -23,7 +23,7 @@
       "@odata.type": "#HpeBiosExt.v2_0_0.HpeBiosExt",
       "Links": {
         "BaseConfigs": {
-          "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/iscsi/baseconfigs/"
+          "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/iscsi/baseconfigs/"
         }
       },
       "SettingsObject": {

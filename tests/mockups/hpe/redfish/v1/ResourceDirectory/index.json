@@ -94,7 +94,7 @@
             ]
         },
         {
-            "@odata.id": "/redfish/v1/systems/1/bios",
+            "@odata.id": "/redfish/v1/Systems/1/bios",
             "@odata.type": "#Bios.v1_0_4.Bios",
             "ETag": "W/\"2C3F7FBA70233F3F3F2DDB69FEF35ED1\"",
             "HttpMethods": [
@@ -103,7 +103,7 @@
             ]
         },
         {
-            "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/baseconfigs",
+            "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/baseconfigs",
             "@odata.type": "#HpeBaseConfigs.v2_0_0.HpeBaseConfigs",
             "ETag": "W/\"73165B60634AF1F1F1469D31BD71E6C8\"",
             "HttpMethods": [
@@ -112,7 +112,7 @@
             ]
         },
         {
-            "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/boot",
+            "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/boot",
             "@odata.type": "#HpeServerBootSettings.v2_0_0.HpeServerBootSettings",
             "ETag": "W/\"07A47CA4428130303096DF5A9C600A51\"",
             "HttpMethods": [
@@ -121,7 +121,7 @@
             ]
         },
         {
-            "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/boot/baseconfigs",
+            "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/boot/baseconfigs",
             "@odata.type": "#HpeBaseConfigs.v2_0_0.HpeBaseConfigs",
             "ETag": "W/\"4917AC199B189F9F9FD676D8EEB3930E\"",
             "HttpMethods": [
@@ -130,7 +130,7 @@
             ]
         },
         {
-            "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/boot/settings",
+            "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/boot/settings",
             "@odata.type": "#HpeServerBootSettings.v2_0_0.HpeServerBootSettings",
             "ETag": "W/\"08C97112FBBDFAFAFAA7A818EC2AEA71\"",
             "HttpMethods": [
@@ -141,7 +141,7 @@
             ]
         },
         {
-            "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/iscsi",
+            "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/iscsi",
             "@odata.type": "#HpeiSCSISoftwareInitiator.v2_0_0.HpeiSCSISoftwareInitiator",
             "ETag": "W/\"581D742DFF4C09090980F44B1CCBB80A\"",
             "HttpMethods": [
@@ -150,7 +150,7 @@
             ]
         },
         {
-            "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/iscsi/baseconfigs",
+            "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/iscsi/baseconfigs",
             "@odata.type": "#HpeBaseConfigs.v2_0_0.HpeBaseConfigs",
             "ETag": "W/\"EBA358DB4A4C0404040EC9B2581B42FC\"",
             "HttpMethods": [
@@ -159,7 +159,7 @@
             ]
         },
         {
-            "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/iscsi/settings",
+            "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/iscsi/settings",
             "@odata.type": "#HpeiSCSISoftwareInitiator.v2_0_0.HpeiSCSISoftwareInitiator",
             "ETag": "W/\"2835CD95FCD17B7B7BD0209DAB2108A6\"",
             "HttpMethods": [
@@ -170,7 +170,7 @@
             ]
         },
         {
-            "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/kmsconfig",
+            "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/kmsconfig",
             "@odata.type": "#HpeKmsConfig.v1_0_0.HpeKmsConfig",
             "ETag": "W/\"8B61C715BD8FCDCDCDBA7522391F27EC\"",
             "HttpMethods": [
@@ -179,7 +179,7 @@
             ]
         },
         {
-            "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/kmsconfig/baseconfigs",
+            "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/kmsconfig/baseconfigs",
             "@odata.type": "#HpeBaseConfigs.v2_0_0.HpeBaseConfigs",
             "ETag": "W/\"3D9EDCC9EED28585854CD2B23D5923FC\"",
             "HttpMethods": [
@@ -188,7 +188,7 @@
             ]
         },
         {
-            "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/kmsconfig/settings",
+            "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/kmsconfig/settings",
             "@odata.type": "#HpeKmsConfig.v1_0_0.HpeKmsConfig",
             "ETag": "W/\"A6A5128F2F03080808E00797569D11A6\"",
             "HttpMethods": [
@@ -199,7 +199,7 @@
             ]
         },
         {
-            "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/mappings",
+            "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/mappings",
             "@odata.type": "#HpeBiosMapping.v2_0_0.HpeBiosMapping",
             "ETag": "W/\"0BB3AB54F35F3535351F458911D645BF\"",
             "HttpMethods": [
@@ -208,7 +208,7 @@
             ]
         },
         {
-            "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/serverconfiglock",
+            "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/serverconfiglock",
             "@odata.type": "#HpeServerConfigLock.v1_0_0.HpeServerConfigLock",
             "ETag": "W/\"4CFAA64819CC555555F5D3236EF7D6C9\"",
             "HttpMethods": [
@@ -217,7 +217,7 @@
             ]
         },
         {
-            "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/serverconfiglock/baseconfigs",
+            "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/serverconfiglock/baseconfigs",
             "@odata.type": "#HpeBaseConfigs.v2_0_0.HpeBaseConfigs",
             "ETag": "W/\"AD0329B07DEB626262438CC303587AB9\"",
             "HttpMethods": [
@@ -226,7 +226,7 @@
             ]
         },
         {
-            "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/serverconfiglock/settings",
+            "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/serverconfiglock/settings",
             "@odata.type": "#HpeServerConfigLock.v1_0_0.HpeServerConfigLock",
             "ETag": "W/\"38D6FCD3F5C05F5F5FA4075B84BC26B2\"",
             "HttpMethods": [
@@ -237,7 +237,7 @@
             ]
         },
         {
-            "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/tlsconfig",
+            "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/tlsconfig",
             "@odata.type": "#HpeTlsConfig.v1_0_0.HpeTlsConfig",
             "ETag": "W/\"F48323138E3DC7C7C7F9ECC67D18ECFC\"",
             "HttpMethods": [
@@ -246,7 +246,7 @@
             ]
         },
         {
-            "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/tlsconfig/baseconfigs",
+            "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/tlsconfig/baseconfigs",
             "@odata.type": "#HpeBaseConfigs.v2_0_0.HpeBaseConfigs",
             "ETag": "W/\"15A6A9871F0B7777770A9160820BB027\"",
             "HttpMethods": [
@@ -255,7 +255,7 @@
             ]
         },
         {
-            "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/tlsconfig/settings",
+            "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/tlsconfig/settings",
             "@odata.type": "#HpeTlsConfig.v1_0_0.HpeTlsConfig",
             "ETag": "W/\"232BE31B46AC494949B10E80334FBD02\"",
             "HttpMethods": [
@@ -266,7 +266,7 @@
             ]
         },
         {
-            "@odata.id": "/redfish/v1/systems/1/bios/settings",
+            "@odata.id": "/redfish/v1/Systems/1/bios/settings",
             "@odata.type": "#Bios.v1_0_4.Bios",
             "ETag": "W/\"0C5479D434EEDDDDDD151ED9058F8497\"",
             "HttpMethods": [
@@ -278,7 +278,7 @@
             ]
         },
         {
-            "@odata.id": "/redfish/v1/systems/1/smartstorageconfig",
+            "@odata.id": "/redfish/v1/Systems/1/smartstorageconfig",
             "@odata.type": "#SmartStorageConfig.v2_0_2.SmartStorageConfig",
             "ETag": "W/\"188B52EB8F834040408BCD518B378243\"",
             "HttpMethods": [
@@ -287,7 +287,7 @@
             ]
         },
         {
-            "@odata.id": "/redfish/v1/systems/1/smartstorageconfig/settings",
+            "@odata.id": "/redfish/v1/Systems/1/smartstorageconfig/settings",
             "@odata.type": "#SmartStorageConfig.v2_0_2.SmartStorageConfig",
             "ETag": "W/\"80928D5C83AA7A7A7A2FA6D65DAB092A\"",
             "HttpMethods": [

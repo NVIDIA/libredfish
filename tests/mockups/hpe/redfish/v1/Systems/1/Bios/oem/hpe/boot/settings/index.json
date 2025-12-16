@@ -1,7 +1,7 @@
 {
   "@odata.context": "/redfish/v1/$metadata#HpeServerBootSettings.HpeServerBootSettings",
   "@odata.etag": "W/\"08C97112FBBDFAFAFAA7A818EC2AEA71\"",
-  "@odata.id": "/redfish/v1/systems/1/bios/oem/hpe/boot/settings/",
+  "@odata.id": "/redfish/v1/Systems/1/bios/oem/hpe/boot/settings/",
   "@odata.type": "#HpeServerBootSettings.v2_0_0.HpeServerBootSettings",
   "BootSources": [
     {
