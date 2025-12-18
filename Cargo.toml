@@ -7,7 +7,8 @@ authors = [
 ]
 repository = "https://github.com/NVIDIA/libredfish"
 license = "MIT"
-version = "0.34.1"
+# Version is managed via git tags, see GitHub Releases
+version = "0.0.0"
 edition = "2021"
 publish = [ "internal" ]
 
