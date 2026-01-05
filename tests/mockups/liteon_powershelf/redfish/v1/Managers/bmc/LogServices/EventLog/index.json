@@ -1,0 +1,18 @@
+{
+    "@odata.id": "/redfish/v1/Managers/bmc/LogServices/EventLog",
+    "@odata.type": "#LogService.v1_1_0.LogService",
+    "Actions": {
+        "#LogService.ClearLog": {
+            "target": "/redfish/v1/Managers/bmc/LogServices/EventLog/Actions/LogService.ClearLog"
+        }
+    },
+    "DateTime": "2025-12-08T11:56:33+00:00",
+    "DateTimeLocalOffset": "+00:00",
+    "Description": "System Event Log Service",
+    "Entries": {
+        "@odata.id": "/redfish/v1/Managers/bmc/LogServices/EventLog/Entries"
+    },
+    "Id": "EventLog",
+    "Name": "Event Log Service",
+    "OverWritePolicy": "WrapsWhenFull"
+}

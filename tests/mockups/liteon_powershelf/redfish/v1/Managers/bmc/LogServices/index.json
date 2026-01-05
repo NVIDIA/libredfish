@@ -1,0 +1,12 @@
+{
+    "@odata.id": "/redfish/v1/Managers/bmc/LogServices",
+    "@odata.type": "#LogServiceCollection.LogServiceCollection",
+    "Description": "Collection of LogServices for this Manager",
+    "Members": [
+        {
+            "@odata.id": "/redfish/v1/Managers/bmc/LogServices/EventLog"
+        }
+    ],
+    "Members@odata.count": 1,
+    "Name": "Open BMC Log Services Collection"
+}

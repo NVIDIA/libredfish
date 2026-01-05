@@ -1,0 +1,29 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/current_ishare",
+    "@odata.type": "#Sensor.v1_0_0.Sensor",
+    "Id": "ishare",
+    "Name": "ishare",
+    "Reading": 15.435648751373185,
+    "ReadingRangeMax": null,
+    "ReadingRangeMin": null,
+    "ReadingType": "Current",
+    "ReadingUnits": "A",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    },
+    "Thresholds": {
+        "LowerCaution": {
+            "Reading": null
+        },
+        "LowerCritical": {
+            "Reading": null
+        },
+        "UpperCaution": {
+            "Reading": null
+        },
+        "UpperCritical": {
+            "Reading": null
+        }
+    }
+}

@@ -1,0 +1,29 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/power_p4_pin",
+    "@odata.type": "#Sensor.v1_0_0.Sensor",
+    "Id": "p4_pin",
+    "Name": "p4 pin",
+    "Reading": 643.0,
+    "ReadingRangeMax": null,
+    "ReadingRangeMin": null,
+    "ReadingType": "Power",
+    "ReadingUnits": "W",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    },
+    "Thresholds": {
+        "LowerCaution": {
+            "Reading": null
+        },
+        "LowerCritical": {
+            "Reading": null
+        },
+        "UpperCaution": {
+            "Reading": null
+        },
+        "UpperCritical": {
+            "Reading": null
+        }
+    }
+}

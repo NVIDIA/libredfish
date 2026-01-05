@@ -1,0 +1,29 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/voltage_p4_vin",
+    "@odata.type": "#Sensor.v1_0_0.Sensor",
+    "Id": "p4_vin",
+    "Name": "p4 vin",
+    "Reading": 239.5,
+    "ReadingRangeMax": null,
+    "ReadingRangeMin": null,
+    "ReadingType": "Voltage",
+    "ReadingUnits": "V",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    },
+    "Thresholds": {
+        "LowerCaution": {
+            "Reading": null
+        },
+        "LowerCritical": {
+            "Reading": null
+        },
+        "UpperCaution": {
+            "Reading": null
+        },
+        "UpperCritical": {
+            "Reading": null
+        }
+    }
+}

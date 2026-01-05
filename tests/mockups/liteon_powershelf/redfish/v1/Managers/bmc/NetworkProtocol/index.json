@@ -1,0 +1,41 @@
+{
+    "@odata.id": "/redfish/v1/Managers/bmc/NetworkProtocol",
+    "@odata.type": "#ManagerNetworkProtocol.v1_5_0.ManagerNetworkProtocol",
+    "Description": "Manager Network Service",
+    "FQDN": "cm14mp1r",
+    "HTTP": {
+        "Port": 0,
+        "ProtocolEnabled": false
+    },
+    "HTTPS": {
+        "Certificates": {
+            "@odata.id": "/redfish/v1/Managers/bmc/NetworkProtocol/HTTPS/Certificates"
+        },
+        "Port": 443,
+        "ProtocolEnabled": true
+    },
+    "HostName": "cm14mp1r",
+    "IPMI": {
+        "Port": 623,
+        "ProtocolEnabled": true
+    },
+    "Id": "NetworkProtocol",
+    "NTP": {
+        "NTPServers": [],
+        "ProtocolEnabled": true
+    },
+    "Name": "Manager Network Protocol",
+    "SNMP": {
+        "Port": 161,
+        "ProtocolEnabled": true
+    },
+    "SSH": {
+        "Port": 22,
+        "ProtocolEnabled": true
+    },
+    "Status": {
+        "Health": "OK",
+        "HealthRollup": "OK",
+        "State": "Enabled"
+    }
+}

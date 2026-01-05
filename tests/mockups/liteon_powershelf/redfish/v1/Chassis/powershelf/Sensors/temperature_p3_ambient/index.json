@@ -1,0 +1,29 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_p3_ambient",
+    "@odata.type": "#Sensor.v1_0_0.Sensor",
+    "Id": "p3_ambient",
+    "Name": "p3 ambient",
+    "Reading": 25.0,
+    "ReadingRangeMax": null,
+    "ReadingRangeMin": null,
+    "ReadingType": "Temperature",
+    "ReadingUnits": "Cel",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    },
+    "Thresholds": {
+        "LowerCaution": {
+            "Reading": null
+        },
+        "LowerCritical": {
+            "Reading": null
+        },
+        "UpperCaution": {
+            "Reading": null
+        },
+        "UpperCritical": {
+            "Reading": null
+        }
+    }
+}

@@ -1,0 +1,8 @@
+{
+    "@odata.id": "/redfish/v1/Managers/bmc/NetworkProtocol/HTTPS/Certificates",
+    "@odata.type": "#CertificateCollection.CertificateCollection",
+    "Description": "A Collection of HTTPS certificate instances",
+    "Members": [],
+    "Members@odata.count": 0,
+    "Name": "HTTPS Certificates Collection"
+}

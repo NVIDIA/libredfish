@@ -1,0 +1,14 @@
+{
+    "@odata.id": "/redfish/v1/UpdateService/FirmwareInventory",
+    "@odata.type": "#SoftwareInventoryCollection.SoftwareInventoryCollection",
+    "Members": [
+        {
+            "@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/mcu"
+        },
+        {
+            "@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/pmc_8ae54fcf"
+        }
+    ],
+    "Members@odata.count": 2,
+    "Name": "Software Inventory Collection"
+}

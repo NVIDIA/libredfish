@@ -1,0 +1,20 @@
+{
+    "@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/pmc_8ae54fcf",
+    "@odata.type": "#SoftwareInventory.v1_1_0.SoftwareInventory",
+    "Description": "BMC image",
+    "Id": "pmc_8ae54fcf",
+    "Name": "Software Inventory",
+    "RelatedItem": [
+        {
+            "@odata.id": "/redfish/v1/Managers/bmc"
+        }
+    ],
+    "RelatedItem@odata.count": 1,
+    "Status": {
+        "Health": "OK",
+        "HealthRollup": "OK",
+        "State": "Enabled"
+    },
+    "Updateable": true,
+    "Version": "r1.3.8"
+}

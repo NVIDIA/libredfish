@@ -390,6 +390,7 @@ pub enum ResourceState {
     Enabled,
     Disabled,
     Degraded,
+    Standby,
     StandbyOffline,
     StandbySpare,
     InTest,

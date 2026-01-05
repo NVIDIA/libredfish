@@ -188,7 +188,7 @@ impl RedfishClientPool {
             }
         }
         // returns the vendor specific object
-        s.set_vendor(vendor)
+        s.set_vendor(vendor).await
     }
 
     /// Creates a Redfish BMC client for a certain endpoint

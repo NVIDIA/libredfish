@@ -1,0 +1,29 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_DC_temp_plus",
+    "@odata.type": "#Sensor.v1_0_0.Sensor",
+    "Id": "DC_temp_plus",
+    "Name": "DC temp plus",
+    "Reading": 41.02269108408309,
+    "ReadingRangeMax": null,
+    "ReadingRangeMin": null,
+    "ReadingType": "Temperature",
+    "ReadingUnits": "Cel",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    },
+    "Thresholds": {
+        "LowerCaution": {
+            "Reading": null
+        },
+        "LowerCritical": {
+            "Reading": null
+        },
+        "UpperCaution": {
+            "Reading": null
+        },
+        "UpperCritical": {
+            "Reading": null
+        }
+    }
+}

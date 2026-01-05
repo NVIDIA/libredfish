@@ -1,0 +1,62 @@
+{
+    "@odata.id": "/redfish/v1",
+    "@odata.type": "#ServiceRoot.v1_11_0.ServiceRoot",
+    "AccountService": {
+        "@odata.id": "/redfish/v1/AccountService"
+    },
+    "CertificateService": {
+        "@odata.id": "/redfish/v1/CertificateService"
+    },
+    "Chassis": {
+        "@odata.id": "/redfish/v1/Chassis"
+    },
+    "EventService": {
+        "@odata.id": "/redfish/v1/EventService"
+    },
+    "Id": "RootService",
+    "JsonSchemas": {
+        "@odata.id": "/redfish/v1/JsonSchemas"
+    },
+    "Links": {
+        "Sessions": {
+            "@odata.id": "/redfish/v1/SessionService/Sessions"
+        }
+    },
+    "Managers": {
+        "@odata.id": "/redfish/v1/Managers"
+    },
+    "Name": "Root Service",
+    "ProtocolFeaturesSupported": {
+        "DeepOperations": {
+            "DeepPATCH": false,
+            "DeepPOST": false
+        },
+        "ExcerptQuery": false,
+        "ExpandQuery": {
+            "ExpandAll": false,
+            "Levels": false,
+            "Links": false,
+            "NoLinks": false
+        },
+        "FilterQuery": false,
+        "OnlyMemberQuery": false,
+        "SelectQuery": false
+    },
+    "RedfishVersion": "1.9.0",
+    "Registries": {
+        "@odata.id": "/redfish/v1/Registries"
+    },
+    "SessionService": {
+        "@odata.id": "/redfish/v1/SessionService"
+    },
+    "Tasks": {
+        "@odata.id": "/redfish/v1/TaskService"
+    },
+    "TelemetryService": {
+        "@odata.id": "/redfish/v1/TelemetryService"
+    },
+    "UUID": "514e1acd-d519-4c5a-9122-83ecf85f943e",
+    "UpdateService": {
+        "@odata.id": "/redfish/v1/UpdateService"
+    }
+}

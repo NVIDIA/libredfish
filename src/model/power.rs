@@ -121,15 +121,19 @@ pub struct PowerSupply {
     pub line_input_voltage: Option<f64>,
     pub line_input_voltage_type: Option<String>,
     pub efficiency_percent: Option<f64>, // not in Supermicro or NVIDIA DPU
+    pub hardware_version: Option<String>,
     pub hot_pluggable: Option<bool>,
     pub manufacturer: Option<String>,
     pub model: Option<String>,
     pub name: String,
     pub input_ranges: Option<Vec<InputRanges>>, // only present sometimes on Supermicro
     pub power_output_amps: Option<f64>,
+    pub capacity_watts: Option<String>,
     pub power_capacity_watts: Option<f64>, // present but 'null' on Supermicro
     pub power_input_watts: Option<f64>,
     pub power_output_watts: Option<f64>,
+    #[serde(skip)] // gb200 has this as string and liteon has it as bool
+    pub power_state: Option<String>,
     pub power_supply_type: Option<String>,
     pub serial_number: Option<String>,
     pub spare_part_number: Option<String>,
@@ -186,6 +190,16 @@ pub struct Power {
     pub power_supplies: Option<Vec<PowerSupply>>,
     pub voltages: Option<Vec<Voltages>>,
     pub redundancy: Option<Vec<Redundancy>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
+pub struct PowerSupplies {
+    #[serde(flatten)]
+    pub odata: Option<ODataLinks>,
+    pub description: Option<String>,
+    pub members: Vec<ODataId>,
+    pub name: String,
 }
 
 impl StatusVec for Power {

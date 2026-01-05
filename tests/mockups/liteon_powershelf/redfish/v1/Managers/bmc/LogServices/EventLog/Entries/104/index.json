@@ -1,0 +1,13 @@
+{
+    "@odata.id": "/redfish/v1/Managers/bmc/LogServices/EventLog/Entries/104",
+    "@odata.type": "#LogEntry.v1_8_0.LogEntry",
+    "AdditionalDataURI": "/redfish/v1/Managers/bmc/LogServices/EventLog/attachment/104",
+    "Created": "2025-07-31T05:16:49.259000+00:00",
+    "EntryType": "Event",
+    "Id": "104",
+    "Message": "com.liteon.Common.Error.PowerDeviceOff",
+    "Modified": "2025-07-31T05:16:49.259000+00:00",
+    "Name": "System Event Log Entry",
+    "Resolved": false,
+    "Severity": "OK"
+}

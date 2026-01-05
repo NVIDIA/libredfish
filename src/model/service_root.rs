@@ -69,6 +69,7 @@ pub enum RedfishVendor {
     NvidiaGBx00, // all Grace-Blackwell combinations 200, .. since openbmc fw and redfish schema are the same
     NvidiaGBSwitch, // GB NVLink switch
     P3809, // dummy for P3809, needs to be set to NvidiaGH200 or NvidiaGBSwitch based on chassis
+    LiteOnPowerShelf,
     Unknown,
 }
 
@@ -90,7 +91,7 @@ impl ServiceRoot {
     }
 
     pub fn vendor(&self) -> Option<RedfishVendor> {
-        let v = self.vendor_string()?;
+        let v = self.vendor_string().unwrap_or("Unknown".to_string());
         Some(match v.to_lowercase().as_str() {
             "ami" => RedfishVendor::AMI,
             "dell" => RedfishVendor::Dell,
@@ -103,6 +104,7 @@ impl ServiceRoot {
             },
             "wiwynn" => RedfishVendor::NvidiaGBx00,
             "supermicro" => RedfishVendor::Supermicro,
+            "lite-on technology corp." => RedfishVendor::LiteOnPowerShelf,
             _ => RedfishVendor::Unknown,
         })
     }

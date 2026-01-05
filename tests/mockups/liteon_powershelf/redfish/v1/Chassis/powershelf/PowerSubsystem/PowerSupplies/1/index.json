@@ -1,0 +1,59 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/1",
+    "@odata.type": "#PowerSupply.v1_5_0.PowerSupply",
+    "CapacityWatts": "5500",
+    "FirmwareVersion": "0x6 / 0x8",
+    "HardwareVersion": "X7",
+    "HotPluggable": true,
+    "Id": "1",
+    "InputSourceNum": 1,
+    "Location": {
+        "LocationOrdinalValue": 0,
+        "LocationType": "Bay",
+        "ServiceLabel": "PSU 1"
+    },
+    "Manufacturer": "LITE-ON TECHNOLOGY CORP.",
+    "Model": "SP-2552-1R",
+    "Name": "Power Supply 1",
+    "PowerState": true,
+    "Sensors": [
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/voltage_p1_vout"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/current_p1_iout"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/power_p1_pout"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/power_p1_pin"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/voltage_p1_vin"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/current_p1_iin"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_p1_ambient"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_p1_hotspot"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_p1_exhaust"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/fantach_p1_fan1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/frequency_p1_freqin"
+        }
+    ],
+    "SerialNumber": "6PL1R01X7512D7X",
+    "Status": {
+        "Health": "OK",
+        "State": "Standby"
+    }
+}

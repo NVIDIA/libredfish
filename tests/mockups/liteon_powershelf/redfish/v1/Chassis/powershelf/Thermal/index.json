@@ -1,0 +1,476 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal",
+    "@odata.type": "#Thermal.v1_4_0.Thermal",
+    "Fans": [
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Fans/0",
+            "@odata.type": "#Thermal.v1_3_0.Fan",
+            "LowerThresholdCritical": 0,
+            "LowerThresholdNonCritical": 0,
+            "MaxReadingRange": -1,
+            "MemberId": "p0_fan1",
+            "MinReadingRange": 1,
+            "Name": "PSU 0 fan1",
+            "Reading": 5952,
+            "ReadingUnits": "RPM",
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": 0,
+            "UpperThresholdNonCritical": 0
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Fans/1",
+            "@odata.type": "#Thermal.v1_3_0.Fan",
+            "LowerThresholdCritical": 0,
+            "LowerThresholdNonCritical": 0,
+            "MaxReadingRange": -1,
+            "MemberId": "p1_fan1",
+            "MinReadingRange": 1,
+            "Name": "PSU 1 fan1",
+            "Reading": 6336,
+            "ReadingUnits": "RPM",
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": 0,
+            "UpperThresholdNonCritical": 0
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Fans/2",
+            "@odata.type": "#Thermal.v1_3_0.Fan",
+            "LowerThresholdCritical": 0,
+            "LowerThresholdNonCritical": 0,
+            "MaxReadingRange": -1,
+            "MemberId": "p2_fan1",
+            "MinReadingRange": 1,
+            "Name": "PSU 2 fan1",
+            "Reading": 6080,
+            "ReadingUnits": "RPM",
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": 0,
+            "UpperThresholdNonCritical": 0
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Fans/3",
+            "@odata.type": "#Thermal.v1_3_0.Fan",
+            "LowerThresholdCritical": 0,
+            "LowerThresholdNonCritical": 0,
+            "MaxReadingRange": -1,
+            "MemberId": "p3_fan1",
+            "MinReadingRange": 1,
+            "Name": "PSU 3 fan1",
+            "Reading": 5952,
+            "ReadingUnits": "RPM",
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": 0,
+            "UpperThresholdNonCritical": 0
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Fans/4",
+            "@odata.type": "#Thermal.v1_3_0.Fan",
+            "LowerThresholdCritical": 0,
+            "LowerThresholdNonCritical": 0,
+            "MaxReadingRange": -1,
+            "MemberId": "p4_fan1",
+            "MinReadingRange": 1,
+            "Name": "PSU 4 fan1",
+            "Reading": 8640,
+            "ReadingUnits": "RPM",
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": 0,
+            "UpperThresholdNonCritical": 0
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Fans/5",
+            "@odata.type": "#Thermal.v1_3_0.Fan",
+            "LowerThresholdCritical": 0,
+            "LowerThresholdNonCritical": 0,
+            "MaxReadingRange": -1,
+            "MemberId": "p5_fan1",
+            "MinReadingRange": 1,
+            "Name": "PSU 5 fan1",
+            "Reading": 5952,
+            "ReadingUnits": "RPM",
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": 0,
+            "UpperThresholdNonCritical": 0
+        }
+    ],
+    "Id": "Thermal",
+    "Name": "Thermal",
+    "Redundancy": [],
+    "Temperatures": [
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Temperatures/0",
+            "@odata.type": "#Thermal.v1_3_0.Temperature",
+            "LowerThresholdCritical": null,
+            "LowerThresholdNonCritical": null,
+            "MaxReadingRangeTemp": null,
+            "MemberId": "DC_temp_minus",
+            "MinReadingRangeTemp": null,
+            "Name": "DC temp minus",
+            "ReadingCelsius": 41.31564677493694,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": null,
+            "UpperThresholdNonCritical": null
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Temperatures/1",
+            "@odata.type": "#Thermal.v1_3_0.Temperature",
+            "LowerThresholdCritical": null,
+            "LowerThresholdNonCritical": null,
+            "MaxReadingRangeTemp": null,
+            "MemberId": "DC_temp_plus",
+            "MinReadingRangeTemp": null,
+            "Name": "DC temp plus",
+            "ReadingCelsius": 41.02269108408309,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": null,
+            "UpperThresholdNonCritical": null
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Temperatures/2",
+            "@odata.type": "#Thermal.v1_3_0.Temperature",
+            "LowerThresholdCritical": null,
+            "LowerThresholdNonCritical": null,
+            "MaxReadingRangeTemp": null,
+            "MemberId": "p0_ambient",
+            "MinReadingRangeTemp": null,
+            "Name": "PSU 0 ambient temperature",
+            "ReadingCelsius": 25.5,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": null,
+            "UpperThresholdNonCritical": null
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Temperatures/3",
+            "@odata.type": "#Thermal.v1_3_0.Temperature",
+            "LowerThresholdCritical": null,
+            "LowerThresholdNonCritical": null,
+            "MaxReadingRangeTemp": null,
+            "MemberId": "p0_exhaust",
+            "MinReadingRangeTemp": null,
+            "Name": "PSU 0 exhaust",
+            "ReadingCelsius": 49.25,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": null,
+            "UpperThresholdNonCritical": null
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Temperatures/4",
+            "@odata.type": "#Thermal.v1_3_0.Temperature",
+            "LowerThresholdCritical": null,
+            "LowerThresholdNonCritical": null,
+            "MaxReadingRangeTemp": null,
+            "MemberId": "p0_hotspot",
+            "MinReadingRangeTemp": null,
+            "Name": "PSU 0 hotspot",
+            "ReadingCelsius": 50.75,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": null,
+            "UpperThresholdNonCritical": null
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Temperatures/5",
+            "@odata.type": "#Thermal.v1_3_0.Temperature",
+            "LowerThresholdCritical": null,
+            "LowerThresholdNonCritical": null,
+            "MaxReadingRangeTemp": null,
+            "MemberId": "p1_ambient",
+            "MinReadingRangeTemp": null,
+            "Name": "PSU 1 ambient temperature",
+            "ReadingCelsius": 23.75,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": null,
+            "UpperThresholdNonCritical": null
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Temperatures/6",
+            "@odata.type": "#Thermal.v1_3_0.Temperature",
+            "LowerThresholdCritical": null,
+            "LowerThresholdNonCritical": null,
+            "MaxReadingRangeTemp": null,
+            "MemberId": "p1_exhaust",
+            "MinReadingRangeTemp": null,
+            "Name": "PSU 1 exhaust",
+            "ReadingCelsius": 45.25,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": null,
+            "UpperThresholdNonCritical": null
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Temperatures/7",
+            "@odata.type": "#Thermal.v1_3_0.Temperature",
+            "LowerThresholdCritical": null,
+            "LowerThresholdNonCritical": null,
+            "MaxReadingRangeTemp": null,
+            "MemberId": "p1_hotspot",
+            "MinReadingRangeTemp": null,
+            "Name": "PSU 1 hotspot",
+            "ReadingCelsius": 46.75,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": null,
+            "UpperThresholdNonCritical": null
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Temperatures/8",
+            "@odata.type": "#Thermal.v1_3_0.Temperature",
+            "LowerThresholdCritical": null,
+            "LowerThresholdNonCritical": null,
+            "MaxReadingRangeTemp": null,
+            "MemberId": "p2_ambient",
+            "MinReadingRangeTemp": null,
+            "Name": "PSU 2 ambient temperature",
+            "ReadingCelsius": 25.25,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": null,
+            "UpperThresholdNonCritical": null
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Temperatures/9",
+            "@odata.type": "#Thermal.v1_3_0.Temperature",
+            "LowerThresholdCritical": null,
+            "LowerThresholdNonCritical": null,
+            "MaxReadingRangeTemp": null,
+            "MemberId": "p2_exhaust",
+            "MinReadingRangeTemp": null,
+            "Name": "PSU 2 exhaust",
+            "ReadingCelsius": 49.25,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": null,
+            "UpperThresholdNonCritical": null
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Temperatures/10",
+            "@odata.type": "#Thermal.v1_3_0.Temperature",
+            "LowerThresholdCritical": null,
+            "LowerThresholdNonCritical": null,
+            "MaxReadingRangeTemp": null,
+            "MemberId": "p2_hotspot",
+            "MinReadingRangeTemp": null,
+            "Name": "PSU 2 hotspot",
+            "ReadingCelsius": 50.5,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": null,
+            "UpperThresholdNonCritical": null
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Temperatures/11",
+            "@odata.type": "#Thermal.v1_3_0.Temperature",
+            "LowerThresholdCritical": null,
+            "LowerThresholdNonCritical": null,
+            "MaxReadingRangeTemp": null,
+            "MemberId": "p3_ambient",
+            "MinReadingRangeTemp": null,
+            "Name": "PSU 3 ambient temperature",
+            "ReadingCelsius": 25.0,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": null,
+            "UpperThresholdNonCritical": null
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Temperatures/12",
+            "@odata.type": "#Thermal.v1_3_0.Temperature",
+            "LowerThresholdCritical": null,
+            "LowerThresholdNonCritical": null,
+            "MaxReadingRangeTemp": null,
+            "MemberId": "p3_exhaust",
+            "MinReadingRangeTemp": null,
+            "Name": "PSU 3 exhaust",
+            "ReadingCelsius": 47.5,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": null,
+            "UpperThresholdNonCritical": null
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Temperatures/13",
+            "@odata.type": "#Thermal.v1_3_0.Temperature",
+            "LowerThresholdCritical": null,
+            "LowerThresholdNonCritical": null,
+            "MaxReadingRangeTemp": null,
+            "MemberId": "p3_hotspot",
+            "MinReadingRangeTemp": null,
+            "Name": "PSU 3 hotspot",
+            "ReadingCelsius": 51.25,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": null,
+            "UpperThresholdNonCritical": null
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Temperatures/14",
+            "@odata.type": "#Thermal.v1_3_0.Temperature",
+            "LowerThresholdCritical": null,
+            "LowerThresholdNonCritical": null,
+            "MaxReadingRangeTemp": null,
+            "MemberId": "p4_ambient",
+            "MinReadingRangeTemp": null,
+            "Name": "PSU 4 ambient temperature",
+            "ReadingCelsius": 24.5,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": null,
+            "UpperThresholdNonCritical": null
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Temperatures/15",
+            "@odata.type": "#Thermal.v1_3_0.Temperature",
+            "LowerThresholdCritical": null,
+            "LowerThresholdNonCritical": null,
+            "MaxReadingRangeTemp": null,
+            "MemberId": "p4_exhaust",
+            "MinReadingRangeTemp": null,
+            "Name": "PSU 4 exhaust",
+            "ReadingCelsius": 45.0,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": null,
+            "UpperThresholdNonCritical": null
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Temperatures/16",
+            "@odata.type": "#Thermal.v1_3_0.Temperature",
+            "LowerThresholdCritical": null,
+            "LowerThresholdNonCritical": null,
+            "MaxReadingRangeTemp": null,
+            "MemberId": "p4_hotspot",
+            "MinReadingRangeTemp": null,
+            "Name": "PSU 4 hotspot",
+            "ReadingCelsius": 46.25,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": null,
+            "UpperThresholdNonCritical": null
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Temperatures/17",
+            "@odata.type": "#Thermal.v1_3_0.Temperature",
+            "LowerThresholdCritical": null,
+            "LowerThresholdNonCritical": null,
+            "MaxReadingRangeTemp": null,
+            "MemberId": "p5_ambient",
+            "MinReadingRangeTemp": null,
+            "Name": "PSU 5 ambient temperature",
+            "ReadingCelsius": 25.5,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": null,
+            "UpperThresholdNonCritical": null
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Temperatures/18",
+            "@odata.type": "#Thermal.v1_3_0.Temperature",
+            "LowerThresholdCritical": null,
+            "LowerThresholdNonCritical": null,
+            "MaxReadingRangeTemp": null,
+            "MemberId": "p5_exhaust",
+            "MinReadingRangeTemp": null,
+            "Name": "PSU 5 exhaust",
+            "ReadingCelsius": 48.25,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": null,
+            "UpperThresholdNonCritical": null
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Temperatures/19",
+            "@odata.type": "#Thermal.v1_3_0.Temperature",
+            "LowerThresholdCritical": null,
+            "LowerThresholdNonCritical": null,
+            "MaxReadingRangeTemp": null,
+            "MemberId": "p5_hotspot",
+            "MinReadingRangeTemp": null,
+            "Name": "PSU 5 hotspot",
+            "ReadingCelsius": 51.5,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": null,
+            "UpperThresholdNonCritical": null
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Thermal#/Temperatures/20",
+            "@odata.type": "#Thermal.v1_3_0.Temperature",
+            "LowerThresholdCritical": null,
+            "LowerThresholdNonCritical": null,
+            "MaxReadingRangeTemp": null,
+            "MemberId": "chassis_temperature",
+            "MinReadingRangeTemp": null,
+            "Name": "chassis temperature",
+            "ReadingCelsius": 24.95,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": null,
+            "UpperThresholdNonCritical": null
+        }
+    ]
+}

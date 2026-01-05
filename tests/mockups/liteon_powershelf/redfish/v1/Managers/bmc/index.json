@@ -1,0 +1,104 @@
+{
+    "@odata.id": "/redfish/v1/Managers/bmc",
+    "@odata.type": "#Manager.v1_11_0.Manager",
+    "Actions": {
+        "#Manager.Reset": {
+            "@Redfish.ActionInfo": "/redfish/v1/Managers/bmc/ResetActionInfo",
+            "target": "/redfish/v1/Managers/bmc/Actions/Manager.Reset"
+        },
+        "#Manager.ResetToDefaults": {
+            "ResetType@Redfish.AllowableValues": [
+                "ResetAll"
+            ],
+            "target": "/redfish/v1/Managers/bmc/Actions/Manager.ResetToDefaults"
+        }
+    },
+    "BackupFirmwareVersion": "none",
+    "DateTime": "2025-12-08T11:56:32+00:00",
+    "DateTimeLocalOffset": "+00:00",
+    "Description": "Baseboard Management Controller",
+    "EthernetInterfaces": {
+        "@odata.id": "/redfish/v1/Managers/bmc/EthernetInterfaces"
+    },
+    "FirmwareVersion": "r1.3.8",
+    "GraphicalConsole": {
+        "ConnectTypesSupported": [
+            "KVMIP"
+        ],
+        "MaxConcurrentSessions": 4,
+        "ServiceEnabled": true
+    },
+    "HardwareVersion": "X6",
+    "Id": "bmc",
+    "LastResetTime": "2025-09-10T05:44:37+00:00",
+    "Links": {
+        "ActiveSoftwareImage": {
+            "@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/pmc_8ae54fcf"
+        },
+        "ManagerForChassis": [
+            {
+                "@odata.id": "/redfish/v1/Chassis/powershelf"
+            }
+        ],
+        "ManagerForChassis@odata.count": 1,
+        "ManagerInChassis": {
+            "@odata.id": "/redfish/v1/Chassis/powershelf"
+        },
+        "SoftwareImages": [
+            {
+                "@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/pmc_8ae54fcf"
+            }
+        ],
+        "SoftwareImages@odata.count": 1
+    },
+    "Location": {
+        "Placement": {
+            "RackOffset": 0
+        }
+    },
+    "LocationIndicatorActive": false,
+    "LogServices": {
+        "@odata.id": "/redfish/v1/Managers/bmc/LogServices"
+    },
+    "ManagerType": "BMC",
+    "Manufacturer": "LITE-ON TECHNOLOGY CORP.",
+    "Model": "CM-14MP-1R",
+    "Name": "OpenBmc Manager",
+    "NetworkProtocol": {
+        "@odata.id": "/redfish/v1/Managers/bmc/NetworkProtocol"
+    },
+    "Oem": {
+        "@odata.id": "/redfish/v1/Managers/bmc#/Oem",
+        "@odata.type": "#OemManager.Oem",
+        "OpenBmc": {
+            "@odata.id": "/redfish/v1/Managers/bmc#/Oem/OpenBmc",
+            "@odata.type": "#OemManager.OpenBmc",
+            "Certificates": {
+                "@odata.id": "/redfish/v1/Managers/bmc/Truststore/Certificates"
+            }
+        }
+    },
+    "PartNumber": "CM-14MP-1R",
+    "PowerState": "On",
+    "SerialConsole": {
+        "ConnectTypesSupported": [
+            "IPMI",
+            "SSH"
+        ],
+        "MaxConcurrentSessions": 15,
+        "ServiceEnabled": true
+    },
+    "SerialNumber": "614MP1RXX03X6510035",
+    "ServiceEntryPointUUID": "514e1acd-d519-4c5a-9122-83ecf85f943e",
+    "SnmpManagers": {
+        "@odata.id": "/redfish/v1/Managers/bmc/SnmpManagers"
+    },
+    "SparePartNumber": "",
+    "Status": {
+        "Health": "OK",
+        "HealthRollup": "OK",
+        "State": "Standby"
+    },
+    "UUID": "133b1580-3ee4-4e44-9fee-13260d6d2e4e",
+    "sparePartNumber": ""
+}

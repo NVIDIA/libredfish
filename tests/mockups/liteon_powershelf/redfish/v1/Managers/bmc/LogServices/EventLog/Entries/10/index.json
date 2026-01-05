@@ -1,0 +1,13 @@
+{
+    "@odata.id": "/redfish/v1/Managers/bmc/LogServices/EventLog/Entries/10",
+    "@odata.type": "#LogEntry.v1_8_0.LogEntry",
+    "AdditionalDataURI": "/redfish/v1/Managers/bmc/LogServices/EventLog/attachment/10",
+    "Created": "2025-07-30T23:27:27.920000+00:00",
+    "EntryType": "Event",
+    "Id": "10",
+    "Message": "com.liteon.Common.Error.BmcSystemBootComplete",
+    "Modified": "2025-07-30T23:27:27.920000+00:00",
+    "Name": "System Event Log Entry",
+    "Resolved": false,
+    "Severity": "OK"
+}

@@ -1,0 +1,109 @@
+{
+  "@odata.id": "/redfish/v1/Systems/system",
+  "@odata.type": "#ComputerSystem.v1_16_0.ComputerSystem",
+  "Actions": {
+    "#ComputerSystem.Reset": {
+      "@Redfish.ActionInfo": "/redfish/v1/Systems/system/ResetActionInfo",
+      "target": "/redfish/v1/Systems/system/Actions/ComputerSystem.Reset"
+    }
+  },
+  "Bios": {
+    "@odata.id": "/redfish/v1/Systems/system/Bios"
+  },
+  "Boot": {
+    "AutomaticRetryAttempts": 3,
+    "AutomaticRetryConfig": "RetryAttempts",
+    "AutomaticRetryConfig@Redfish.AllowableValues": [
+      "Disabled",
+      "RetryAttempts"
+    ],
+    "BootSourceOverrideEnabled": "Disabled",
+    "BootSourceOverrideTarget": "None",
+    "BootSourceOverrideTarget@Redfish.AllowableValues": [
+      "None",
+      "Pxe",
+      "Hdd",
+      "Cd",
+      "Diags",
+      "BiosSetup",
+      "Usb"
+    ],
+    "RemainingAutomaticRetryAttempts": 3,
+    "TrustedModuleRequiredToBoot": "Disabled"
+  },
+  "BootProgress": {
+    "LastState": "None"
+  },
+  "Description": "Computer System",
+  "GraphicalConsole": {
+    "ConnectTypesSupported": [
+      "KVMIP"
+    ],
+    "MaxConcurrentSessions": 4,
+    "ServiceEnabled": true
+  },
+  "Id": "system",
+  "IndicatorLED": "Off",
+  "LastResetTime": "1970-01-01T00:00:00+00:00",
+  "Links": {
+    "Chassis": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/powershelf"
+      }
+    ],
+    "ManagedBy": [
+      {
+        "@odata.id": "/redfish/v1/Managers/bmc"
+      }
+    ]
+  },
+  "LocationIndicatorActive": false,
+  "LogServices": {
+    "@odata.id": "/redfish/v1/Systems/system/LogServices"
+  },
+  "Memory": {
+    "@odata.id": "/redfish/v1/Systems/system/Memory"
+  },
+  "MemorySummary": {
+    "Status": {
+      "Health": "OK",
+      "HealthRollup": "OK",
+      "State": "Disabled"
+    },
+    "TotalSystemMemoryGiB": 0
+  },
+  "Name": "system",
+  "PowerRestorePolicy": "AlwaysOff",
+  "PowerState": "Off",
+  "ProcessorSummary": {
+    "Count": 0,
+    "Status": {
+      "Health": "OK",
+      "HealthRollup": "OK",
+      "State": "Disabled"
+    }
+  },
+  "Processors": {
+    "@odata.id": "/redfish/v1/Systems/system/Processors"
+  },
+  "SerialConsole": {
+    "IPMI": {
+      "ServiceEnabled": true
+    },
+    "MaxConcurrentSessions": 15,
+    "SSH": {
+      "HotKeySequenceDisplay": "Press ~. to exit console",
+      "Port": 2200,
+      "ServiceEnabled": true
+    }
+  },
+  "Status": {
+    "Health": "OK",
+    "HealthRollup": "OK",
+    "State": "Disabled"
+  },
+  "Storage": {
+    "@odata.id": "/redfish/v1/Systems/system/Storage"
+  },
+  "SystemType": "Physical"
+}

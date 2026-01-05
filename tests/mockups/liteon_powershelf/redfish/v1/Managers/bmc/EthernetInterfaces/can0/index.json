@@ -1,0 +1,42 @@
+{
+    "@odata.id": "/redfish/v1/Managers/bmc/EthernetInterfaces/can0",
+    "@odata.type": "#EthernetInterface.v1_4_1.EthernetInterface",
+    "DHCPv4": {
+        "DHCPEnabled": true,
+        "UseDNSServers": true,
+        "UseDomainName": true,
+        "UseNTPServers": true
+    },
+    "DHCPv6": {
+        "OperatingMode": "Stateful",
+        "UseDNSServers": true,
+        "UseDomainName": true,
+        "UseNTPServers": true
+    },
+    "Description": "Management Network Interface",
+    "FQDN": "cm14mp1r",
+    "HostName": "cm14mp1r",
+    "IPv4Addresses": [],
+    "IPv4StaticAddresses": [],
+    "IPv6AddressPolicyTable": [],
+    "IPv6Addresses": [],
+    "IPv6DefaultGateway": "0:0:0:0:0:0:0:0",
+    "IPv6StaticAddresses": [],
+    "Id": "can0",
+    "InterfaceEnabled": true,
+    "LinkStatus": "LinkDown",
+    "MACAddress": "00:00:00:00:00:00",
+    "MTUSize": 0,
+    "Name": "Manager Ethernet Interface",
+    "NameServers": [],
+    "SpeedMbps": 0,
+    "StaticNameServers": [],
+    "Status": {
+        "Health": "OK",
+        "HealthRollup": "OK",
+        "State": "Enabled"
+    },
+    "VLANs": {
+        "@odata.id": "/redfish/v1/Managers/bmc/EthernetInterfaces/can0/VLANs"
+    }
+}

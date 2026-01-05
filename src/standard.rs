@@ -606,7 +606,17 @@ impl Redfish for RedfishStandard {
     }
 
     async fn get_service_root(&self) -> Result<ServiceRoot, RedfishError> {
-        let (_status_code, body) = self.client.get("").await?;
+        let (_status_code, mut body): (StatusCode, ServiceRoot) = self.client.get("").await?;
+        // fix lite-on power shelf bmc behavior
+        if body.vendor.is_none() {
+            let chassis_all = self.get_chassis_all().await?;
+            if chassis_all.contains(&"powershelf".to_string()) {
+                let chassis = self.get_chassis("powershelf").await?;
+                if let Some(x) = chassis.manufacturer {
+                    body.vendor = Some(x);
+                }
+            }
+        }
         Ok(body)
     }
 
@@ -946,7 +956,7 @@ impl RedfishStandard {
         Ok(member_ids)
     }
     /// Fetch root URL and record the vendor, if any
-    pub fn set_vendor(
+    pub async fn set_vendor(
         &mut self,
         vendor: RedfishVendor,
     ) -> Result<Box<dyn crate::Redfish>, RedfishError> {
@@ -979,6 +989,9 @@ impl RedfishStandard {
                 Ok(Box::new(crate::nvidia_gh200::Bmc::new(self.clone())?))
             }
             RedfishVendor::Supermicro => Ok(Box::new(crate::supermicro::Bmc::new(self.clone())?)),
+            RedfishVendor::LiteOnPowerShelf => {
+                Ok(Box::new(crate::liteon_powershelf::Bmc::new(self.clone())?))
+            }
             _ => Ok(Box::new(self.clone())),
         }
     }

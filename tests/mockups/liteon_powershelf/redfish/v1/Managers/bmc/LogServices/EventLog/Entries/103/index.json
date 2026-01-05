@@ -1,0 +1,13 @@
+{
+    "@odata.id": "/redfish/v1/Managers/bmc/LogServices/EventLog/Entries/103",
+    "@odata.type": "#LogEntry.v1_8_0.LogEntry",
+    "AdditionalDataURI": "/redfish/v1/Managers/bmc/LogServices/EventLog/attachment/103",
+    "Created": "2025-07-31T05:16:49.242000+00:00",
+    "EntryType": "Event",
+    "Id": "103",
+    "Message": "com.liteon.Common.Error.PowerDevicePowerNotGood",
+    "Modified": "2025-07-31T05:16:49.242000+00:00",
+    "Name": "System Event Log Entry",
+    "Resolved": false,
+    "Severity": "OK"
+}

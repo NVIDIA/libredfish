@@ -63,6 +63,7 @@ const DELL_MULTI_DPU_PORT: &str = "8739";
 const NVIDIA_GH200_PORT: &str = "8740";
 const NVIDIA_GB200_PORT: &str = "8741";
 const NVIDIA_GBSWITCH_PORT: &str = "8742";
+const LITEON_POWERSHELF_PORT: &str = "8743";
 
 static SETUP: Once = Once::new();
 
@@ -159,6 +160,11 @@ async fn test_forbidden_error_handling() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+#[tokio::test]
+async fn test_liteon_powershelf() -> Result<(), anyhow::Error> {
+    run_integration_test("liteon_powershelf", LITEON_POWERSHELF_PORT).await
 }
 
 async fn nvidia_dpu_integration_test(redfish: &dyn Redfish) -> Result<(), anyhow::Error> {
@@ -321,6 +327,7 @@ async fn run_integration_test(
     if vendor_dir != "nvidia_gh200"
         && vendor_dir != "nvidia_gb200"
         && vendor_dir != "nvidia_gbswitch"
+        && vendor_dir != "liteon_powershelf"
     {
         let system_eth_interfaces = redfish.get_system_ethernet_interfaces().await?;
         assert!(!system_eth_interfaces.is_empty());
@@ -360,8 +367,10 @@ async fn run_integration_test(
         }
     }
 
-    assert_eq!(redfish.get_power_state().await?, libredfish::PowerState::On);
-    if vendor_dir != "nvidia_gbswitch" {
+    if vendor_dir != "liteon_powershelf" {
+        assert_eq!(redfish.get_power_state().await?, libredfish::PowerState::On);
+    }
+    if vendor_dir != "nvidia_gbswitch" && vendor_dir != "liteon_powershelf" {
         assert!(redfish.bios().await?.len() > 8);
     }
 
@@ -375,9 +384,11 @@ async fn run_integration_test(
 
     // A real BMC requires a reboot after every change, so pretend for accuracy.
     // Dell will 400 Bad Request if you make two consecutive changes.
-    redfish
-        .lockdown(libredfish::EnabledDisabled::Disabled)
-        .await?;
+    if vendor_dir != "liteon_powershelf" {
+        redfish
+            .lockdown(libredfish::EnabledDisabled::Disabled)
+            .await?;
+    }
     redfish
         .power(libredfish::SystemPowerControl::ForceRestart)
         .await?;
@@ -389,6 +400,7 @@ async fn run_integration_test(
     if vendor_dir != "nvidia_gh200"
         && vendor_dir != "nvidia_gb200"
         && vendor_dir != "nvidia_gbswitch"
+        && vendor_dir != "liteon_powershelf"
     {
         redfish.setup_serial_console().await?;
         redfish
@@ -401,6 +413,7 @@ async fn run_integration_test(
         && vendor_dir != "nvidia_gh200"
         && vendor_dir != "nvidia_gb200"
         && vendor_dir != "nvidia_gbswitch"
+        && vendor_dir != "liteon_powershelf"
     {
         redfish.clear_tpm().await?;
         // The mockup includes TPM clear pending operation
@@ -410,7 +423,7 @@ async fn run_integration_test(
         .power(libredfish::SystemPowerControl::ForceRestart)
         .await?;
 
-    if vendor_dir != "nvidia_gbswitch" {
+    if vendor_dir != "nvidia_gbswitch" && vendor_dir != "liteon_powershelf" {
         redfish.boot_once(libredfish::Boot::Pxe).await?;
         redfish.boot_first(libredfish::Boot::HardDisk).await?;
     }
@@ -418,9 +431,11 @@ async fn run_integration_test(
         .power(libredfish::SystemPowerControl::ForceRestart)
         .await?;
 
-    redfish
-        .lockdown(libredfish::EnabledDisabled::Enabled)
-        .await?;
+    if vendor_dir != "liteon_powershelf" {
+        redfish
+            .lockdown(libredfish::EnabledDisabled::Enabled)
+            .await?;
+    }
 
     redfish
         .power(libredfish::SystemPowerControl::GracefulRestart)
@@ -530,8 +545,9 @@ async fn run_integration_test(
             ("hpe", 6),
         ]
     )?;
-
-    resource_tests(redfish.as_ref()).await?;
+    if vendor_dir != "liteon_powershelf" {
+        resource_tests(redfish.as_ref()).await?;
+    }
 
     Ok(())
 }

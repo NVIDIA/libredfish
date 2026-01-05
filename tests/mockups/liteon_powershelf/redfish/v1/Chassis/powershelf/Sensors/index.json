@@ -1,0 +1,225 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors",
+    "@odata.type": "#SensorCollection.SensorCollection",
+    "Description": "Collection of Sensors for this Chassis",
+    "Members": [
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/current_chassis_input_current"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/current_chassis_output_current"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/current_ishare"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/current_p0_iin"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/current_p0_iout"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/current_p1_iin"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/current_p1_iout"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/current_p2_iin"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/current_p2_iout"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/current_p3_iin"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/current_p3_iout"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/current_p4_iin"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/current_p4_iout"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/current_p5_iin"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/current_p5_iout"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/fantach_p0_fan1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/fantach_p1_fan1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/fantach_p2_fan1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/fantach_p3_fan1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/fantach_p4_fan1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/fantach_p5_fan1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/power_chassis_input_power"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/power_chassis_output_power"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/power_p0_pin"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/power_p0_pout"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/power_p1_pin"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/power_p1_pout"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/power_p2_pin"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/power_p2_pout"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/power_p3_pin"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/power_p3_pout"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/power_p4_pin"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/power_p4_pout"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/power_p5_pin"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/power_p5_pout"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_DC_temp_minus"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_DC_temp_plus"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_chassis_temperature"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_p0_ambient"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_p0_exhaust"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_p0_hotspot"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_p1_ambient"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_p1_exhaust"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_p1_hotspot"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_p2_ambient"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_p2_exhaust"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_p2_hotspot"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_p3_ambient"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_p3_exhaust"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_p3_hotspot"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_p4_ambient"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_p4_exhaust"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_p4_hotspot"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_p5_ambient"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_p5_exhaust"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/temperature_p5_hotspot"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/utilization_chassis_efficiency"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/utilization_chassis_load"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/voltage_chassis_input_voltage"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/voltage_chassis_output_voltage"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/voltage_p0_vin"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/voltage_p0_vout"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/voltage_p1_vin"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/voltage_p1_vout"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/voltage_p2_vin"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/voltage_p2_vout"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/voltage_p3_vin"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/voltage_p3_vout"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/voltage_p4_vin"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/voltage_p4_vout"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/voltage_p5_vin"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/powershelf/Sensors/voltage_p5_vout"
+        }
+    ],
+    "Members@odata.count": 72,
+    "Name": "Sensors"
+}

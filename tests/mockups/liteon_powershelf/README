@@ -1,0 +1,9 @@
+Redfish service captured by the Redfish Mockup Creator, Version 1.2.0
+Created: 2025-12-07 21:36:39
+Service: https://10.84.196.54
+User: root
+Description: 
+Total response time: 124.69369673728943
+Average response time: 0.333405606249437
+Minimum response time: 0.10677886009216309, /redfish/v1/JsonSchemas/MessageRegistryFile
+Maximum response time: 4.745636701583862, /redfish/v1/Managers/bmc/LogServices/EventLog/Entries
