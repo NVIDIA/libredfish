@@ -28,34 +28,12 @@ use serde_json::Value;
 use tokio::fs::File;
 
 use crate::{
-    jsonmap,
-    model::{
-        account_service::ManagerAccount,
-        certificate::Certificate,
-        chassis::{Assembly, Chassis, NetworkAdapter},
-        component_integrity::ComponentIntegrities,
-        network_device_function::NetworkDeviceFunction,
-        oem::{
+    BiosProfileType, Boot, BootOptions, Collection, EnabledDisabled, JobState, MachineSetupDiff, MachineSetupStatus, ODataId, PCIeDevice, PowerState, Redfish, RedfishError, Resource, RoleId, Status, StatusInternal, SystemPowerControl, jsonmap, model::{
+        BootOption, ComputerSystem, InvalidValueError, Manager, OnOff, account_service::ManagerAccount, certificate::Certificate, chassis::{Assembly, Chassis, NetworkAdapter}, component_integrity::ComponentIntegrities, network_device_function::NetworkDeviceFunction, oem::{
             dell::{self, ShareParameters, StorageCollection, SystemConfiguration},
-            nvidia_dpu::NicMode,
-        },
-        power::Power,
-        resource::ResourceCollection,
-        secure_boot::SecureBoot,
-        sel::{LogEntry, LogEntryCollection},
-        sensor::GPUSensors,
-        service_root::{RedfishVendor, ServiceRoot},
-        software_inventory::SoftwareInventory,
-        storage::Drives,
-        task::Task,
-        thermal::Thermal,
-        update_service::{ComponentType, TransferProtocolType, UpdateService},
-        BootOption, ComputerSystem, InvalidValueError, Manager, OnOff,
-    },
-    standard::RedfishStandard,
-    BiosProfileType, Boot, BootOptions, Collection, EnabledDisabled, JobState, MachineSetupDiff,
-    MachineSetupStatus, ODataId, PCIeDevice, PowerState, Redfish, RedfishError, Resource, RoleId,
-    Status, StatusInternal, SystemPowerControl,
+            nvidia_dpu::{HostPrivilegeLevel, NicMode},
+        }, power::Power, resource::ResourceCollection, secure_boot::SecureBoot, sel::{LogEntry, LogEntryCollection}, sensor::GPUSensors, service_root::{RedfishVendor, ServiceRoot}, software_inventory::SoftwareInventory, storage::Drives, task::Task, thermal::Thermal, update_service::{ComponentType, TransferProtocolType, UpdateService}
+    }, standard::RedfishStandard
 };
 
 const UEFI_PASSWORD_NAME: &str = "SetupPassword";
@@ -1023,6 +1001,10 @@ impl Redfish for Bmc {
         url: &str,
     ) -> Result<crate::model::component_integrity::Evidence, RedfishError> {
         self.s.get_evidence(url).await
+    }
+
+    async fn set_host_privilege_level(&self, level: HostPrivilegeLevel) -> Result<(), RedfishError> {
+        self.s.set_host_privilege_level(level).await
     }
 }
 

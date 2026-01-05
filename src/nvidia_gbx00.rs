@@ -32,7 +32,7 @@ use tokio::fs::File;
 use crate::model::account_service::ManagerAccount;
 use crate::model::certificate::Certificate;
 use crate::model::component_integrity::{ComponentIntegrities, RegexToFirmwareIdOptions};
-use crate::model::oem::nvidia_dpu::NicMode;
+use crate::model::oem::nvidia_dpu::{HostPrivilegeLevel, NicMode};
 use crate::model::sensor::{GPUSensors, Sensor, Sensors};
 use crate::model::service_root::RedfishVendor;
 use crate::model::storage::DriveCollection;
@@ -1094,6 +1094,10 @@ impl Redfish for Bmc {
         url: &str,
     ) -> Result<crate::model::component_integrity::Evidence, RedfishError> {
         self.s.get_evidence(url).await
+    }
+
+    async fn set_host_privilege_level(&self, level: HostPrivilegeLevel) -> Result<(), RedfishError> {
+        self.s.set_host_privilege_level(level).await
     }
 }
 

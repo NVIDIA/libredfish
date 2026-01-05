@@ -858,20 +858,6 @@ impl Redfish for Bmc {
     ) -> Result<crate::model::component_integrity::Evidence, RedfishError> {
         self.s.get_evidence(url).await
     }
-}
-
-impl Bmc {
-    async fn patch_bios_setting(
-        &self,
-        data: HashMap<&str, HashMap<&str, String>>,
-    ) -> Result<(), RedfishError> {
-        let url = format!("Systems/{}/Bios/Settings", self.s.system_id());
-        self.s
-            .client
-            .patch(&url, data)
-            .await
-            .map(|_status_code| Ok(()))?
-    }
 
     async fn set_host_privilege_level(
         &self,
@@ -896,6 +882,20 @@ impl Bmc {
         let data = HashMap::from([("Attributes", HashMap::from([(key, level.to_string())]))]);
 
         self.patch_bios_setting(data)
+            .await
+            .map(|_status_code| Ok(()))?
+    }
+}
+
+impl Bmc {
+    async fn patch_bios_setting(
+        &self,
+        data: HashMap<&str, HashMap<&str, String>>,
+    ) -> Result<(), RedfishError> {
+        let url = format!("Systems/{}/Bios/Settings", self.s.system_id());
+        self.s
+            .client
+            .patch(&url, data)
             .await
             .map(|_status_code| Ok(()))?
     }

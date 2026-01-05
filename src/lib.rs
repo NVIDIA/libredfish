@@ -541,6 +541,10 @@ pub trait Redfish: Send + Sync + 'static {
         &self,
         url: &str,
     ) -> Result<model::component_integrity::Evidence, RedfishError>;
+
+     // Sets the host privilege level for a DPU
+     async fn set_host_privilege_level(&self, level: HostPrivilegeLevel) -> Result<(), RedfishError>;
+
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]

@@ -4,7 +4,7 @@ use std::{collections::HashMap, path::Path, time::Duration};
 use crate::model::account_service::ManagerAccount;
 use crate::model::certificate::Certificate;
 use crate::model::component_integrity::ComponentIntegrities;
-use crate::model::oem::nvidia_dpu::NicMode;
+use crate::model::oem::nvidia_dpu::{HostPrivilegeLevel, NicMode};
 use crate::model::sensor::{GPUSensors, Sensors};
 use crate::model::service_root::RedfishVendor;
 use crate::model::task::Task;
@@ -819,6 +819,10 @@ impl Redfish for Bmc {
         Err(RedfishError::NotSupported(
             "not populated for GBSwitch".to_string(),
         ))
+    }
+
+    async fn set_host_privilege_level(&self, level: HostPrivilegeLevel) -> Result<(), RedfishError> {
+        self.s.set_host_privilege_level(level).await
     }
 }
 

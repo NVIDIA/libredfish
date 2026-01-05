@@ -25,34 +25,12 @@ use std::{collections::HashMap, path::Path, time::Duration};
 use serde_json::Value;
 
 use crate::{
-    model::{
-        account_service::ManagerAccount,
-        certificate::Certificate,
-        chassis::{Assembly, Chassis, NetworkAdapter},
-        component_integrity::ComponentIntegrities,
-        network_device_function::NetworkDeviceFunction,
-        oem::{
+    BiosProfileType, Boot, BootOptions, Collection, Deserialize, EnabledDisabled::{self, Disabled, Enabled}, JobState, MachineSetupDiff, MachineSetupStatus, OData, ODataId, PCIeDevice, PowerState, Redfish, RedfishError, Resource, RoleId, Serialize, Status, StatusInternal, SystemPowerControl, model::{
+        BootOption, ComputerSystem, Manager, Slot, SystemStatus, account_service::ManagerAccount, certificate::Certificate, chassis::{Assembly, Chassis, NetworkAdapter}, component_integrity::ComponentIntegrities, network_device_function::NetworkDeviceFunction, oem::{
             hpe::{self, BootDevices},
-            nvidia_dpu::NicMode,
-        },
-        power::Power,
-        secure_boot::SecureBoot,
-        sel::{LogEntry, LogEntryCollection},
-        sensor::GPUSensors,
-        service_root::{RedfishVendor, ServiceRoot},
-        software_inventory::SoftwareInventory,
-        storage::{self, Drives},
-        task::Task,
-        thermal::Thermal,
-        update_service::{ComponentType, TransferProtocolType, UpdateService},
-        BootOption, ComputerSystem, Manager, Slot, SystemStatus,
-    },
-    network::REDFISH_ENDPOINT,
-    standard::RedfishStandard,
-    BiosProfileType, Boot, BootOptions, Collection, Deserialize,
-    EnabledDisabled::{self, Disabled, Enabled},
-    JobState, MachineSetupDiff, MachineSetupStatus, OData, ODataId, PCIeDevice, PowerState,
-    Redfish, RedfishError, Resource, RoleId, Serialize, Status, StatusInternal, SystemPowerControl,
+            nvidia_dpu::{HostPrivilegeLevel, NicMode},
+        }, power::Power, secure_boot::SecureBoot, sel::{LogEntry, LogEntryCollection}, sensor::GPUSensors, service_root::{RedfishVendor, ServiceRoot}, software_inventory::SoftwareInventory, storage::{self, Drives}, task::Task, thermal::Thermal, update_service::{ComponentType, TransferProtocolType, UpdateService}
+    }, network::REDFISH_ENDPOINT, standard::RedfishStandard
 };
 
 // The following is specific for the HPE machine since the HPE redfish
@@ -933,6 +911,10 @@ impl Redfish for Bmc {
         url: &str,
     ) -> Result<crate::model::component_integrity::Evidence, RedfishError> {
         self.s.get_evidence(url).await
+    }
+
+    async fn set_host_privilege_level(&self, level: HostPrivilegeLevel) -> Result<(), RedfishError> {
+        self.s.set_host_privilege_level(level).await
     }
 }
 

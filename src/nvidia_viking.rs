@@ -31,38 +31,15 @@ use tracing::{debug, error, info, warn};
 use version_compare::Version;
 
 use crate::{
-    model::{
-        account_service::ManagerAccount,
-        boot::{BootSourceOverrideEnabled, BootSourceOverrideTarget},
-        certificate::Certificate,
-        chassis::{Assembly, Chassis, NetworkAdapter},
-        component_integrity::ComponentIntegrities,
-        network_device_function::NetworkDeviceFunction,
-        oem::{
-            nvidia_dpu::NicMode,
+    BiosProfileType, Boot, BootOptions, Collection, EnabledDisabled::{self, Disabled, Enabled}, JobState, MachineSetupDiff, MachineSetupStatus, ODataId, PCIeDevice, PowerState, Redfish, RedfishError, Resource, RoleId, Status, StatusInternal, SystemPowerControl, model::{
+        BootOption, ComputerSystem, EnableDisable, Manager, ManagerResetType, account_service::ManagerAccount, boot::{BootSourceOverrideEnabled, BootSourceOverrideTarget}, certificate::Certificate, chassis::{Assembly, Chassis, NetworkAdapter}, component_integrity::ComponentIntegrities, network_device_function::NetworkDeviceFunction, oem::{
+            nvidia_dpu::{HostPrivilegeLevel, NicMode},
             nvidia_viking::{
                 BootDevices::{self},
                 *,
             },
-        },
-        power::Power,
-        resource::IsResource,
-        secure_boot::SecureBoot,
-        sel::{LogEntry, LogEntryCollection},
-        sensor::{GPUSensors, Sensor},
-        service_root::{RedfishVendor, ServiceRoot},
-        software_inventory::SoftwareInventory,
-        storage::Drives,
-        task::Task,
-        thermal::Thermal,
-        update_service::{ComponentType, TransferProtocolType, UpdateService},
-        BootOption, ComputerSystem, EnableDisable, Manager, ManagerResetType,
-    },
-    standard::RedfishStandard,
-    BiosProfileType, Boot, BootOptions, Collection,
-    EnabledDisabled::{self, Disabled, Enabled},
-    JobState, MachineSetupDiff, MachineSetupStatus, ODataId, PCIeDevice, PowerState, Redfish,
-    RedfishError, Resource, RoleId, Status, StatusInternal, SystemPowerControl,
+        }, power::Power, resource::IsResource, secure_boot::SecureBoot, sel::{LogEntry, LogEntryCollection}, sensor::{GPUSensors, Sensor}, service_root::{RedfishVendor, ServiceRoot}, software_inventory::SoftwareInventory, storage::Drives, task::Task, thermal::Thermal, update_service::{ComponentType, TransferProtocolType, UpdateService}
+    }, standard::RedfishStandard
 };
 
 const UEFI_PASSWORD_NAME: &str = "AdminPassword";
@@ -1000,6 +977,10 @@ impl Redfish for Bmc {
         url: &str,
     ) -> Result<crate::model::component_integrity::Evidence, RedfishError> {
         self.s.get_evidence(url).await
+    }
+
+    async fn set_host_privilege_level(&self, level: HostPrivilegeLevel) -> Result<(), RedfishError> {
+        self.s.set_host_privilege_level(level).await
     }
 }
 

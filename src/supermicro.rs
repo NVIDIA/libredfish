@@ -27,33 +27,12 @@ use serde::Serialize;
 use tokio::fs::File;
 
 use crate::{
-    model::{
-        account_service::ManagerAccount,
-        boot,
-        certificate::Certificate,
-        chassis::{Assembly, Chassis, NetworkAdapter},
-        component_integrity::ComponentIntegrities,
-        network_device_function::NetworkDeviceFunction,
-        oem::{
-            nvidia_dpu::NicMode,
+    BiosProfileType, Boot, BootOptions, Collection, EnabledDisabled, JobState, MachineSetupDiff, MachineSetupStatus, ODataId, PCIeDevice, PowerState, Redfish, RedfishError, Resource, RoleId, Status, StatusInternal, SystemPowerControl, model::{
+        BootOption, ComputerSystem, EnableDisable, InvalidValueError, Manager, account_service::ManagerAccount, boot, certificate::Certificate, chassis::{Assembly, Chassis, NetworkAdapter}, component_integrity::ComponentIntegrities, network_device_function::NetworkDeviceFunction, oem::{
+            nvidia_dpu::{HostPrivilegeLevel, NicMode},
             supermicro::{self, FixedBootOrder},
-        },
-        power::Power,
-        secure_boot::SecureBoot,
-        sel::LogEntry,
-        sensor::GPUSensors,
-        service_root::{RedfishVendor, ServiceRoot},
-        software_inventory::SoftwareInventory,
-        storage::Drives,
-        task::Task,
-        thermal::Thermal,
-        update_service::{ComponentType, TransferProtocolType, UpdateService},
-        BootOption, ComputerSystem, EnableDisable, InvalidValueError, Manager,
-    },
-    standard::RedfishStandard,
-    BiosProfileType, Boot, BootOptions, Collection, EnabledDisabled, JobState, MachineSetupDiff,
-    MachineSetupStatus, ODataId, PCIeDevice, PowerState, Redfish, RedfishError, Resource, RoleId,
-    Status, StatusInternal, SystemPowerControl,
+        }, power::Power, secure_boot::SecureBoot, sel::LogEntry, sensor::GPUSensors, service_root::{RedfishVendor, ServiceRoot}, software_inventory::SoftwareInventory, storage::Drives, task::Task, thermal::Thermal, update_service::{ComponentType, TransferProtocolType, UpdateService}
+    }, standard::RedfishStandard
 };
 
 const MELLANOX_UEFI_HTTP_IPV4: &str = "UEFI HTTP IPv4 Mellanox Network Adapter";
@@ -926,6 +905,10 @@ impl Redfish for Bmc {
         url: &str,
     ) -> Result<crate::model::component_integrity::Evidence, RedfishError> {
         self.s.get_evidence(url).await
+    }
+
+    async fn set_host_privilege_level(&self, level: HostPrivilegeLevel) -> Result<(), RedfishError> {
+        self.s.set_host_privilege_level(level).await
     }
 }
 

@@ -29,6 +29,7 @@ use tracing::debug;
 use crate::model::certificate::Certificate;
 use crate::model::chassis::Assembly;
 use crate::model::component_integrity::ComponentIntegrities;
+use crate::model::oem::nvidia_dpu::HostPrivilegeLevel;
 use crate::model::service_root::ServiceRoot;
 use crate::model::software_inventory::SoftwareInventory;
 use crate::model::task::Task;
@@ -910,6 +911,10 @@ impl Redfish for RedfishStandard {
         let url = format!("{}/data", url.replace("/redfish/v1/", ""));
         let (_status_code, body) = self.client.get(&url).await?;
         Ok(body)
+    }
+
+    async fn set_host_privilege_level(&self, _level: HostPrivilegeLevel) -> Result<(), RedfishError> {
+        Err(RedfishError::NotSupported("set_host_privilege_level".to_string()))
     }
 }
 
