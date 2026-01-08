@@ -4,7 +4,7 @@ use std::{collections::HashMap, path::Path, time::Duration};
 use tokio::fs::File;
 
 use crate::model::account_service::ManagerAccount;
-use crate::model::oem::nvidia_dpu::NicMode;
+use crate::model::oem::nvidia_dpu::{HostPrivilegeLevel, NicMode};
 use crate::model::power::{Power, PowerSupplies, PowerSupply, Voltages};
 use crate::model::sensor::{GPUSensors, Sensor, Sensors};
 use crate::model::service_root::RedfishVendor;
@@ -727,6 +727,10 @@ impl Redfish for Bmc {
         Err(RedfishError::NotSupported(
             "not supported".to_string(),
         ))
+    }
+
+    async fn set_host_privilege_level(&self, level: HostPrivilegeLevel) -> Result<(), RedfishError> {
+        self.s.set_host_privilege_level(level).await
     }
 }
 
