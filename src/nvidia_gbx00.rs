@@ -1226,10 +1226,8 @@ impl Bmc {
         let all_boot_options: Vec<BootOption> = self
             .get_collection(boot_options_id)
             .await
-            .and_then(|c| c.try_get::<BootOption>())
-            .into_iter()
-            .flat_map(|rc| rc.members)
-            .collect();
+            .and_then(|c| c.try_get::<BootOption>())?
+            .members;
 
         // Search through all boot options to find the one we want
         let found_boot_option = all_boot_options.iter().find(|b| match match_field {
