@@ -1202,14 +1202,8 @@ impl Bmc {
         self.change_boot_order(boot_array).await
     }
 
-    // A Vec of string boot option names, with the one you want first.
-    //
-    // Example: get_boot_options_ids_with_first(lenovo::BootOptionName::Network) might return
-    // ["Boot0003", "Boot0002", "Boot0001", "Boot0004"] where Boot0003 is Network. It has been
-    // moved to the front ready for sending as an update.
-    // The order of the other boot options does not change.
-    //
-    // If the boot option you want is not found returns Ok(None)
+    // This function searches all reported boot options to find the
+    // desired option, then prepends it to the existing boot order.
     async fn get_boot_options_ids_with_first(
         &self,
         with_name: BootOptionName,
@@ -1217,28 +1211,53 @@ impl Bmc {
         with_name_str: Option<&str>,
     ) -> Result<Vec<String>, RedfishError> {
         let name_str = with_name_str.unwrap_or(with_name.to_string());
-        let mut ordered = Vec::new(); // the final boot options
-        let boot_options = self.s.get_system().await?.boot.boot_order;
-        let mut found_matching_boot_option = false;
-        for member in &boot_options {
-            let b: BootOption = self.s.get_boot_option(member.as_str()).await?;
-            let is_match = match match_field {
-                BootOptionMatchField::DisplayName => b.display_name.starts_with(name_str),
-                BootOptionMatchField::UefiDevicePath => {
-                    matches!(b.uefi_device_path, Some(x) if x.starts_with(name_str))
-                }
-            };
-            if is_match {
-                ordered.insert(0, b.id);
-                found_matching_boot_option = true;
-            } else {
-                ordered.push(b.id);
-            }
-        }
+        let system = self.s.get_system().await?;
 
-        if !found_matching_boot_option {
-            return Err(RedfishError::GenericError { error: format!("Could not find boot option matching {name_str} on {}; boot options: {boot_options:#?}", match_field) });
-        }
+        let boot_options_id =
+            system
+                .boot
+                .boot_options
+                .clone()
+                .ok_or_else(|| RedfishError::MissingKey {
+                    key: "boot.boot_options".to_string(),
+                    url: system.odata.odata_id.clone(),
+                })?;
+
+        let all_boot_options: Vec<BootOption> = self
+            .get_collection(boot_options_id)
+            .await
+            .and_then(|c| c.try_get::<BootOption>())
+            .into_iter()
+            .flat_map(|rc| rc.members)
+            .collect();
+
+        // Search through all boot options to find the one we want
+        let found_boot_option = all_boot_options.iter().find(|b| match match_field {
+            BootOptionMatchField::DisplayName => b.display_name.starts_with(name_str),
+            BootOptionMatchField::UefiDevicePath => {
+                matches!(&b.uefi_device_path, Some(x) if x.starts_with(name_str))
+            }
+        });
+
+        let Some(target) = found_boot_option else {
+            let all_names: Vec<_> = all_boot_options
+                .iter()
+                .map(|b| format!("{}: {}", b.id, b.display_name))
+                .collect();
+            return Err(RedfishError::GenericError {
+                error: format!(
+                    "Could not find boot option matching {name_str} on {}; all boot options: {:#?}",
+                    match_field, all_names
+                ),
+            });
+        };
+
+        let target_id = target.id.clone();
+
+        // Prepend the found option to the front of the existing boot order
+        let mut ordered = system.boot.boot_order;
+        ordered.retain(|id| id != &target_id);
+        ordered.insert(0, target_id);
 
         Ok(ordered)
     }
