@@ -422,45 +422,23 @@ impl Redfish for Bmc {
         let bios = self.bios().await?;
         let attrs = jsonmap::get_object(&bios, "Attributes", &url)?;
 
-        let core_expected = vec![
-            // "any" means any value counts as correctly disabled
+        // "any" means any value counts as correctly disabled
+        // Attributes are checked if present, missing attributes are skipped
+        let expected = vec![
             ("DevicesandIOPorts_COMPort1", "Enabled", "any"),
             ("DevicesandIOPorts_ConsoleRedirection", "Enabled", "Auto"),
             ("DevicesandIOPorts_SerialPortSharing", "Enabled", "Disabled"),
+            ("DevicesandIOPorts_SPRedirection", "Enabled", "Disabled"),
+            ("DevicesandIOPorts_COMPortActiveAfterBoot", "Enabled", "Disabled"),
+            ("DevicesandIOPorts_SerialPortAccessMode", "Shared", "Disabled"),
         ];
         
-        // Only in older Lenovo systems
-        let older_expected = vec![
-            ("DevicesandIOPorts_SPRedirection", "Enabled", "Disabled"),
-            (
-                "DevicesandIOPorts_COMPortActiveAfterBoot",
-                "Enabled",
-                "Disabled",
-            ),
-            (
-                "DevicesandIOPorts_SerialPortAccessMode",
-                "Shared",
-                "Disabled",
-            ),
-        ];
         let mut message = String::new();
         let mut enabled = true;
         let mut disabled = true;
         
-        // Check core attributes (must exist)
-        for (key, val_enabled, val_disabled) in core_expected {
-            let val_current = jsonmap::get_str(attrs, key, &url)?;
-            message.push_str(&format!("{key}={val_current} "));
-            if val_current != val_enabled {
-                enabled = false;
-            }
-            if val_current != val_disabled && val_disabled != "any" {
-                disabled = false;
-            }
-        }
-        
-        // Check older attributes (skip if missing)
-        for (key, val_enabled, val_disabled) in older_expected {
+        // Check all attributes, skip if missing
+        for (key, val_enabled, val_disabled) in expected {
             if let Some(val_current) = attrs.get(key).and_then(|v| v.as_str()) {
                 message.push_str(&format!("{key}={val_current} "));
                 if val_current != val_enabled {
@@ -470,7 +448,6 @@ impl Redfish for Bmc {
                     disabled = false;
                 }
             }
-            // If attribute doesn't exist, we don't count it against enabled/disabled status
         }
 
         Ok(Status {
