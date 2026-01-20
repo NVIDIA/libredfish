@@ -20,20 +20,40 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-use std::{collections::HashMap, path::Path, time::Duration};
+use std::collections::HashMap;
+use std::path::Path;
+use std::time::Duration;
 
-use reqwest::{header::HeaderMap, Method};
+use reqwest::header::HeaderMap;
+use reqwest::Method;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio::fs::File;
 
+use crate::model::account_service::ManagerAccount;
+use crate::model::certificate::Certificate;
+use crate::model::chassis::{Assembly, Chassis, NetworkAdapter};
+use crate::model::component_integrity::ComponentIntegrities;
+use crate::model::network_device_function::NetworkDeviceFunction;
+use crate::model::oem::dell::{self, ShareParameters, StorageCollection, SystemConfiguration};
+use crate::model::oem::nvidia_dpu::{HostPrivilegeLevel, NicMode};
+use crate::model::power::Power;
+use crate::model::resource::ResourceCollection;
+use crate::model::secure_boot::SecureBoot;
+use crate::model::sel::{LogEntry, LogEntryCollection};
+use crate::model::sensor::GPUSensors;
+use crate::model::service_root::{RedfishVendor, ServiceRoot};
+use crate::model::software_inventory::SoftwareInventory;
+use crate::model::storage::Drives;
+use crate::model::task::Task;
+use crate::model::thermal::Thermal;
+use crate::model::update_service::{ComponentType, TransferProtocolType, UpdateService};
+use crate::model::{BootOption, ComputerSystem, InvalidValueError, Manager, OnOff};
+use crate::standard::RedfishStandard;
 use crate::{
-    BiosProfileType, Boot, BootOptions, Collection, EnabledDisabled, JobState, MachineSetupDiff, MachineSetupStatus, ODataId, PCIeDevice, PowerState, Redfish, RedfishError, Resource, RoleId, Status, StatusInternal, SystemPowerControl, jsonmap, model::{
-        BootOption, ComputerSystem, InvalidValueError, Manager, OnOff, account_service::ManagerAccount, certificate::Certificate, chassis::{Assembly, Chassis, NetworkAdapter}, component_integrity::ComponentIntegrities, network_device_function::NetworkDeviceFunction, oem::{
-            dell::{self, ShareParameters, StorageCollection, SystemConfiguration},
-            nvidia_dpu::{HostPrivilegeLevel, NicMode},
-        }, power::Power, resource::ResourceCollection, secure_boot::SecureBoot, sel::{LogEntry, LogEntryCollection}, sensor::GPUSensors, service_root::{RedfishVendor, ServiceRoot}, software_inventory::SoftwareInventory, storage::Drives, task::Task, thermal::Thermal, update_service::{ComponentType, TransferProtocolType, UpdateService}
-    }, standard::RedfishStandard
+    jsonmap, BiosProfileType, Boot, BootOptions, Collection, EnabledDisabled, JobState,
+    MachineSetupDiff, MachineSetupStatus, ODataId, PCIeDevice, PowerState, Redfish, RedfishError,
+    Resource, RoleId, Status, StatusInternal, SystemPowerControl,
 };
 
 const UEFI_PASSWORD_NAME: &str = "SetupPassword";
@@ -965,7 +985,8 @@ impl Redfish for Bmc {
 
     async fn is_bios_setup(&self, boot_interface_mac: Option<&str>) -> Result<bool, RedfishError> {
         let diffs = self.diff_bios_bmc_attr(boot_interface_mac).await?;
-        Ok(diffs.is_empty())
+        let has_pending_jobs = self.has_pending_jobs().await?;
+        Ok(diffs.is_empty() && !has_pending_jobs)
     }
 
     async fn get_component_integrities(&self) -> Result<ComponentIntegrities, RedfishError> {
@@ -1003,7 +1024,10 @@ impl Redfish for Bmc {
         self.s.get_evidence(url).await
     }
 
-    async fn set_host_privilege_level(&self, level: HostPrivilegeLevel) -> Result<(), RedfishError> {
+    async fn set_host_privilege_level(
+        &self,
+        level: HostPrivilegeLevel,
+    ) -> Result<(), RedfishError> {
         self.s.set_host_privilege_level(level).await
     }
 }
@@ -2059,6 +2083,83 @@ impl Bmc {
         let actual_first_boot_option = boot_order.first().map(|opt| opt.display_name.clone());
 
         Ok((expected_first_boot_option, actual_first_boot_option))
+    }
+    async fn has_pending_jobs(&self) -> Result<bool, RedfishError> {
+        // Get all jobs from the queue
+        let url = "Managers/iDRAC.Embedded.1/Oem/Dell/Jobs";
+        let (_status_code, body): (_, HashMap<String, serde_json::Value>) =
+            self.s.client.get(url).await?;
+
+        let members = body
+            .get("Members")
+            .and_then(|v| v.as_array())
+            .ok_or_else(|| RedfishError::MissingKey {
+                key: "Members".to_string(),
+                url: url.to_string(),
+            })?;
+
+        // Check each job to see if it's BIOS-related and pending
+        for member in members {
+            let job_id = member
+                .get("@odata.id")
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| RedfishError::MissingKey {
+                    key: "@odata.id".to_string(),
+                    url: url.to_string(),
+                })?;
+
+            // Fetch the full job details
+            let (_status_code, job): (_, HashMap<String, serde_json::Value>) = self
+                .s
+                .client
+                .get(job_id.trim_start_matches("/redfish/v1/"))
+                .await?;
+
+            // Check if it's a BIOS job
+            let job_type = jsonmap::get_str(&job, "JobType", job_id)?;
+            if job_type != "BIOSConfiguration" {
+                continue;
+            }
+
+            // Check the job state:
+            // A special case is ScheduledWithErrors, which Dell indicates via the Message field
+            // when the JobState is Scheduled. A scheduled job with errors
+            // may never complete successfully until the errors are resolved.
+            //
+            // When a job exists to apply a configuration to  the BIOS,
+            // no other job can change the configuration until the first job is complete.
+            //
+            // You will see errors similar to:
+            //  IDRAC.2.9.SYS011 - "Pending configuration values are already committed"
+            //  See - https://www.dell.com/support/manuals/en-us/poweredge-r440/eemi_automated_2024/sys%E2%80%94system-info-event-messages?guid=guid-311c002b-8f60-4920-99fd-d293b53b0ab9&lang=en-us
+            //  SYS011
+            let job_state_value = jsonmap::get_str(&job, "JobState", job_id)?;
+            let job_state = match JobState::from_str(job_state_value) {
+                JobState::Scheduled => {
+                    // Check for ScheduledWithErrors by examining the Message field
+                    let message_value = jsonmap::get_str(&job, "Message", job_id)?;
+                    match message_value {
+                        "Job processing initialization failure." => JobState::ScheduledWithErrors,
+                        _ => JobState::Scheduled,
+                    }
+                }
+                state => state,
+            };
+
+            match job_state {
+                JobState::Scheduled | JobState::ScheduledWithErrors | JobState::Running => {
+                    tracing::info!(
+                        "Found pending BIOS job: {} in state {:?}",
+                        job_id,
+                        job_state
+                    );
+                    return Ok(true);
+                }
+                _ => continue,
+            }
+        }
+
+        Ok(false)
     }
 }
 

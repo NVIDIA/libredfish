@@ -19,7 +19,10 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-use std::{collections::HashMap, fmt, path::Path, time::Duration};
+use std::collections::HashMap;
+use std::fmt;
+use std::path::Path;
+use std::time::Duration;
 
 pub mod model;
 use model::account_service::ManagerAccount;
@@ -29,6 +32,7 @@ pub use model::network_device_function::NetworkDeviceFunction;
 use model::oem::nvidia_dpu::{HostPrivilegeLevel, InternalCPUModel, NicMode};
 pub use model::port::NetworkPort;
 pub use model::resource::{Collection, OData, Resource};
+use model::secure_boot::SecureBoot;
 use model::sensor::GPUSensors;
 use model::service_root::{RedfishVendor, ServiceRoot};
 use model::software_inventory::SoftwareInventory;
@@ -36,8 +40,7 @@ pub use model::system::{BootOptions, PCIeDevice, PowerState, SystemPowerControl,
 use model::task::Task;
 use model::update_service::{ComponentType, TransferProtocolType, UpdateService};
 pub use model::EnabledDisabled;
-use model::Manager;
-use model::{secure_boot::SecureBoot, BootOption, ComputerSystem, ODataId};
+use model::{BootOption, ComputerSystem, Manager, ODataId};
 use serde::{Deserialize, Serialize};
 mod dell;
 mod error;
@@ -544,9 +547,9 @@ pub trait Redfish: Send + Sync + 'static {
         url: &str,
     ) -> Result<model::component_integrity::Evidence, RedfishError>;
 
-     // Sets the host privilege level for a DPU
-     async fn set_host_privilege_level(&self, level: HostPrivilegeLevel) -> Result<(), RedfishError>;
-
+    // Sets the host privilege level for a DPU
+    async fn set_host_privilege_level(&self, level: HostPrivilegeLevel)
+        -> Result<(), RedfishError>;
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]

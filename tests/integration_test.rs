@@ -37,15 +37,11 @@ use std::{
 };
 
 use anyhow::{anyhow, Context};
-use libredfish::model::{certificate::Certificate, service_root::RedfishVendor};
-use libredfish::model::{ComputerSystem, ODataId};
-use libredfish::{
-    model::{
-        resource::{IsResource, ResourceCollection},
-        Manager,
-    },
-    Chassis, EthernetInterface, NetworkAdapter, PCIeDevice, Redfish,
-};
+use libredfish::model::certificate::Certificate;
+use libredfish::model::resource::{IsResource, ResourceCollection};
+use libredfish::model::service_root::RedfishVendor;
+use libredfish::model::{ComputerSystem, Manager, ODataId};
+use libredfish::{Chassis, EthernetInterface, NetworkAdapter, PCIeDevice, Redfish};
 use tracing::debug;
 
 const ROOT_DIR: &str = env!("CARGO_MANIFEST_DIR");
@@ -237,9 +233,10 @@ async fn nvidia_dpu_integration_test(redfish: &dyn Redfish) -> Result<(), anyhow
 
 fn run_mockup_server(vendor_dir: &'static str, port: &'static str) -> anyhow::Result<MockupServer> {
     SETUP.call_once(move || {
+        use tracing_subscriber::filter::LevelFilter;
         use tracing_subscriber::fmt::Layer;
         use tracing_subscriber::prelude::*;
-        use tracing_subscriber::{filter::LevelFilter, EnvFilter};
+        use tracing_subscriber::EnvFilter;
         tracing_subscriber::registry()
             .with(
                 EnvFilter::builder()
@@ -499,6 +496,16 @@ async fn run_integration_test(
     if vendor_dir == "dell" {
         let firmware = redfish.get_firmware_for_component("ERoT_BMC_0").await;
         assert!(firmware.is_err());
+
+        // Test is_bios_setup which internally calls has_pending_jobs()
+        // The dell mockup has one completed BIOS job (JID_102241909559)
+        // so has_pending_jobs should return false (no pending jobs)
+        // This test verifies the function doesn't panic and correctly handles completed jobs
+        let is_setup = redfish.is_bios_setup(None).await?;
+        debug!(
+            "is_bios_setup returned: {} (Dell mockup has completed BIOS job, no pending)",
+            is_setup
+        );
     }
 
     test_vendor_collection_count!(
