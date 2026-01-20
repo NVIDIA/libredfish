@@ -373,36 +373,46 @@ impl Redfish for Bmc {
     }
 
     async fn setup_serial_console(&self) -> Result<(), RedfishError> {
-        let mut body = HashMap::new();
-        body.insert(
-            "Attributes",
-            HashMap::from([
-                (
-                    "DevicesandIOPorts_COMPort1",
-                    EnabledDisabled::Enabled.to_string(),
-                ),
-                (
-                    "DevicesandIOPorts_ConsoleRedirection",
-                    "Enabled".to_string(), // not an EnabledDisabled, can be "Auto"
-                ),
-                (
-                    "DevicesandIOPorts_SPRedirection",
-                    EnabledDisabled::Enabled.to_string(),
-                ),
-                (
-                    "DevicesandIOPorts_SerialPortSharing",
-                    EnabledDisabled::Enabled.to_string(),
-                ),
-                (
-                    "DevicesandIOPorts_COMPortActiveAfterBoot",
-                    EnabledDisabled::Enabled.to_string(),
-                ),
-                (
-                    "DevicesandIOPorts_SerialPortAccessMode",
-                    "Shared".to_string(),
-                ),
-            ]),
+        let bios = self.bios().await?;
+        let url = format!("Systems/{}/Bios", self.s.system_id());
+        let current_attrs = jsonmap::get_object(&bios, "Attributes", &url)?;
+        
+        let mut attributes = HashMap::new();
+        
+        attributes.insert(
+            "DevicesandIOPorts_COMPort1",
+            EnabledDisabled::Enabled.to_string(),
         );
+        attributes.insert(
+            "DevicesandIOPorts_ConsoleRedirection",
+            "Enabled".to_string(),
+        );
+        attributes.insert(
+            "DevicesandIOPorts_SerialPortSharing",
+            EnabledDisabled::Enabled.to_string(),
+        );
+        attributes.insert(
+            "DevicesandIOPorts_SerialPortAccessMode",
+            EnabledDisabled::Enabled.to_string(),
+        );
+
+        // Only in older Lenovo systems
+        if current_attrs.contains_key("DevicesandIOPorts_SPRedirection") {
+            attributes.insert(
+                "DevicesandIOPorts_SPRedirection",
+                EnabledDisabled::Enabled.to_string(),
+            );
+        }
+        if current_attrs.contains_key("DevicesandIOPorts_COMPortActiveAfterBoot") {
+            attributes.insert(
+                "DevicesandIOPorts_COMPortActiveAfterBoot",
+                EnabledDisabled::Enabled.to_string(),
+            );
+        }
+        
+        let mut body = HashMap::new();
+        body.insert("Attributes", attributes);
+        
         let url = format!("Systems/{}/Bios/Pending", self.s.system_id());
         self.s.client.patch(&url, body).await.map(|_status_code| ())
     }
@@ -412,12 +422,16 @@ impl Redfish for Bmc {
         let bios = self.bios().await?;
         let attrs = jsonmap::get_object(&bios, "Attributes", &url)?;
 
-        let expected = vec![
+        let core_expected = vec![
             // "any" means any value counts as correctly disabled
             ("DevicesandIOPorts_COMPort1", "Enabled", "any"),
             ("DevicesandIOPorts_ConsoleRedirection", "Enabled", "Auto"),
-            ("DevicesandIOPorts_SPRedirection", "Enabled", "Disabled"),
             ("DevicesandIOPorts_SerialPortSharing", "Enabled", "Disabled"),
+        ];
+        
+        // Only in older Lenovo systems
+        let older_expected = vec![
+            ("DevicesandIOPorts_SPRedirection", "Enabled", "Disabled"),
             (
                 "DevicesandIOPorts_COMPortActiveAfterBoot",
                 "Enabled",
@@ -432,7 +446,9 @@ impl Redfish for Bmc {
         let mut message = String::new();
         let mut enabled = true;
         let mut disabled = true;
-        for (key, val_enabled, val_disabled) in expected {
+        
+        // Check core attributes (must exist)
+        for (key, val_enabled, val_disabled) in core_expected {
             let val_current = jsonmap::get_str(attrs, key, &url)?;
             message.push_str(&format!("{key}={val_current} "));
             if val_current != val_enabled {
@@ -441,6 +457,20 @@ impl Redfish for Bmc {
             if val_current != val_disabled && val_disabled != "any" {
                 disabled = false;
             }
+        }
+        
+        // Check older attributes (skip if missing)
+        for (key, val_enabled, val_disabled) in older_expected {
+            if let Some(val_current) = attrs.get(key).and_then(|v| v.as_str()) {
+                message.push_str(&format!("{key}={val_current} "));
+                if val_current != val_enabled {
+                    enabled = false;
+                }
+                if val_current != val_disabled && val_disabled != "any" {
+                    disabled = false;
+                }
+            }
+            // If attribute doesn't exist, we don't count it against enabled/disabled status
         }
 
         Ok(Status {
@@ -1372,23 +1402,36 @@ impl Bmc {
     /// Set so that we only UEFI IPv4 HTTP boot, and we retry that.
     ///
     /// Disable PXE Boot
-    /// Disable LegacyBIOS Mode
+    /// Disable LegacyBIOS Mode (if supported)
     /// Set Bootmode to UEFI
     /// Enable IPv4 HTTP Boot
     /// Disable IPv4 PXE Boot
     /// Disable IPv6 PXE Boot
     /// Enable Infinite Boot Mode
     async fn set_uefi_boot_only(&self) -> Result<(), RedfishError> {
+        let bios = self.bios().await?;
+        let url = format!("Systems/{}/Bios", self.s.system_id());
+        let attrs = jsonmap::get_object(&bios, "Attributes", &url)?;
+        
+        let mut attributes = self.uefi_boot_only_attributes();
+        
+        // Legacy BIOS attributes only exist in older systems
+        // Only set them if they're present in the current BIOS
+        if attrs.contains_key("LegacyBIOS_NonOnboardPXE") {
+            attributes.insert("LegacyBIOS_NonOnboardPXE", "Disabled");
+        }
+        if attrs.contains_key("LegacyBIOS_LegacyBIOS") {
+            attributes.insert("LegacyBIOS_LegacyBIOS", "Disabled");
+        }
+        
         let mut body = HashMap::new();
-        body.insert("Attributes", self.uefi_boot_only_attributes());
+        body.insert("Attributes", attributes);
         let url = format!("Systems/{}/Bios/Pending", self.s.system_id());
         self.s.client.patch(&url, body).await.map(|_status_code| ())
     }
 
     fn uefi_boot_only_attributes(&self) -> HashMap<&str, &str> {
         HashMap::from([
-            ("LegacyBIOS_NonOnboardPXE", "Disabled"),
-            ("LegacyBIOS_LegacyBIOS", "Disabled"),
             ("BootModes_SystemBootMode", "UEFIMode"),
             ("NetworkStackSettings_IPv4HTTPSupport", "Enabled"),
             ("NetworkStackSettings_IPv4PXESupport", "Disabled"),

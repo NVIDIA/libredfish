@@ -212,7 +212,7 @@ pub struct ComputerSystemLinks {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct SerialConsole {
-    pub max_concurrent_sessions: usize,
+    pub max_concurrent_sessions: Option<usize>,
     #[serde(rename = "SSH")]
     pub ssh: SerialConsoleConnectionType,
     #[serde(rename = "IPMI")]
@@ -418,7 +418,7 @@ mod test {
         let result: super::ComputerSystem = serde_json::from_str(data).unwrap();
         assert_eq!(
             result.oem.unwrap().lenovo.unwrap().total_power_on_hours,
-            3816
+            Some(3816)
         );
         assert_eq!(result.processor_summary.unwrap().count, Some(2));
     }

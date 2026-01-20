@@ -316,7 +316,7 @@ impl Redfish for Bmc {
             ));
         };
         let is_enabled = sr.ssh.service_enabled
-            && sr.max_concurrent_sessions != 0
+            && sr.max_concurrent_sessions != Some(0)
             && s_interface.is_supermicro_default();
         let status = if is_enabled {
             StatusInternal::Enabled

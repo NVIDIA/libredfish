@@ -38,18 +38,18 @@ pub struct RecipientSettings {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct System {
-    pub scheduled_power_actions: ODataId,
+    pub scheduled_power_actions: Option<ODataId>,
     #[serde(rename = "FrontPanelUSB")]
     pub front_panel_usb: Option<FrontPanelUSB>,
     pub metrics: ODataId,
     pub system_status: String,
-    pub number_of_reboots: i64,
-    pub history_sys_perf: ODataId,
+    pub number_of_reboots: Option<i64>,
+    pub history_sys_perf: Option<ODataId>,
     #[serde(rename = "@odata.type")]
     pub odata_type: String,
-    pub total_power_on_hours: i64,
-    pub sensors: ODataId,
-    pub boot_settings: ODataId,
+    pub total_power_on_hours: Option<i64>,
+    pub sensors: Option<ODataId>,
+    pub boot_settings: Option<ODataId>,
 }
 
 /* Front Panel USB Port Management mapping from UI to redfish API:
@@ -76,10 +76,13 @@ pub struct System {
 pub struct FrontPanelUSB {
     inactivity_timeout_mins: i64,
     #[serde(rename = "IDButton")]
-    id_button: String,
+    id_button: Option<String>, // Only in older Lenovo systems
     pub port_switching_to: PortSwitchingMode,
     #[serde(rename = "FPMode")]
     pub fp_mode: FrontPanelUSBMode,
+    // Fields in newer Lenovo systems
+    port_id: Option<String>,
+    status: Option<String>,
 }
 
 #[allow(clippy::upper_case_acronyms)]
