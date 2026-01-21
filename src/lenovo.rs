@@ -437,7 +437,6 @@ impl Redfish for Bmc {
         let mut enabled = true;
         let mut disabled = true;
         
-        // Check all attributes, skip if missing
         for (key, val_enabled, val_disabled) in expected {
             if let Some(val_current) = attrs.get(key).and_then(|v| v.as_str()) {
                 message.push_str(&format!("{key}={val_current} "));
