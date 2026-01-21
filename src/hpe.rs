@@ -1090,16 +1090,17 @@ impl Bmc {
     /// Both Intel and AMD have virtualization technologies that help fix the issue of x86 instruction
     /// architecture not being virtualizable.
     /// get_enable_virtualization_key returns the KEY for enabling virtualization in the bios attributes
-    /// map that the Lenovo's BMC returns when querying the bios attributes registry. The string returned
-    /// will depend on the processors within the given HPE.
+    /// map that the HPE BMC returns when querying the bios attributes registry. The string returned
+    /// will depend on the processor type and BIOS version (e.g., iLO 7 may use ProcVirtualization instead of IntelProcVtd).
     async fn get_enable_virtualization_key(
         &self,
         bios_attributes: &Value,
     ) -> Result<&str, RedfishError> {
         const INTEL_ENABLE_VIRTUALIZATION_KEY: &str = "IntelProcVtd";
         const AMD_ENABLE_VIRTUALIZATION_KEY: &str = "ProcAmdIoVt";
+        const PROC_VIRTUALIZATION_KEY: &str = "ProcVirtualization";
 
-        // Intel specific
+        // Intel specific (older iLO versions)
         if bios_attributes
             .get(INTEL_ENABLE_VIRTUALIZATION_KEY)
             .is_some()
@@ -1108,11 +1109,14 @@ impl Bmc {
         // AMD specific
         } else if bios_attributes.get(AMD_ENABLE_VIRTUALIZATION_KEY).is_some() {
             Ok(AMD_ENABLE_VIRTUALIZATION_KEY)
+        // iLO 7 Intel fallback
+        } else if bios_attributes.get(PROC_VIRTUALIZATION_KEY).is_some() {
+            Ok(PROC_VIRTUALIZATION_KEY)
         } else {
             Err(RedfishError::MissingKey {
                 key: format!(
-                    "{}/{}",
-                    INTEL_ENABLE_VIRTUALIZATION_KEY, AMD_ENABLE_VIRTUALIZATION_KEY
+                    "{}/{}/{}",
+                    INTEL_ENABLE_VIRTUALIZATION_KEY, AMD_ENABLE_VIRTUALIZATION_KEY, PROC_VIRTUALIZATION_KEY
                 )
                 .to_string(),
                 url: format!("Systems/{}/Bios", self.s.system_id()),
