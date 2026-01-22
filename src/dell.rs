@@ -1082,11 +1082,12 @@ impl Bmc {
             expected_attrs.con_term_type,
             dell::SerialPortTermSettings
         );
-        diff!(
-            "RedirAfterBoot",
-            expected_attrs.redir_after_boot,
-            EnabledDisabled
-        );
+        // Only available in iDRAC 9
+        if let (Some(exp), Some(_)) =
+            (expected_attrs.redir_after_boot, bios.get("RedirAfterBoot"))
+        {
+            diff!("RedirAfterBoot", exp, EnabledDisabled);
+        }
         diff!(
             "SriovGlobalEnable",
             expected_attrs.sriov_global_enable,
@@ -1126,11 +1127,14 @@ impl Bmc {
             ("OS-BMC.1.AdminState", "Disabled"),
         ]);
         for (key, exp) in expected {
-            let Some(act) = manager_attrs.get(key) else {
-                return Err(RedfishError::MissingKey {
+            let act = match manager_attrs.get(key) {
+                Some(v) => v,
+                // Only available in iDRAC 9, skip if it doesn't exist
+                None if key == "OS-BMC.1.AdminState" => continue,
+                None => return Err(RedfishError::MissingKey {
                     key: key.to_string(),
                     url: "Managers/{manager_id}/Oem/Dell/DellAttributes/{manager_id}".to_string(),
-                });
+                }),
             };
             if act != exp {
                 diffs.push(MachineSetupDiff {
@@ -1591,12 +1595,18 @@ impl Bmc {
         let manager_id = self.s.manager_id();
         let url = format!("Managers/{manager_id}/Oem/Dell/DellAttributes/{manager_id}");
 
+        let current_attrs = self.manager_dell_oem_attributes().await?;
+
         let mut attributes = HashMap::new();
         // racadm set idrac.webserver.HostHeaderCheck 0
         attributes.insert("WebServer.1.HostHeaderCheck", "Disabled".to_string());
         // racadm set iDRAC.IPMILan.Enable 1
         attributes.insert("IPMILan.1.Enable", "Enabled".to_string());
-        attributes.insert("OS-BMC.1.AdminState", "Disabled".to_string());
+        
+        // Only available in iDRAC 9
+        if current_attrs.get("OS-BMC.1.AdminState").is_some() {
+            attributes.insert("OS-BMC.1.AdminState", "Disabled".to_string());
+        }
 
         let body = HashMap::from([("Attributes", attributes)]);
         self.s.client.patch(&url, body).await?;
@@ -1697,6 +1707,19 @@ impl Bmc {
             .collect();
         let boot_options_to_disable_str = boot_options_to_disable_arr.join(",");
 
+        // RedirAfterBoot: Not available in iDRAC 10
+        let redir_after_boot = curr_bios_attributes
+            .get("RedirAfterBoot")
+            .is_some()
+            .then_some(EnabledDisabled::Enabled);
+
+        // BootMode: Read-only in iDRAC 10 (UEFI-only hardware), writable in iDRAC 9
+        let boot_mode = match curr_bios_attributes.get("BootMode").and_then(|v| v.as_str()) {
+            Some("Uefi") => None, // Already correct, don't touch it
+            Some(_) => Some("Uefi".to_string()), // Try to fix it (iDRAC 9)
+            None => None, // Attribute doesn't exist
+        };
+
         Ok(dell::MachineBiosAttrs {
             in_band_manageability_interface: EnabledDisabled::Disabled,
             uefi_variable_access: dell::UefiVariableAccessSettings::Standard,
@@ -1704,14 +1727,14 @@ impl Bmc {
             serial_port_address: dell::SerialPortSettings::Com1,
             fail_safe_baud: "115200".to_string(),
             con_term_type: dell::SerialPortTermSettings::Vt100Vt220,
-            redir_after_boot: EnabledDisabled::Enabled,
+            redir_after_boot,
             sriov_global_enable: EnabledDisabled::Enabled,
             tpm_security: OnOff::On,
             tpm2_hierarchy: dell::Tpm2HierarchySettings::Clear,
             tpm2_algorithm: dell::Tpm2Algorithm::SHA256,
             http_device_1_enabled_disabled: EnabledDisabled::Enabled,
             pxe_device_1_enabled_disabled: EnabledDisabled::Disabled,
-            boot_mode: "Uefi".to_string(),
+            boot_mode,
             http_device_1_interface: nic_slot.to_string(),
             set_boot_order_en: nic_slot.to_string(),
             http_device_1_tls_mode: dell::TlsMode::None,

@@ -393,7 +393,7 @@ impl Redfish for Bmc {
         );
         attributes.insert(
             "DevicesandIOPorts_SerialPortAccessMode",
-            EnabledDisabled::Enabled.to_string(),
+            "Shared".to_string(),
         );
 
         // Only in older Lenovo systems

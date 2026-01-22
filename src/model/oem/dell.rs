@@ -246,12 +246,14 @@ pub struct MachineBiosAttrs {
     pub serial_port_address: SerialPortSettings,
     pub fail_safe_baud: String,
     pub con_term_type: SerialPortTermSettings,
-    pub redir_after_boot: EnabledDisabled,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub redir_after_boot: Option<EnabledDisabled>,
     pub sriov_global_enable: EnabledDisabled,
     pub tpm_security: OnOff,
     pub tpm2_hierarchy: Tpm2HierarchySettings,
     pub tpm2_algorithm: Tpm2Algorithm,
-    pub boot_mode: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub boot_mode: Option<String>,
     #[serde(rename = "HttpDev1EnDis")]
     pub http_device_1_enabled_disabled: EnabledDisabled,
     #[serde(rename = "PxeDev1EnDis")]
