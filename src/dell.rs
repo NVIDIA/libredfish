@@ -1006,6 +1006,19 @@ impl Redfish for Bmc {
     async fn set_host_privilege_level(&self, level: HostPrivilegeLevel) -> Result<(), RedfishError> {
         self.s.set_host_privilege_level(level).await
     }
+
+    async fn set_utc_timezone(&self) -> Result<(), RedfishError> {
+        let manager_id = self.s.manager_id();
+        let url = format!("Managers/{manager_id}/Oem/Dell/DellAttributes/{manager_id}");
+
+        let mut timezone_attrs = HashMap::new();
+        timezone_attrs.insert("Time.1.Timezone", "UTC");
+
+        let body = HashMap::from([("Attributes", timezone_attrs)]);
+
+        self.s.client.patch(&url, body).await?;
+        Ok(())
+    }
 }
 
 impl Bmc {

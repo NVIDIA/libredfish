@@ -926,6 +926,11 @@ impl Redfish for RedfishStandard {
     async fn set_host_privilege_level(&self, _level: HostPrivilegeLevel) -> Result<(), RedfishError> {
         Err(RedfishError::NotSupported("set_host_privilege_level".to_string()))
     }
+
+    async fn set_utc_timezone(&self) -> Result<(), RedfishError> {
+        // No-op for non-Dell vendors
+        Ok(())
+    }
 }
 
 impl RedfishStandard {

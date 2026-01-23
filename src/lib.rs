@@ -547,6 +547,10 @@ pub trait Redfish: Send + Sync + 'static {
      // Sets the host privilege level for a DPU
      async fn set_host_privilege_level(&self, level: HostPrivilegeLevel) -> Result<(), RedfishError>;
 
+     // Sets the timezone to UTC
+     // Only applicable to Dells
+     async fn set_utc_timezone(&self) -> Result<(), RedfishError>;
+
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]

@@ -164,22 +164,25 @@ mod test {
 
     #[test]
     fn test_manager_datetime_parsing() {
-        // Test parsing RFC3339 datetime format
+        // Test parsing RFC3339 datetime format with timezone offset
+        // The input has -06:00 offset, which gets converted to UTC
         let json_data = include_str!("testdata/manager_datetime_test.json");
 
         let manager: super::Manager = serde_json::from_str(json_data).unwrap();
         assert!(manager.date_time.is_some());
         
         let dt = manager.date_time.unwrap();
+        // Input: 2025-12-05T21:07:58-06:00
+        // UTC:   2025-12-06T03:07:58+00:00 (21:07 + 6 hours = 03:07 next day)
         assert_eq!(dt.year(), 2025);
         assert_eq!(dt.month(), 12);
-        assert_eq!(dt.day(), 5);
-        assert_eq!(dt.hour(), 21);
+        assert_eq!(dt.day(), 6); // Next day in UTC
+        assert_eq!(dt.hour(), 3); // 21 + 6 = 27 -> 3 (next day)
         assert_eq!(dt.minute(), 7);
         assert_eq!(dt.second(), 58);
         
-        // Verify the datetime string format
+        // Verify the datetime is converted to UTC format
         let dt_str = dt.to_rfc3339();
-        assert_eq!(dt_str, "2025-12-05T21:07:58+00:00");
+        assert_eq!(dt_str, "2025-12-06T03:07:58+00:00");
     }
 }

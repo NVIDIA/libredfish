@@ -885,6 +885,10 @@ impl Redfish for Bmc {
             .await
             .map(|_status_code| Ok(()))?
     }
+
+    async fn set_utc_timezone(&self) -> Result<(), RedfishError> {
+        self.s.set_utc_timezone().await
+    }
 }
 
 impl Bmc {
