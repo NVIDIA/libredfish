@@ -22,7 +22,7 @@
  */
 use std::{collections::HashMap, path::Path, time::Duration};
 
-use reqwest::{header::HeaderMap, Method};
+use reqwest::{header::HeaderMap, Method, StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio::fs::File;
@@ -1380,6 +1380,26 @@ impl Bmc {
     }
 
     async fn setup_bmc_remote_access(&self) -> Result<(), RedfishError> {
+        // Try the regular Attributes path first (iDRAC 9 and earlier)
+        match self.setup_bmc_remote_access_standard().await {
+            Ok(()) => return Ok(()),
+            Err(RedfishError::HTTPErrorCode {
+                status_code: StatusCode::NOT_FOUND,
+                ..
+            }) => {
+                // Regular path doesn't exist, fall back to OEM path (iDRAC 10+)
+                tracing::info!(
+                    "Managers/Attributes not found, using OEM DellAttributes path"
+                );
+            }
+            Err(e) => return Err(e),
+        }
+
+        self.setup_bmc_remote_access_oem().await
+    }
+
+    /// Setup BMC remote access via standard Attributes path (iDRAC 9 and earlier).
+    async fn setup_bmc_remote_access_standard(&self) -> Result<(), RedfishError> {
         let apply_time = dell::SetSettingsApplyTime {
             apply_time: dell::RedfishSettingsApplyTime::Immediate,
         };
@@ -1407,6 +1427,24 @@ impl Bmc {
             .patch(&url, set_remote_access)
             .await
             .map(|_status_code| ())
+    }
+
+    /// Setup BMC remote access via OEM DellAttributes path (iDRAC 10).
+    async fn setup_bmc_remote_access_oem(&self) -> Result<(), RedfishError> {
+        let manager_id = self.s.manager_id();
+        let url = format!("Managers/{manager_id}/Oem/Dell/DellAttributes/{manager_id}");
+
+        let attributes = HashMap::from([
+            ("SerialRedirection.1.Enable", "Enabled"),
+            ("IPMISOL.1.Enable", "Enabled"),
+            ("IPMISOL.1.BaudRate", "115200"),
+            ("IPMISOL.1.MinPrivilege", "Administrator"),
+            ("SSH.1.Enable", "Enabled"),
+            ("IPMILan.1.Enable", "Enabled"),
+        ]);
+
+        let body = HashMap::from([("Attributes", attributes)]);
+        self.s.client.patch(&url, body).await.map(|_| ())
     }
 
     async fn bmc_remote_access_status(&self) -> Result<Status, RedfishError> {

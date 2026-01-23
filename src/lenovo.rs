@@ -26,6 +26,7 @@ use chrono::Utc;
 use regex::Regex;
 use reqwest::header::HeaderMap;
 use reqwest::Method;
+use reqwest::StatusCode;
 use serde::Serialize;
 use serde_json::Value;
 use tokio::fs::File;
@@ -807,70 +808,22 @@ impl Redfish for Bmc {
         &self,
         mac_address: &str,
     ) -> Result<Option<String>, RedfishError> {
-        // Now we have the MAC, make it the only boot option
-        let mac = mac_address.to_string();
-        // We see three patterns for HTTP IPv4 DPU boot option names in a Lenovo's network boot order:
-        // "UEFI:   SLOT2 (31/0/0) HTTP IPv4  Nvidia Network Adapter - A0:88:C2:08:53:C4",
-        // "UEFI:   SLOT1 (4B/0/0) HTTP IPv4  Mellanox Network Adapter - B8:3F:D2:90:99:C4"
-        // "UEFI:   SLOT 1 (41/0/0) HTTP IPv4  Nvidia BlueField-3 VPI QSFP112 2P 200G PCIe Gen5 x16 - 5C:25:73:79:DA:5C"
-        // This regex pattern uses .*? (non-greedy match) to allow any characters to appear between "Nvidia" and the MAC address.
-        let net_boot_option_pattern = format!("HTTP IPv4  (Mellanox|Nvidia).*? - {}", mac);
-        let net_boot_option_regex =
-            Regex::new(&net_boot_option_pattern).map_err(|err| RedfishError::GenericError {
-                error: format!(
-                    "could not create net_boot_option_regex from {net_boot_option_pattern}: {err}"
-                ),
-            })?;
-
-        // Check boot_order_supported for the list of currently supported boot options.
-        // Set boot_order_next because that's what will happen when we reboot.
-        // boot_order_current is the current order.
-        let mut net_boot_order = self.get_network_boot_order().await?;
-        let dpu_boot_option = net_boot_order
-            .boot_order_supported
-            .iter()
-            .find(|s| net_boot_option_regex.is_match(s))
-            .ok_or_else(|| {
-                RedfishError::MissingBootOption(format!(
-                    "Oem/Lenovo NetworkBootOrder BootOrderSupported {mac} (matching on {net_boot_option_pattern}); currently supported boot options: {:#?}",
-                    net_boot_order.boot_order_supported
-                ))
-            })?;
-
-        if let Some(pos) = net_boot_order
-            .boot_order_next
-            .iter()
-            .position(|s| s == dpu_boot_option)
-        {
-            // the DPU boot option is already at the first index of the boot_order_next list
-            if pos == 0 {
+        // Try the OEM NetworkBootOrder path first (older firmware)
+        match self.set_boot_order_dpu_first_oem(mac_address).await {
+            Ok(result) => return Ok(result),
+            Err(RedfishError::HTTPErrorCode {
+                status_code: StatusCode::NOT_FOUND,
+                ..
+            }) => {
+                // OEM path doesn't exist, fall back to BIOS attributes (newer firmware)
                 tracing::info!(
-                    "NO-OP: DPU ({mac_address}) will already be the first netboot option ({dpu_boot_option}) after reboot"
+                    "OEM NetworkBootOrder not found, using BIOS attributes for boot order"
                 );
-                return Ok(None);
-            } else {
-                // boot_order_next contains the DPU boot option. move it to the front.
-                net_boot_order.boot_order_next.swap(0, pos);
             }
-        } else {
-            // boot_order_next did not have the DPU boot option. add it to the beginning.
-            net_boot_order
-                .boot_order_next
-                .insert(0, dpu_boot_option.clone());
+            Err(e) => return Err(e),
         }
 
-        // Patch remote
-        let url = format!(
-            "{}/BootOrder.NetworkBootOrder",
-            self.get_boot_settings_uri()
-        );
-        let body = HashMap::from([("BootOrderNext", net_boot_order.boot_order_next.clone())]);
-        self.s
-            .client
-            .patch(&url, body)
-            .await
-            .map(|_status_code| ())?;
-        Ok(None)
+        self.set_boot_order_dpu_first_bios_attr(mac_address).await
     }
 
     async fn clear_uefi_password(
@@ -983,7 +936,11 @@ impl Redfish for Bmc {
 
     async fn is_boot_order_setup(&self, boot_interface_mac: &str) -> Result<bool, RedfishError> {
         // Check if Network is first in the boot order
-        let boot_first = self.s.get_first_boot_option().await?;
+        let system = self.get_system().await?;
+        let Some(first_boot_id) = system.boot.boot_order.first() else {
+            return Ok(false);
+        };
+        let boot_first = self.get_boot_option(first_boot_id).await?;
         if boot_first.name != "Network" {
             return Ok(false);
         }
@@ -1041,6 +998,179 @@ impl Redfish for Bmc {
 }
 
 impl Bmc {
+    /// Set DPU as first network boot option using OEM NetworkBootOrder path (older firmware).
+    /// Boot options are strings like "UEFI: SLOT2 HTTP IPv4 Nvidia Network Adapter - A0:88:C2:08:53:C4"
+    async fn set_boot_order_dpu_first_oem(
+        &self,
+        mac_address: &str,
+    ) -> Result<Option<String>, RedfishError> {
+        let mac = mac_address.to_string();
+        // We see three patterns for HTTP IPv4 DPU boot option names in a Lenovo's network boot order:
+        // "UEFI:   SLOT2 (31/0/0) HTTP IPv4  Nvidia Network Adapter - A0:88:C2:08:53:C4",
+        // "UEFI:   SLOT1 (4B/0/0) HTTP IPv4  Mellanox Network Adapter - B8:3F:D2:90:99:C4"
+        // "UEFI:   SLOT 1 (41/0/0) HTTP IPv4  Nvidia BlueField-3 VPI QSFP112 2P 200G PCIe Gen5 x16 - 5C:25:73:79:DA:5C"
+        // This regex pattern uses .*? (non-greedy match) to allow any characters to appear between "Nvidia" and the MAC address.
+        let net_boot_option_pattern = format!("HTTP IPv4  (Mellanox|Nvidia).*? - {}", mac);
+        let net_boot_option_regex =
+            Regex::new(&net_boot_option_pattern).map_err(|err| RedfishError::GenericError {
+                error: format!(
+                    "could not create net_boot_option_regex from {net_boot_option_pattern}: {err}"
+                ),
+            })?;
+
+        // Check boot_order_supported for the list of currently supported boot options.
+        // Set boot_order_next because that's what will happen when we reboot.
+        // boot_order_current is the current order.
+        let mut net_boot_order = self.get_network_boot_order().await?;
+        let dpu_boot_option = net_boot_order
+            .boot_order_supported
+            .iter()
+            .find(|s| net_boot_option_regex.is_match(s))
+            .ok_or_else(|| {
+                RedfishError::MissingBootOption(format!(
+                    "Oem/Lenovo NetworkBootOrder BootOrderSupported {mac} (matching on {net_boot_option_pattern}); currently supported boot options: {:#?}",
+                    net_boot_order.boot_order_supported
+                ))
+            })?;
+
+        if let Some(pos) = net_boot_order
+            .boot_order_next
+            .iter()
+            .position(|s| s == dpu_boot_option)
+        {
+            // the DPU boot option is already at the first index of the boot_order_next list
+            if pos == 0 {
+                tracing::info!(
+                    "NO-OP: DPU ({mac_address}) will already be the first netboot option ({dpu_boot_option}) after reboot"
+                );
+                return Ok(None);
+            } else {
+                // boot_order_next contains the DPU boot option. move it to the front.
+                net_boot_order.boot_order_next.swap(0, pos);
+            }
+        } else {
+            // boot_order_next did not have the DPU boot option. add it to the beginning.
+            net_boot_order
+                .boot_order_next
+                .insert(0, dpu_boot_option.clone());
+        }
+
+        // Patch remote
+        let url = format!(
+            "{}/BootOrder.NetworkBootOrder",
+            self.get_boot_settings_uri()
+        );
+        let body = HashMap::from([("BootOrderNext", net_boot_order.boot_order_next.clone())]);
+        self.s
+            .client
+            .patch(&url, body)
+            .await
+            .map(|_status_code| ())?;
+        Ok(None)
+    }
+
+    /// Set DPU as first network boot option using BIOS attributes (newer firmware).
+    /// Boot options are BIOS attributes like BootOrder_NetworkPriority_1 with
+    /// values like "Slot5Port1HTTPv4NvidiaNetworkAdapter_B8_E9_24_18_42_52".
+    async fn set_boot_order_dpu_first_bios_attr(
+        &self,
+        mac_address: &str,
+    ) -> Result<Option<String>, RedfishError> {
+        let mac = mac_address.replace(':', "_").to_uppercase();
+        let bios = self.s.bios_attributes().await?;
+
+        let (pos, dpu_val) = (1u32..=10)
+            .find_map(|i| {
+                bios.get(format!("BootOrder_NetworkPriority_{i}"))
+                    .and_then(|v| v.as_str())
+                    .filter(|v| v.to_uppercase().contains(&mac) && v.contains("HTTPv4"))
+                    .map(|v| (i, v.to_string()))
+            })
+            .ok_or_else(|| {
+                RedfishError::MissingBootOption(format!(
+                    "No BootOrder_NetworkPriority_* contains MAC {mac_address} (HTTPv4)"
+                ))
+            })?;
+
+        if pos == 1 {
+            return Ok(None);
+        }
+
+        // Swap our DPU with the old network priority
+        let mut attrs = HashMap::from([("BootOrder_NetworkPriority_1".to_string(), dpu_val)]);
+        if let Some(old) = bios.get("BootOrder_NetworkPriority_1").and_then(|v| v.as_str()) {
+            attrs.insert(format!("BootOrder_NetworkPriority_{pos}"), old.to_string());
+        }
+
+        self.s
+            .client
+            .patch(
+                &format!("Systems/{}/Bios/Pending", self.s.system_id()),
+                HashMap::from([("Attributes", attrs)]),
+            )
+            .await
+            .map(|_| ())?;
+
+        Ok(None)
+    }
+
+    /// Get expected and actual first boot option using OEM NetworkBootOrder path (older firmware).
+    async fn get_expected_and_actual_first_boot_option_oem(
+        &self,
+        boot_interface_mac: &str,
+    ) -> Result<(Option<String>, Option<String>), RedfishError> {
+        let mac = boot_interface_mac.to_string();
+        // We see three patterns for HTTP IPv4 DPU boot option names in a Lenovo's network boot order:
+        // "UEFI:   SLOT2 (31/0/0) HTTP IPv4  Nvidia Network Adapter - A0:88:C2:08:53:C4",
+        // "UEFI:   SLOT1 (4B/0/0) HTTP IPv4  Mellanox Network Adapter - B8:3F:D2:90:99:C4"
+        // "UEFI:   SLOT 1 (41/0/0) HTTP IPv4  Nvidia BlueField-3 VPI QSFP112 2P 200G PCIe Gen5 x16 - 5C:25:73:79:DA:5C"
+        // This regex pattern uses .*? (non-greedy match) to allow any characters to appear between "Nvidia" and the MAC address.
+        let net_boot_option_pattern = format!("HTTP IPv4  (Mellanox|Nvidia).*? - {}", mac);
+        let net_boot_option_regex =
+            Regex::new(&net_boot_option_pattern).map_err(|err| RedfishError::GenericError {
+                error: format!(
+                    "could not create net_boot_option_regex from {net_boot_option_pattern}: {err}"
+                ),
+            })?;
+
+        // Check boot_order_supported for the list of currently supported boot options.
+        // Set boot_order_next because that's what will happen when we reboot.
+        // boot_order_current is the current order.
+        let net_boot_order = self.get_network_boot_order().await?;
+        let expected_first_boot_option = net_boot_order
+            .boot_order_supported
+            .iter()
+            .find(|s| net_boot_option_regex.is_match(s))
+            .cloned();
+
+        let actual_first_boot_option = net_boot_order.boot_order_next.first().cloned();
+
+        Ok((expected_first_boot_option, actual_first_boot_option))
+    }
+
+    /// Get expected and actual first boot option using BIOS attributes (newer firmware).
+    async fn get_expected_and_actual_first_boot_option_bios_attr(
+        &self,
+        boot_interface_mac: &str,
+    ) -> Result<(Option<String>, Option<String>), RedfishError> {
+        let mac = boot_interface_mac.replace(':', "_").to_uppercase();
+        let bios = self.s.bios_attributes().await?;
+
+        let expected = (1u32..=10).find_map(|i| {
+            bios.get(format!("BootOrder_NetworkPriority_{i}"))
+                .and_then(|v| v.as_str())
+                .filter(|v| v.to_uppercase().contains(&mac) && v.contains("HTTPv4"))
+                .map(|v| v.to_string())
+        });
+
+        let actual = bios
+            .get("BootOrder_NetworkPriority_1")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        Ok((expected, actual))
+    }
+
     /// Check BIOS and BMC attributes and return differences
     async fn diff_bios_bmc_attr(&self) -> Result<Vec<MachineSetupDiff>, RedfishError> {
         let mut diffs = vec![];
@@ -1075,22 +1205,29 @@ impl Bmc {
                 });
                 continue;
             };
-            if actual.as_str().unwrap_or("_wrong_type_") != expected {
+            let actual_str = actual.as_str().unwrap_or("_wrong_type_");
+            if actual_str != expected {
                 diffs.push(MachineSetupDiff {
                     key: key.to_string(),
                     expected: expected.to_string(),
-                    actual: actual.to_string(),
+                    actual: actual_str.to_string(),
                 });
             }
         }
 
-        let boot_first = self.s.get_first_boot_option().await?;
-        if boot_first.name != "Network" {
+        // Get the first boot option from the actual boot order 
+        // Some lenovos return an unordered BootOptions collection
+        let system = self.get_system().await?;
+        let boot_first_name = match system.boot.boot_order.first() {
+            Some(first_boot_id) => self.get_boot_option(first_boot_id).await?.name,
+            None => "_empty_boot_order_".to_string(),
+        };
+        if boot_first_name != "Network" {
             // Boot::Pxe maps to lenovo::BootOptionName::Network
             diffs.push(MachineSetupDiff {
                 key: "boot_first_type".to_string(),
                 expected: lenovo::BootOptionName::Network.to_string(),
-                actual: boot_first.name.to_string(),
+                actual: boot_first_name,
             });
         }
 
@@ -1413,6 +1550,7 @@ impl Bmc {
             ("NetworkStackSettings_IPv4PXESupport", "Disabled"),
             ("NetworkStackSettings_IPv6PXESupport", "Disabled"),
             ("BootModes_InfiniteBootRetry", "Enabled"),
+            ("BootModes_PreventOSChangesToBootOrder", "Enabled"),
         ])
     }
 
@@ -1570,33 +1708,20 @@ impl Bmc {
         &self,
         boot_interface_mac: &str,
     ) -> Result<(Option<String>, Option<String>), RedfishError> {
-        let mac = boot_interface_mac.to_string();
-        // We see three patterns for HTTP IPv4 DPU boot option names in a Lenovo's network boot order:
-        // "UEFI:   SLOT2 (31/0/0) HTTP IPv4  Nvidia Network Adapter - A0:88:C2:08:53:C4",
-        // "UEFI:   SLOT1 (4B/0/0) HTTP IPv4  Mellanox Network Adapter - B8:3F:D2:90:99:C4"
-        // "UEFI:   SLOT 1 (41/0/0) HTTP IPv4  Nvidia BlueField-3 VPI QSFP112 2P 200G PCIe Gen5 x16 - 5C:25:73:79:DA:5C"
-        // This regex pattern uses .*? (non-greedy match) to allow any characters to appear between "Nvidia" and the MAC address.
-        let net_boot_option_pattern = format!("HTTP IPv4  (Mellanox|Nvidia).*? - {}", mac);
-        let net_boot_option_regex =
-            Regex::new(&net_boot_option_pattern).map_err(|err| RedfishError::GenericError {
-                error: format!(
-                    "could not create net_boot_option_regex from {net_boot_option_pattern}: {err}"
-                ),
-            })?;
+        // Try the OEM NetworkBootOrder path first (older firmware)
+        match self.get_expected_and_actual_first_boot_option_oem(boot_interface_mac).await {
+            Ok(result) => return Ok(result),
+            Err(RedfishError::HTTPErrorCode {
+                status_code: StatusCode::NOT_FOUND,
+                ..
+            }) => {
+                // OEM path doesn't exist, fall back to BIOS attributes (newer firmware)
+            }
+            Err(e) => return Err(e),
+        }
 
-        // Check boot_order_supported for the list of currently supported boot options.
-        // Set boot_order_next because that's what will happen when we reboot.
-        // boot_order_current is the current order.
-        let net_boot_order = self.get_network_boot_order().await?;
-        let expected_first_boot_option = net_boot_order
-            .boot_order_supported
-            .iter()
-            .find(|s| net_boot_option_regex.is_match(s))
-            .cloned();
-
-        let actual_first_boot_option = net_boot_order.boot_order_next.first().cloned();
-
-        Ok((expected_first_boot_option, actual_first_boot_option))
+        self.get_expected_and_actual_first_boot_option_bios_attr(boot_interface_mac)
+            .await
     }
 }
 
