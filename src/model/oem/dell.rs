@@ -290,7 +290,8 @@ pub struct BiosSerialAttrs {
     pub ext_serial_connector: SerialPortExtSettings,
     pub fail_safe_baud: String,
     pub con_term_type: SerialPortTermSettings,
-    pub redir_after_boot: EnabledDisabled,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub redir_after_boot: Option<EnabledDisabled>, // Not available in iDRAC 10
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -303,9 +304,11 @@ pub struct SetBiosSerialAttrs {
 
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub enum SerialCommSettings {
-    OnConRedir, // preferred
+    OnConRedir,      // iDRAC 9 - preferred
     OnNoConRedir,
-    OnConRedirAuto, // PowerEdge R640
+    OnConRedirAuto,  // newer iDRAC - preferred
+    OnConRedirCom1,  // newer iDRAC
+    OnConRedirCom2,  // newer iDRAC
     Off,
 }
 
@@ -322,6 +325,8 @@ impl FromStr for SerialCommSettings {
             "OnConRedir" => Ok(Self::OnConRedir),
             "OnNoConRedir" => Ok(Self::OnNoConRedir),
             "OnConRedirAuto" => Ok(Self::OnConRedirAuto),
+            "OnConRedirCom1" => Ok(Self::OnConRedirCom1),
+            "OnConRedirCom2" => Ok(Self::OnConRedirCom2),
             "Off" => Ok(Self::Off),
             x => Err(InvalidValueError(format!(
                 "Invalid SerialCommSettings value: {x}"
@@ -332,8 +337,10 @@ impl FromStr for SerialCommSettings {
 
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub enum SerialPortSettings {
-    Com1, // preferred
-    Com2,
+    Com1,                    // legacy preferred
+    Com2,                    // legacy
+    Serial1Com1Serial2Com2,  // newer BIOS: SD1=COM1, SD2=COM2
+    Serial1Com2Serial2Com1,  // newer BIOS: SD1=COM2, SD2=COM1 (preferred for SOL)
 }
 
 impl fmt::Display for SerialPortSettings {

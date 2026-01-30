@@ -384,16 +384,45 @@ impl Redfish for Bmc {
 
         self.setup_bmc_remote_access().await?;
 
+        // Detect BIOS format from current values and use appropriate targets
+        let curr_bios_attributes = self.s.bios_attributes().await?;
+
+        // Detect newer iDRAC by checking SerialPortAddress format.
+        // Newer Dell BIOS uses Serial1Com*Serial2Com* format and OnConRedirAuto for SerialComm.
+        let is_newer_idrac = curr_bios_attributes
+            .get("SerialPortAddress")
+            .and_then(|v| v.as_str())
+            .map(|v| v.starts_with("Serial1"))
+            .unwrap_or(false);
+
+        let (serial_port_address, serial_comm) = if is_newer_idrac {
+            (
+                dell::SerialPortSettings::Serial1Com2Serial2Com1,
+                dell::SerialCommSettings::OnConRedirAuto,
+            )
+        } else {
+            (
+                dell::SerialPortSettings::Com1,
+                dell::SerialCommSettings::OnConRedir,
+            )
+        };
+
+        // RedirAfterBoot: Not available in iDRAC 10
+        let redir_after_boot = curr_bios_attributes
+            .get("RedirAfterBoot")
+            .is_some()
+            .then_some(EnabledDisabled::Enabled);
+
         let apply_time = dell::SetSettingsApplyTime {
             apply_time: dell::RedfishSettingsApplyTime::OnReset, // requires reboot to apply
         };
         let serial_console = dell::BiosSerialAttrs {
-            serial_comm: dell::SerialCommSettings::OnConRedir,
-            serial_port_address: dell::SerialPortSettings::Com1,
+            serial_comm,
+            serial_port_address,
             ext_serial_connector: dell::SerialPortExtSettings::Serial1,
             fail_safe_baud: "115200".to_string(),
             con_term_type: dell::SerialPortTermSettings::Vt100Vt220,
-            redir_after_boot: EnabledDisabled::Enabled,
+            redir_after_boot,
         };
         let set_serial_attrs = dell::SetBiosSerialAttrs {
             redfish_settings_apply_time: apply_time,
@@ -751,7 +780,7 @@ impl Redfish for Bmc {
     }
 
     async fn get_job_state(&self, job_id: &str) -> Result<JobState, RedfishError> {
-        let url = format!("Managers/iDRAC.Embedded.1/Jobs/{}", job_id);
+        let url = format!("Managers/iDRAC.Embedded.1/Oem/Dell/Jobs/{}", job_id);
         let (_status_code, body): (_, HashMap<String, serde_json::Value>) =
             self.s.client.get(&url).await?;
         let job_state_value = jsonmap::get_str(&body, "JobState", &url)?;
@@ -844,7 +873,18 @@ impl Redfish for Bmc {
         &self,
         current_uefi_password: &str,
     ) -> Result<Option<String>, RedfishError> {
-        let job_id = self.clear_uefi_password(current_uefi_password).await?;
+        match self.change_uefi_password(current_uefi_password, "").await {
+            Ok(job_id) => return Ok(job_id),
+            Err(e) => {
+                tracing::info!(
+                    "Standard clear_uefi_password failed, trying ImportSystemConfiguration fallback: {e}"
+                );
+            }
+        }
+
+        // Fallback to ImportSystemConfiguration hack for older iDRAC
+        // See: https://github.com/dell/iDRAC-Redfish-Scripting/issues/308
+        let job_id = self.clear_uefi_password_via_import(current_uefi_password).await?;
         Ok(Some(job_id))
     }
 
@@ -1525,7 +1565,10 @@ impl Bmc {
                 url: url.to_string(),
                 field: "serial_comm".to_string(),
             })? {
-                dell::SerialCommSettings::OnConRedir | dell::SerialCommSettings::OnConRedirAuto => {
+                dell::SerialCommSettings::OnConRedir
+                | dell::SerialCommSettings::OnConRedirAuto
+                | dell::SerialCommSettings::OnConRedirCom1
+                | dell::SerialCommSettings::OnConRedirCom2 => {
                     // enabled
                     disabled = false;
                 }
@@ -1570,7 +1613,10 @@ impl Bmc {
             val.as_ref().unwrap_or(&"unknown".to_string())
         ));
         if let Some(x) = &val {
-            if *x != dell::SerialPortSettings::Com1.to_string() {
+            // Accept both legacy (Com1) and newer BIOS format (Serial1Com2Serial2Com1)
+            if *x != dell::SerialPortSettings::Com1.to_string()
+                && *x != dell::SerialPortSettings::Serial1Com2Serial2Com1.to_string()
+            {
                 enabled = false;
             }
         }
@@ -1722,7 +1768,7 @@ impl Bmc {
     }
 
     pub async fn create_bios_config_job(&self) -> Result<String, RedfishError> {
-        let url = "Managers/iDRAC.Embedded.1/Jobs";
+        let url = "Managers/iDRAC.Embedded.1/Oem/Dell/Jobs";
 
         let mut arg = HashMap::new();
         arg.insert(
@@ -1771,11 +1817,31 @@ impl Bmc {
             None => None, // Attribute doesn't exist
         };
 
+        // Detect newer iDRAC by checking SerialPortAddress format.
+        // Newer Dell BIOS uses Serial1Com*Serial2Com* format and OnConRedirAuto for SerialComm.
+        let is_newer_idrac = curr_bios_attributes
+            .get("SerialPortAddress")
+            .and_then(|v| v.as_str())
+            .map(|v| v.starts_with("Serial1"))
+            .unwrap_or(false);
+
+        let (serial_port_address, serial_comm) = if is_newer_idrac {
+            (
+                dell::SerialPortSettings::Serial1Com2Serial2Com1,
+                dell::SerialCommSettings::OnConRedirAuto,
+            )
+        } else {
+            (
+                dell::SerialPortSettings::Com1,
+                dell::SerialCommSettings::OnConRedir,
+            )
+        };
+
         Ok(dell::MachineBiosAttrs {
             in_band_manageability_interface: EnabledDisabled::Disabled,
             uefi_variable_access: dell::UefiVariableAccessSettings::Standard,
-            serial_comm: dell::SerialCommSettings::OnConRedir,
-            serial_port_address: dell::SerialPortSettings::Com1,
+            serial_comm,
+            serial_port_address,
             fail_safe_baud: "115200".to_string(),
             con_term_type: dell::SerialPortTermSettings::Vt100Vt220,
             redir_after_boot,
@@ -1796,7 +1862,7 @@ impl Bmc {
     /// Dells endpoint to change the UEFI password has a bug for updating it once it is set.
     /// Use the ImportSystemConfiguration endpoint as a hack to clear the UEFI password instead.
     /// Detailed here: https://github.com/dell/iDRAC-Redfish-Scripting/issues/308
-    async fn clear_uefi_password(
+    async fn clear_uefi_password_via_import(
         &self,
         current_uefi_password: &str,
     ) -> Result<String, RedfishError> {
