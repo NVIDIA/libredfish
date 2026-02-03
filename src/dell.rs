@@ -850,7 +850,7 @@ impl Redfish for Bmc {
                     return Ok(None);
                 }
 
-                let url = format!("Systems/{}", self.s.system_id());
+                let url = format!("Systems/{}/Settings", self.s.system_id());
                 let body = HashMap::from([(
                     "Boot",
                     HashMap::from([("BootOrder", vec![boot_option.id.clone()])]),
