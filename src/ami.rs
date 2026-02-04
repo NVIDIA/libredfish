@@ -954,14 +954,15 @@ impl Bmc {
     /// Get the BIOS attributes for machine setup.
     fn machine_setup_attrs(&self) -> HashMap<String, serde_json::Value> {
         HashMap::from([
-            ("VMXEN".to_string(), "Enable".into()),     // VMX (Intel Virtualization)
-            ("PCIS007".to_string(), "Enabled".into()),  // SR-IOV Support
-            ("NWSK000".to_string(), "Enabled".into()),  // Network Stack
-            ("NWSK001".to_string(), "Disabled".into()), // IPv4 PXE Support
-            ("NWSK006".to_string(), "Enabled".into()),  // IPv4 HTTP Support
-            ("NWSK002".to_string(), "Disabled".into()), // IPv6 PXE Support
-            ("NWSK007".to_string(), "Disabled".into()), // IPv6 HTTP Support
-            ("FBO001".to_string(), "UEFI".into()),      // Boot Mode Select
+            ("VMXEN".to_string(), "Enable".into()),        // VMX (Intel Virtualization)
+            ("PCIS007".to_string(), "Enabled".into()),     // SR-IOV Support
+            ("NWSK000".to_string(), "Enabled".into()),     // Network Stack
+            ("NWSK001".to_string(), "Disabled".into()),    // IPv4 PXE Support
+            ("NWSK006".to_string(), "Enabled".into()),     // IPv4 HTTP Support
+            ("NWSK002".to_string(), "Disabled".into()),    // IPv6 PXE Support
+            ("NWSK007".to_string(), "Disabled".into()),    // IPv6 HTTP Support
+            ("FBO001".to_string(), "UEFI".into()),         // Boot Mode Select
+            ("EndlessBoot".to_string(), "Enabled".into()), // Infinite Boot
         ])
     }
 
