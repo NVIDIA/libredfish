@@ -331,8 +331,25 @@ impl Redfish for RedfishStandard {
     }
 
     async fn pcie_devices(&self) -> Result<Vec<PCIeDevice>, RedfishError> {
-        self.pcie_devices_for_chassis(vec![self.system_id().into()])
-            .await
+        let system = self.get_system().await?;
+        let chassis = system
+            .links
+            .and_then(|l| l.chassis)
+            .map(|chassis| {
+                chassis
+                    .into_iter()
+                    .filter_map(|odata_id| {
+                        odata_id
+                            .odata_id
+                            .trim_matches('/')
+                            .split('/')
+                            .next_back()
+                            .map(|v| v.to_string())
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or(vec![self.system_id().into()]);
+        self.pcie_devices_for_chassis(chassis).await
     }
 
     async fn get_firmware(&self, id: &str) -> Result<SoftwareInventory, RedfishError> {
