@@ -39,6 +39,7 @@ pub use model::EnabledDisabled;
 use model::Manager;
 use model::{secure_boot::SecureBoot, BootOption, ComputerSystem, ODataId};
 use serde::{Deserialize, Serialize};
+mod ami;
 mod dell;
 mod error;
 mod hpe;

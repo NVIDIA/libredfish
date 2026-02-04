@@ -108,6 +108,14 @@ impl ServiceRoot {
             _ => RedfishVendor::Unknown,
         })
     }
+
+    /// Check if this system has an AMI-based BMC (indicated by "Ami" key in OEM field)
+    pub fn has_ami_bmc(&self) -> bool {
+        self.oem
+            .as_ref()
+            .map(|oem| oem.keys().any(|k| k.to_lowercase() == "ami"))
+            .unwrap_or(false)
+    }
 }
 
 #[cfg(test)]
