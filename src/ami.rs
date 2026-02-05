@@ -295,8 +295,9 @@ impl Redfish for Bmc {
         })
     }
 
-    async fn is_bios_setup(&self, boot_interface_mac: Option<&str>) -> Result<bool, RedfishError> {
-        self.s.is_bios_setup(boot_interface_mac).await
+    async fn is_bios_setup(&self, _boot_interface_mac: Option<&str>) -> Result<bool, RedfishError> {
+        let diffs = self.diff_bios_bmc_attr().await?;
+        Ok(diffs.is_empty())
     }
 
     /// AMI BMC requires If-Match header for password policy changes
@@ -758,8 +759,12 @@ impl Redfish for Bmc {
         self.s.is_ipmi_over_lan_enabled().await
     }
 
+    /// AMI BMC requires If-Match header for network protocol changes
     async fn enable_ipmi_over_lan(&self, target: EnabledDisabled) -> Result<(), RedfishError> {
-        self.s.enable_ipmi_over_lan(target).await
+        let url = format!("Managers/{}/NetworkProtocol", self.s.manager_id());
+        let ipmi_data = HashMap::from([("ProtocolEnabled", target.is_enabled())]);
+        let data = HashMap::from([("IPMI", ipmi_data)]);
+        self.s.client.patch_with_if_match(&url, data).await
     }
 
     async fn enable_rshim_bmc(&self) -> Result<(), RedfishError> {
