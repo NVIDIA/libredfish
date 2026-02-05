@@ -199,7 +199,6 @@ impl Redfish for Bmc {
         >,
         _selected_profile: BiosProfileType,
     ) -> Result<(), RedfishError> {
-        self.disable_secure_boot().await?;
         self.set_host_privilege_level(Restricted).await?;
         // we have found that only newer BMC fws support this action.
         // Until we re-enable DPU BMC firmware updates in preingestion,
@@ -215,15 +214,6 @@ impl Redfish for Bmc {
         _boot_interface_mac: Option<&str>,
     ) -> Result<MachineSetupStatus, RedfishError> {
         let mut diffs = vec![];
-
-        let sb = self.get_secure_boot().await?;
-        if sb.secure_boot_enable.unwrap_or(false) {
-            diffs.push(MachineSetupDiff {
-                key: "SecureBoot".to_string(),
-                expected: "false".to_string(),
-                actual: "true".to_string(),
-            });
-        }
 
         let bios = self.s.bios_attributes().await?;
         let key = "HostPrivilegeLevel";
