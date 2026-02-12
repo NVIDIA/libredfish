@@ -1303,7 +1303,8 @@ impl Bmc {
             redfish_settings_apply_time: apply_time,
             attributes: boot,
         };
-        let url = format!("Managers/{}/Attributes", self.s.manager_id());
+        let manager_id = self.s.manager_id();
+        let url = format!("Managers/{manager_id}/Oem/Dell/DellAttributes/{manager_id}");
         self.s
             .client
             .patch(&url, set_boot)
@@ -1313,7 +1314,7 @@ impl Bmc {
 
     async fn set_idrac_lockdown(&self, enabled: EnabledDisabled) -> Result<(), RedfishError> {
         let manager_id: &str = self.s.manager_id();
-        let url = format!("Managers/{manager_id}/Attributes/");
+        let url = format!("Managers/{manager_id}/Oem/Dell/DellAttributes/{manager_id}");
 
         let mut lockdown = HashMap::new();
         lockdown.insert("Lockdown.1.SystemLockdown", enabled.to_string());
