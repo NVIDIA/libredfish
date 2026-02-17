@@ -1011,9 +1011,21 @@ impl Redfish for Bmc {
         &self,
         controller_id: &str,
         volume_name: &str,
-        raid_type: &str,
     ) -> Result<Option<String>, RedfishError> {
         let drives = self.get_storage_drives(controller_id).await?;
+
+        let raid_type = match drives.as_array().map(|a| a.len()).unwrap_or(0) {
+            1 => "RAID0",
+            2 => "RAID1",
+            n => {
+                return Err(RedfishError::GenericError {
+                    error: format!(
+                        "Expected 1 or 2 drives for BOSS controller {controller_id}, found {n}"
+                    ),
+                });
+            }
+        };
+
         Ok(Some(
             self.create_storage_volume(controller_id, volume_name, raid_type, drives)
                 .await?,

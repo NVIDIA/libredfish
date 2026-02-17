@@ -684,10 +684,9 @@ impl Redfish for Bmc {
         &self,
         controller_id: &str,
         volume_name: &str,
-        raid_type: &str,
     ) -> Result<Option<String>, RedfishError> {
         self.s
-            .create_storage_volume(controller_id, volume_name, raid_type)
+            .create_storage_volume(controller_id, volume_name)
             .await
     }
 

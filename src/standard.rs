@@ -873,7 +873,6 @@ impl Redfish for RedfishStandard {
         &self,
         _controller_id: &str,
         _volume_name: &str,
-        _raid_type: &str,
     ) -> Result<Option<String>, RedfishError> {
         Err(RedfishError::NotSupported(
             "create_storage_volume".to_string(),

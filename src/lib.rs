@@ -510,7 +510,6 @@ pub trait Redfish: Send + Sync + 'static {
         &self,
         controller_id: &str,
         volume_name: &str,
-        raid_type: &str,
     ) -> Result<Option<String>, RedfishError>;
 
     fn ac_powercycle_supported_by_power(&self) -> bool;
