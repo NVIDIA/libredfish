@@ -2176,9 +2176,9 @@ impl Bmc {
     }
 
     async fn get_lifecycle_controller_status(&self) -> Result<String, RedfishError> {
+        let manager_id = self.s.manager_id();
         let url = format!(
-            "Dell/Managers/{}/DellLCService/Actions/DellLCService.GetRemoteServicesAPIStatus",
-            self.s.manager_id()
+            "Managers/{manager_id}/Oem/Dell/DellLCService/Actions/DellLCService.GetRemoteServicesAPIStatus"
         );
         let arg: HashMap<&'static str, Value> = HashMap::new();
         let (_status_code, resp_body, _resp_headers): (
