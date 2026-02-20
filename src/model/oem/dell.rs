@@ -304,11 +304,11 @@ pub struct SetBiosSerialAttrs {
 
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub enum SerialCommSettings {
-    OnConRedir,      // iDRAC 9 - preferred
+    OnConRedir, // iDRAC 9 - preferred
     OnNoConRedir,
-    OnConRedirAuto,  // newer iDRAC - preferred
-    OnConRedirCom1,  // newer iDRAC
-    OnConRedirCom2,  // newer iDRAC
+    OnConRedirAuto, // newer iDRAC - preferred
+    OnConRedirCom1, // newer iDRAC
+    OnConRedirCom2, // newer iDRAC
     Off,
 }
 
@@ -337,10 +337,10 @@ impl FromStr for SerialCommSettings {
 
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub enum SerialPortSettings {
-    Com1,                    // legacy preferred
-    Com2,                    // legacy
-    Serial1Com1Serial2Com2,  // newer BIOS: SD1=COM1, SD2=COM2
-    Serial1Com2Serial2Com1,  // newer BIOS: SD1=COM2, SD2=COM1 (preferred for SOL)
+    Com1,                   // legacy preferred
+    Com2,                   // legacy
+    Serial1Com1Serial2Com2, // newer BIOS: SD1=COM1, SD2=COM2
+    Serial1Com2Serial2Com1, // newer BIOS: SD1=COM2, SD2=COM1 (preferred for SOL)
 }
 
 impl fmt::Display for SerialPortSettings {

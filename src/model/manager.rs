@@ -170,7 +170,7 @@ mod test {
 
         let manager: super::Manager = serde_json::from_str(json_data).unwrap();
         assert!(manager.date_time.is_some());
-        
+
         let dt = manager.date_time.unwrap();
         // Input: 2025-12-05T21:07:58-06:00
         // UTC:   2025-12-06T03:07:58+00:00 (21:07 + 6 hours = 03:07 next day)
@@ -180,7 +180,7 @@ mod test {
         assert_eq!(dt.hour(), 3); // 21 + 6 = 27 -> 3 (next day)
         assert_eq!(dt.minute(), 7);
         assert_eq!(dt.second(), 58);
-        
+
         // Verify the datetime is converted to UTC format
         let dt_str = dt.to_rfc3339();
         assert_eq!(dt_str, "2025-12-06T03:07:58+00:00");

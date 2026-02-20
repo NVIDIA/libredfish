@@ -24,12 +24,12 @@
 use std::{collections::HashMap, path::Path, time::Duration};
 
 use crate::{
+    jsonmap,
     model::{
         account_service::ManagerAccount,
         boot::{BootSourceOverrideEnabled, BootSourceOverrideTarget},
         certificate::Certificate,
         chassis::{Assembly, Chassis, NetworkAdapter},
-        storage::Drives,
         component_integrity::ComponentIntegrities,
         network_device_function::NetworkDeviceFunction,
         oem::nvidia_dpu::{HostPrivilegeLevel, NicMode},
@@ -39,16 +39,16 @@ use crate::{
         sensor::GPUSensors,
         service_root::{RedfishVendor, ServiceRoot},
         software_inventory::SoftwareInventory,
+        storage::Drives,
         task::Task,
         thermal::Thermal,
         update_service::{ComponentType, TransferProtocolType, UpdateService},
         BootOption, ComputerSystem, Manager, ManagerResetType,
     },
-    jsonmap,
     standard::RedfishStandard,
-    BiosProfileType, Boot, BootOptions, Collection, EnabledDisabled, JobState,
-    MachineSetupStatus, MachineSetupDiff, ODataId, PCIeDevice, PowerState, Redfish, RedfishError,
-    Resource, RoleId, Status, StatusInternal, SystemPowerControl,
+    BiosProfileType, Boot, BootOptions, Collection, EnabledDisabled, JobState, MachineSetupDiff,
+    MachineSetupStatus, ODataId, PCIeDevice, PowerState, Redfish, RedfishError, Resource, RoleId,
+    Status, StatusInternal, SystemPowerControl,
 };
 
 /// AMI uses BIOS attribute SETUP001 for Administrator Password (UEFI password)
@@ -378,14 +378,14 @@ impl Redfish for Bmc {
         use serde_json::Value;
 
         let attributes: HashMap<String, Value> = HashMap::from([
-            ("TER001".to_string(), "Enabled".into()),   // Console Redirection
-            ("TER010".to_string(), "Enabled".into()),   // Console Redirection EMS
-            ("TER06B".to_string(), "COM1".into()),      // Out-of-Band Mgmt Port
-            ("TER0021".to_string(), "115200".into()),   // Bits per second
-            ("TER0020".to_string(), "115200".into()),   // Bits per second EMS
+            ("TER001".to_string(), "Enabled".into()), // Console Redirection
+            ("TER010".to_string(), "Enabled".into()), // Console Redirection EMS
+            ("TER06B".to_string(), "COM1".into()),    // Out-of-Band Mgmt Port
+            ("TER0021".to_string(), "115200".into()), // Bits per second
+            ("TER0020".to_string(), "115200".into()), // Bits per second EMS
             ("TER012".to_string(), "VT100Plus".into()), // Terminal Type
-            ("TER011".to_string(), "VT-UTF8".into()),   // Terminal Type EMS
-            ("TER05D".to_string(), "None".into()),      // Flow Control
+            ("TER011".to_string(), "VT-UTF8".into()), // Terminal Type EMS
+            ("TER05D".to_string(), "None".into()),    // Flow Control
         ]);
 
         self.set_bios(attributes).await
@@ -540,10 +540,7 @@ impl Redfish for Bmc {
         }
 
         let body = HashMap::from([("Attributes", reset_attrs)]);
-        self.s
-            .client
-            .patch_with_if_match(&pending_url, body)
-            .await
+        self.s.client.patch_with_if_match(&pending_url, body).await
     }
 
     async fn get_network_device_functions(
@@ -786,8 +783,11 @@ impl Redfish for Bmc {
     }
 
     async fn enable_infinite_boot(&self) -> Result<(), RedfishError> {
-        self.set_bios(HashMap::from([("EndlessBoot".to_string(), "Enabled".into())]))
-            .await
+        self.set_bios(HashMap::from([(
+            "EndlessBoot".to_string(),
+            "Enabled".into(),
+        )]))
+        .await
     }
 
     async fn is_infinite_boot_enabled(&self) -> Result<Option<bool>, RedfishError> {
@@ -866,7 +866,10 @@ impl Redfish for Bmc {
         self.s.get_evidence(url).await
     }
 
-    async fn set_host_privilege_level(&self, level: HostPrivilegeLevel) -> Result<(), RedfishError> {
+    async fn set_host_privilege_level(
+        &self,
+        level: HostPrivilegeLevel,
+    ) -> Result<(), RedfishError> {
         self.s.set_host_privilege_level(level).await
     }
 
@@ -945,16 +948,12 @@ impl Bmc {
             })
             .map(|opt| opt.display_name.clone());
 
-        let actual_first_boot_option = system
-            .boot
-            .boot_order
-            .first()
-            .and_then(|first_ref| {
-                all_boot_options
-                    .iter()
-                    .find(|opt| &opt.boot_option_reference == first_ref)
-                    .map(|opt| opt.display_name.clone())
-            });
+        let actual_first_boot_option = system.boot.boot_order.first().and_then(|first_ref| {
+            all_boot_options
+                .iter()
+                .find(|opt| &opt.boot_option_reference == first_ref)
+                .map(|opt| opt.display_name.clone())
+        });
 
         Ok((expected_first_boot_option, actual_first_boot_option))
     }
@@ -962,14 +961,14 @@ impl Bmc {
     /// Get the BIOS attributes for machine setup.
     fn machine_setup_attrs(&self) -> HashMap<String, serde_json::Value> {
         HashMap::from([
-            ("VMXEN".to_string(), "Enable".into()),        // VMX (Intel Virtualization)
-            ("PCIS007".to_string(), "Enabled".into()),     // SR-IOV Support
-            ("NWSK000".to_string(), "Enabled".into()),     // Network Stack
-            ("NWSK001".to_string(), "Disabled".into()),    // IPv4 PXE Support
-            ("NWSK006".to_string(), "Enabled".into()),     // IPv4 HTTP Support
-            ("NWSK002".to_string(), "Disabled".into()),    // IPv6 PXE Support
-            ("NWSK007".to_string(), "Disabled".into()),    // IPv6 HTTP Support
-            ("FBO001".to_string(), "UEFI".into()),         // Boot Mode Select
+            ("VMXEN".to_string(), "Enable".into()), // VMX (Intel Virtualization)
+            ("PCIS007".to_string(), "Enabled".into()), // SR-IOV Support
+            ("NWSK000".to_string(), "Enabled".into()), // Network Stack
+            ("NWSK001".to_string(), "Disabled".into()), // IPv4 PXE Support
+            ("NWSK006".to_string(), "Enabled".into()), // IPv4 HTTP Support
+            ("NWSK002".to_string(), "Disabled".into()), // IPv6 PXE Support
+            ("NWSK007".to_string(), "Disabled".into()), // IPv6 HTTP Support
+            ("FBO001".to_string(), "UEFI".into()),  // Boot Mode Select
             ("EndlessBoot".to_string(), "Enabled".into()), // Infinite Boot
         ])
     }
@@ -1002,7 +1001,10 @@ impl Bmc {
                 continue;
             };
             let act = actual.as_str().unwrap_or(&actual.to_string()).to_string();
-            let exp = expected.as_str().unwrap_or(&expected.to_string()).to_string();
+            let exp = expected
+                .as_str()
+                .unwrap_or(&expected.to_string())
+                .to_string();
             if act != exp {
                 diffs.push(MachineSetupDiff {
                     key: key.to_string(),

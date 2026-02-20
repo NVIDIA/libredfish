@@ -872,7 +872,7 @@ impl Redfish for Bmc {
                     return Ok(None);
                 }
 
-                let url = format!("Systems/{}/Settings", self.s.system_id());
+                let url = format!("Systems/{}", self.s.system_id());
                 let body = HashMap::from([(
                     "Boot",
                     HashMap::from([("BootOrder", vec![boot_option.id.clone()])]),
@@ -1840,22 +1840,6 @@ impl Bmc {
         nic_slot: &str,
     ) -> Result<dell::MachineBiosAttrs, RedfishError> {
         let curr_bios_attributes = self.s.bios_attributes().await?;
-        let curr_enabled_boot_options = match curr_bios_attributes.get("SetBootOrderEn") {
-            Some(enabled_boot_options) => enabled_boot_options.as_str().unwrap_or_default(),
-            None => {
-                return Err(RedfishError::MissingKey {
-                    key: "SetBootOrderEn".to_owned(),
-                    url: format!("Systems/{}/Bios", self.s.system_id()),
-                });
-            }
-        };
-
-        // We want to disable all boot options other than HTTP Device 1.
-        let boot_options_to_disable_arr: Vec<&str> = curr_enabled_boot_options
-            .split(",")
-            .filter(|boot_option| *boot_option != "NIC.HttpDevice.1-1")
-            .collect();
-        let boot_options_to_disable_str = boot_options_to_disable_arr.join(",");
 
         // RedirAfterBoot: Not available in iDRAC 10
         let redir_after_boot = curr_bios_attributes
@@ -1911,7 +1895,9 @@ impl Bmc {
             http_device_1_interface: nic_slot.to_string(),
             set_boot_order_en: nic_slot.to_string(),
             http_device_1_tls_mode: dell::TlsMode::None,
-            set_boot_order_dis: boot_options_to_disable_str,
+            // We used to use this to disable all boot options other than the PXE boot option we wanted
+            // We found that it can cause the boot disk option to be disabled in the termination flow.
+            set_boot_order_dis: String::new(),
         })
     }
 
