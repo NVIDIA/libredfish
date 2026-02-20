@@ -2163,11 +2163,11 @@ impl Bmc {
         self.lifecycle_controller_is_ready().await?;
 
         let url: String = format!("Systems/System.Embedded.1/Storage/{controller_id}/Volumes");
-        let mut arg = HashMap::new();
-
-        arg.insert("Name", Value::String(volume_name.to_string()));
-        arg.insert("RAIDType", Value::String(raid_type.to_string()));
-        arg.insert("Drives", drive_info);
+        let arg = HashMap::from([
+            ("Name", Value::String(volume_name.to_string())),
+            ("RAIDType", Value::String(raid_type.to_string())),
+            ("Links", serde_json::json!({ "Drives": drive_info })),
+        ]);
 
         match self.s.client.post(&url, arg).await? {
             (_, Some(headers)) => self.parse_job_id_from_response_headers(&url, headers).await,

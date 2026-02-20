@@ -26,7 +26,7 @@ use tracing::debug;
 
 use super::oem::ChassisExtensions;
 use super::resource::OData;
-use super::{ODataId, ODataLinks, OnOff, PCIeFunction, ResourceStatus};
+use super::{ODataId, ODataLinks, PCIeFunction, PowerState, ResourceStatus};
 use crate::NetworkDeviceFunction;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -117,7 +117,7 @@ pub struct Chassis {
     pub part_number: Option<String>,
     pub power: Option<ODataId>,
     #[serde(default)] // Viking returns Chassis w.o power_state, so default will be used
-    pub power_state: Option<OnOff>,
+    pub power_state: Option<PowerState>,
     pub power_subsystem: Option<ODataId>,
     pub sensors: Option<ODataId>,
     pub serial_number: Option<String>,
