@@ -128,7 +128,10 @@ impl Redfish for RedfishStandard {
         data.insert("Password", new_pass);
         let service_root = self.get_service_root().await?;
         // AMI BMC requires If-Match header for PATCH requests
-        if matches!(service_root.vendor(), Some(RedfishVendor::AMI)) || service_root.has_ami_bmc() {
+        if matches!(
+            service_root.vendor(),
+            Some(RedfishVendor::AMI | RedfishVendor::LenovoAMI)
+        ) {
             self.client.patch_with_if_match(&url, &data).await
         } else {
             self.client
@@ -1013,14 +1016,8 @@ impl RedfishStandard {
             }
             RedfishVendor::Dell => Ok(Box::new(crate::dell::Bmc::new(self.clone())?)),
             RedfishVendor::Hpe => Ok(Box::new(crate::hpe::Bmc::new(self.clone())?)),
-            RedfishVendor::Lenovo => {
-                // Check if this Lenovo has an AMI-based BMC
-                if self.service_root.has_ami_bmc() {
-                    Ok(Box::new(crate::ami::Bmc::new(self.clone())?))
-                } else {
-                    Ok(Box::new(crate::lenovo::Bmc::new(self.clone())?))
-                }
-            }
+            RedfishVendor::Lenovo => Ok(Box::new(crate::lenovo::Bmc::new(self.clone())?)),
+            RedfishVendor::LenovoAMI => Ok(Box::new(crate::ami::Bmc::new(self.clone())?)),
             RedfishVendor::NvidiaDpu => Ok(Box::new(crate::nvidia_dpu::Bmc::new(self.clone())?)),
             RedfishVendor::NvidiaGBx00 => {
                 Ok(Box::new(crate::nvidia_gbx00::Bmc::new(self.clone())?))

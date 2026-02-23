@@ -637,6 +637,7 @@ async fn resource_tests(redfish: &dyn Redfish) -> Result<(), anyhow::Error> {
 
     let chassis_id = match vendor {
         RedfishVendor::Lenovo | RedfishVendor::Supermicro | RedfishVendor::Hpe => "1",
+        RedfishVendor::LenovoAMI => "Self",
         RedfishVendor::AMI => "DGX",
         RedfishVendor::NvidiaDpu => "Card1",
         RedfishVendor::Dell => "System.Embedded.1",

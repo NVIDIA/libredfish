@@ -60,6 +60,7 @@ pub struct ServiceRoot {
 #[derive(Clone, Copy, Debug, PartialEq, Hash, Eq, Serialize, Deserialize)]
 pub enum RedfishVendor {
     Lenovo,
+    LenovoAMI,
     Dell,
     NvidiaDpu,
     Supermicro,
@@ -96,7 +97,13 @@ impl ServiceRoot {
             "ami" => RedfishVendor::AMI,
             "dell" => RedfishVendor::Dell,
             "hpe" => RedfishVendor::Hpe,
-            "lenovo" => RedfishVendor::Lenovo,
+            "lenovo" => {
+                if self.has_ami_bmc() {
+                    RedfishVendor::LenovoAMI
+                } else {
+                    RedfishVendor::Lenovo
+                }
+            }
             "nvidia" => match self.product.as_deref() {
                 Some("P3809") => RedfishVendor::P3809, // could be gh200 compute or nvswitch
                 Some("GB200 NVL") => RedfishVendor::NvidiaGBx00,
