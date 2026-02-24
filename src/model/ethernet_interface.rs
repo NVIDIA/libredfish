@@ -20,9 +20,19 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use super::{LinkStatus, ODataId, ODataLinks, ResourceStatus};
+
+/// Deserializes a JSON array that may contain null entries into a Vec<String>,
+/// filtering out the nulls. AMI BMCs return e.g. `"StaticNameServers": [null, null, null]`.
+fn deserialize_nullable_string_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let v: Vec<Option<String>> = Vec::deserialize(deserializer)?;
+    Ok(v.into_iter().flatten().collect())
+}
 
 /// http://redfish.dmtf.org/schemas/v1/EthernetInterface.v1_6_0.json
 /// The EthernetInterface schema contains an inventory of Ethernet interface components.
@@ -60,10 +70,10 @@ pub struct EthernetInterface {
     #[serde(rename = "MTUSize")]
     pub mtu_size: Option<i32>,
     pub name: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_nullable_string_vec")]
     pub name_servers: Vec<String>,
     pub speed_mbps: Option<i32>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_nullable_string_vec")]
     pub static_name_servers: Vec<String>,
     pub status: Option<ResourceStatus>,
     #[serde(rename = "VLANs")]
