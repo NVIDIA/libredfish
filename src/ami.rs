@@ -65,41 +65,30 @@ impl Bmc {
 
     /// LenovoAMI-specific lockdown status via OEM ConfigBMC endpoint.
     async fn lockdown_status_lenovo_ami(&self) -> Result<Status, RedfishError> {
-        let url = "Managers/Self/Oem/ConfigBMC";
-        let (_status, body): (_, serde_json::Value) = self.s.client.get(url).await?;
-
-        let lockout_host = body
-            .get("LockoutHostControl")
-            .and_then(|v| v.as_str())
-            .unwrap_or("unknown");
-        let lockout_bios_var = body
-            .get("LockoutBiosVariableWriteMode")
-            .and_then(|v| v.as_str())
-            .unwrap_or("unknown");
-        let lockdown_settings = body
-            .get("LockdownBiosSettingsChange")
-            .and_then(|v| v.as_str())
-            .unwrap_or("unknown");
-        let lockdown_upgrade = body
-            .get("LockdownBiosUpgradeDowngrade")
-            .and_then(|v| v.as_str())
-            .unwrap_or("unknown");
-
-        let message = format!(
-            "lockout_host_control={lockout_host}, \
-             lockout_bios_variable_write={lockout_bios_var}, \
-             lockdown_bios_settings={lockdown_settings}, \
-             lockdown_bios_upgrade={lockdown_upgrade}"
-        );
-
-        let all_fields = [
-            lockout_host,
-            lockout_bios_var,
-            lockdown_settings,
-            lockdown_upgrade,
+        const LOCKDOWN_FIELDS: &[&str] = &[
+            "LockoutHostControl",
+            "LockoutBiosVariableWriteMode",
+            "LockdownBiosSettingsChange",
+            "LockdownBiosUpgradeDowngrade",
         ];
-        let is_locked = all_fields.iter().all(|&v| v == "Enable");
-        let is_unlocked = all_fields.iter().all(|&v| v == "Disable");
+
+        let (_status, body): (_, serde_json::Value) =
+            self.s.client.get("Managers/Self/Oem/ConfigBMC").await?;
+
+        let values: Vec<&str> = LOCKDOWN_FIELDS
+            .iter()
+            .map(|key| body.get(key).and_then(|v| v.as_str()).unwrap_or("unknown"))
+            .collect();
+
+        let message = LOCKDOWN_FIELDS
+            .iter()
+            .zip(&values)
+            .map(|(k, v)| format!("{k}={v}"))
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        let is_locked = values.iter().all(|&v| v == "Enable");
+        let is_unlocked = values.iter().all(|&v| v == "Disable");
 
         Ok(Status {
             message,
