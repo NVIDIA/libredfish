@@ -212,6 +212,7 @@ pub trait Redfish: Send + Sync + 'static {
         boot_interface_mac: Option<&str>,
         bios_profiles: &BiosProfileVendor,
         selected_profile: BiosProfileType,
+        oem_manager_profiles: &BiosProfileVendor,
     ) -> Result<(), RedfishError>;
 
     /// Is everything that machine_setup does already done?
@@ -556,21 +557,6 @@ pub trait Redfish: Send + Sync + 'static {
     // Only applicable to Dells
     async fn set_utc_timezone(&self) -> Result<(), RedfishError>;
 
-    /// Disables PSU Hot Spare mode on Dell PowerEdge servers.
-    ///
-    /// This ensures even power distribution across all PSUs instead of
-    /// prioritizing 2 of 4 PSUs in Hot Spare mode.
-    ///
-    /// Specifically sets Dell iDRAC attribute: `ServerPwr.1.PSRapidOn = "Disabled"`
-    ///
-    /// # Returns
-    /// - `Ok(())` if successfully disabled (Dell only)
-    /// - `Err(RedfishError::NotSupported)` for non-Dell vendors
-    /// - `Err(RedfishError)` if the PATCH operation fails
-    ///
-    /// # Note
-    /// Only applicable to Dell servers. Other vendors return `NotSupported`.
-    async fn disable_psu_hot_spare(&self) -> Result<(), RedfishError>;
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]

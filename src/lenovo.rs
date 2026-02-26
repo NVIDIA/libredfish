@@ -224,6 +224,10 @@ impl Redfish for Bmc {
             HashMap<String, HashMap<BiosProfileType, HashMap<String, serde_json::Value>>>,
         >,
         selected_profile: BiosProfileType,
+        _oem_manager_profiles: &HashMap<
+            RedfishVendor,
+            HashMap<String, HashMap<BiosProfileType, HashMap<String, serde_json::Value>>>,
+        >,
     ) -> Result<(), RedfishError> {
         self.setup_serial_console().await?;
         self.clear_tpm().await?;
@@ -1010,9 +1014,6 @@ impl Redfish for Bmc {
         self.s.set_utc_timezone().await
     }
 
-    async fn disable_psu_hot_spare(&self) -> Result<(), RedfishError> {
-        self.s.disable_psu_hot_spare().await
-    }
 }
 
 impl Bmc {

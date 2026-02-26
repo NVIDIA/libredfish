@@ -239,6 +239,10 @@ impl Redfish for Bmc {
             HashMap<String, HashMap<BiosProfileType, HashMap<String, serde_json::Value>>>,
         >,
         selected_profile: BiosProfileType,
+        oem_manager_profiles: &HashMap<
+            RedfishVendor,
+            HashMap<String, HashMap<BiosProfileType, HashMap<String, serde_json::Value>>>,
+        >,
     ) -> Result<(), RedfishError> {
         self.delete_job_queue().await?;
 
@@ -292,7 +296,22 @@ impl Redfish for Bmc {
             (_, None) => Err(RedfishError::NoHeader),
         }?;
 
-        self.machine_setup_oem().await?;
+        let oem_attrs = if let Some(dell) = oem_manager_profiles.get(&RedfishVendor::Dell) {
+            let model = crate::model_coerce(
+                self.get_system()
+                    .await?
+                    .model
+                    .unwrap_or_default()
+                    .as_str(),
+            );
+            dell.get(&model)
+                .and_then(|all| all.get(&selected_profile))
+                .cloned()
+                .unwrap_or_default()
+        } else {
+            HashMap::new()
+        };
+        self.machine_setup_oem(&oem_attrs).await?;
         self.setup_bmc_remote_access().await?;
 
         if has_dpu {
@@ -1099,18 +1118,6 @@ impl Redfish for Bmc {
         Ok(())
     }
 
-    async fn disable_psu_hot_spare(&self) -> Result<(), RedfishError> {
-        let manager_id = self.s.manager_id();
-        let url = format!("Managers/{manager_id}/Oem/Dell/DellAttributes/{manager_id}");
-
-        let mut psu_attrs = HashMap::new();
-        psu_attrs.insert("ServerPwr.1.PSRapidOn", "Disabled");
-
-        let body = HashMap::from([("Attributes", psu_attrs)]);
-
-        self.s.client.patch(&url, body).await?;
-        Ok(())
-    }
 }
 
 impl Bmc {
@@ -1741,22 +1748,37 @@ impl Bmc {
     }
 
     /// Extra Dell-specific attributes we need to set that are not BIOS attributes
-    async fn machine_setup_oem(&self) -> Result<(), RedfishError> {
+    async fn machine_setup_oem(
+        &self,
+        extra_attrs: &HashMap<String, serde_json::Value>,
+    ) -> Result<(), RedfishError> {
         let manager_id = self.s.manager_id();
         let url = format!("Managers/{manager_id}/Oem/Dell/DellAttributes/{manager_id}");
 
         let current_attrs = self.manager_dell_oem_attributes().await?;
 
-        let mut attributes = HashMap::new();
+        let mut attributes: HashMap<String, serde_json::Value> = HashMap::new();
         // racadm set idrac.webserver.HostHeaderCheck 0
-        attributes.insert("WebServer.1.HostHeaderCheck", "Disabled".to_string());
+        attributes.insert(
+            "WebServer.1.HostHeaderCheck".to_string(),
+            serde_json::json!("Disabled"),
+        );
         // racadm set iDRAC.IPMILan.Enable 1
-        attributes.insert("IPMILan.1.Enable", "Enabled".to_string());
+        attributes.insert(
+            "IPMILan.1.Enable".to_string(),
+            serde_json::json!("Enabled"),
+        );
 
         // Only available in iDRAC 9
         if current_attrs.get("OS-BMC.1.AdminState").is_some() {
-            attributes.insert("OS-BMC.1.AdminState", "Disabled".to_string());
+            attributes.insert(
+                "OS-BMC.1.AdminState".to_string(),
+                serde_json::json!("Disabled"),
+            );
         }
+
+        // Merge config-driven OEM attributes (e.g. PSU Hot Spare settings)
+        attributes.extend(extra_attrs.clone());
 
         let body = HashMap::from([("Attributes", attributes)]);
         self.s.client.patch(&url, body).await?;
@@ -2270,5 +2292,76 @@ impl UpdateParameters {
             apply_time,
             oem: Empty {},
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    // Mirrors the attribute-merge logic in machine_setup_oem so we can test it
+    // without a live HTTP connection.
+    fn build_oem_attributes(
+        extra_attrs: &HashMap<String, serde_json::Value>,
+        has_os_bmc: bool,
+    ) -> HashMap<String, serde_json::Value> {
+        let mut attributes: HashMap<String, serde_json::Value> = HashMap::new();
+        attributes.insert(
+            "WebServer.1.HostHeaderCheck".to_string(),
+            serde_json::json!("Disabled"),
+        );
+        attributes.insert(
+            "IPMILan.1.Enable".to_string(),
+            serde_json::json!("Enabled"),
+        );
+        if has_os_bmc {
+            attributes.insert(
+                "OS-BMC.1.AdminState".to_string(),
+                serde_json::json!("Disabled"),
+            );
+        }
+        attributes.extend(extra_attrs.clone());
+        attributes
+    }
+
+    #[test]
+    fn test_machine_setup_oem_hardcoded_attrs_present() {
+        let extra: HashMap<String, serde_json::Value> = HashMap::new();
+        let attrs = build_oem_attributes(&extra, false);
+        assert_eq!(attrs["WebServer.1.HostHeaderCheck"], serde_json::json!("Disabled"));
+        assert_eq!(attrs["IPMILan.1.Enable"], serde_json::json!("Enabled"));
+        assert!(!attrs.contains_key("OS-BMC.1.AdminState"));
+    }
+
+    #[test]
+    fn test_machine_setup_oem_idrac9_attr_conditionally_added() {
+        let extra: HashMap<String, serde_json::Value> = HashMap::new();
+        let attrs = build_oem_attributes(&extra, true);
+        assert_eq!(attrs["OS-BMC.1.AdminState"], serde_json::json!("Disabled"));
+    }
+
+    #[test]
+    fn test_machine_setup_oem_extra_attrs_merged() {
+        let mut extra: HashMap<String, serde_json::Value> = HashMap::new();
+        extra.insert(
+            "System.1.psuHotSpare".to_string(),
+            serde_json::json!("Disabled"),
+        );
+        let attrs = build_oem_attributes(&extra, false);
+        assert_eq!(attrs["System.1.psuHotSpare"], serde_json::json!("Disabled"));
+        // Hardcoded attrs are still present
+        assert_eq!(attrs["WebServer.1.HostHeaderCheck"], serde_json::json!("Disabled"));
+    }
+
+    #[test]
+    fn test_machine_setup_oem_extra_attrs_override_hardcoded() {
+        // Ensure extra_attrs win over any hardcoded defaults if keys collide.
+        let mut extra: HashMap<String, serde_json::Value> = HashMap::new();
+        extra.insert(
+            "IPMILan.1.Enable".to_string(),
+            serde_json::json!("Disabled"),
+        );
+        let attrs = build_oem_attributes(&extra, false);
+        assert_eq!(attrs["IPMILan.1.Enable"], serde_json::json!("Disabled"));
     }
 }
