@@ -513,7 +513,12 @@ impl Redfish for Bmc {
     }
 
     async fn boot_first(&self, target: Boot) -> Result<(), RedfishError> {
-        self.s.boot_first(target).await
+        let alias = match target {
+            Boot::Pxe => "Pxe",
+            Boot::HardDisk => "Hdd",
+            Boot::UefiHttp => "UefiHttp",
+        };
+        self.set_boot_order(alias).await
     }
 
     /// AMI BMC requires If-Match header for boot order changes
@@ -738,23 +743,7 @@ impl Redfish for Bmc {
         mac_address: &str,
     ) -> Result<Option<String>, RedfishError> {
         let mac = mac_address.to_uppercase();
-        let system = self.get_system().await?;
-
-        let boot_options_id =
-            system
-                .boot
-                .boot_options
-                .clone()
-                .ok_or_else(|| RedfishError::MissingKey {
-                    key: "boot.boot_options".to_string(),
-                    url: system.odata.odata_id.clone(),
-                })?;
-
-        let all_boot_options: Vec<BootOption> = self
-            .get_collection(boot_options_id)
-            .await
-            .and_then(|c| c.try_get::<BootOption>())?
-            .members;
+        let (system, all_boot_options) = self.get_system_and_boot_options().await?;
 
         let target = all_boot_options.iter().find(|opt| {
             let display = opt.display_name.to_uppercase();
@@ -970,6 +959,68 @@ impl Bmc {
         self.s.client.patch_with_if_match(&url, data).await
     }
 
+    async fn get_system_and_boot_options(
+        &self,
+    ) -> Result<(ComputerSystem, Vec<BootOption>), RedfishError> {
+        let system = self.get_system().await?;
+        let boot_options_id =
+            system
+                .boot
+                .boot_options
+                .clone()
+                .ok_or_else(|| RedfishError::MissingKey {
+                    key: "boot.boot_options".to_string(),
+                    url: system.odata.odata_id.clone(),
+                })?;
+        let all_boot_options: Vec<BootOption> = self
+            .get_collection(boot_options_id)
+            .await
+            .and_then(|c| c.try_get::<BootOption>())?
+            .members;
+        Ok((system, all_boot_options))
+    }
+
+    /// Finds the first boot option matching the given alias and moves it to the front
+    /// of the boot order.
+    async fn set_boot_order(&self, alias: &str) -> Result<(), RedfishError> {
+        let (system, all_boot_options) = self.get_system_and_boot_options().await?;
+
+        let target = all_boot_options
+            .iter()
+            .find(|opt| opt.alias.as_deref() == Some(alias));
+
+        let target_ref = target
+            .ok_or_else(|| {
+                let all_names: Vec<_> = all_boot_options
+                    .iter()
+                    .map(|b| {
+                        format!(
+                            "{}: {} (alias={})",
+                            b.boot_option_reference,
+                            b.display_name,
+                            b.alias.as_deref().unwrap_or("none")
+                        )
+                    })
+                    .collect();
+                RedfishError::MissingBootOption(format!(
+                    "No boot option with alias {:?} found; available: {:#?}",
+                    alias, all_names
+                ))
+            })?
+            .boot_option_reference
+            .clone();
+
+        let mut boot_order = system.boot.boot_order;
+
+        if boot_order.first() == Some(&target_ref) {
+            return Ok(());
+        }
+
+        boot_order.retain(|id| id != &target_ref);
+        boot_order.insert(0, target_ref);
+        self.change_boot_order(boot_order).await
+    }
+
     /// Get expected and actual first boot option for checking boot order setup.
     ///
     /// AMI boot option format example:
@@ -981,25 +1032,8 @@ impl Bmc {
         boot_interface_mac: &str,
     ) -> Result<(Option<String>, Option<String>), RedfishError> {
         let mac = boot_interface_mac.to_uppercase();
-        let system = self.get_system().await?;
+        let (system, all_boot_options) = self.get_system_and_boot_options().await?;
 
-        let boot_options_id =
-            system
-                .boot
-                .boot_options
-                .clone()
-                .ok_or_else(|| RedfishError::MissingKey {
-                    key: "boot.boot_options".to_string(),
-                    url: system.odata.odata_id.clone(),
-                })?;
-
-        let all_boot_options: Vec<BootOption> = self
-            .get_collection(boot_options_id)
-            .await
-            .and_then(|c| c.try_get::<BootOption>())?
-            .members;
-
-        // Find expected boot option display name (HTTP IPv4 with matching MAC)
         let expected_first_boot_option = all_boot_options
             .iter()
             .find(|opt| {
