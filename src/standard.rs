@@ -1005,12 +1005,8 @@ impl RedfishStandard {
         match vendor {
             // nvidia dgx systems may have both ami and nvidia as vendor strings depending on hw
             // ami also ships its bmc fw for other system vendors.
-            RedfishVendor::AMI => {
-                if self.system_id == "DGX" && self.manager_id == "BMC" {
-                    Ok(Box::new(crate::nvidia_viking::Bmc::new(self.clone())?))
-                } else {
-                    Ok(Box::new(crate::ami::Bmc::new(self.clone())?))
-                }
+            RedfishVendor::AMI if self.system_id == "DGX" && self.manager_id == "BMC" => {
+                Ok(Box::new(crate::nvidia_viking::Bmc::new(self.clone())?))
             }
             RedfishVendor::Dell => Ok(Box::new(crate::dell::Bmc::new(self.clone())?)),
             RedfishVendor::Hpe => Ok(Box::new(crate::hpe::Bmc::new(self.clone())?)),
