@@ -106,7 +106,7 @@ impl ServiceRoot {
             }
             "nvidia" => match self.product.as_deref() {
                 Some("P3809") => RedfishVendor::P3809, // could be gh200 compute or nvswitch
-                Some("GB200 NVL") => RedfishVendor::NvidiaGBx00,
+                Some("GB200 NVL") | Some("GB BMC") => RedfishVendor::NvidiaGBx00,
                 _ => RedfishVendor::NvidiaDpu,
             },
             "wiwynn" => RedfishVendor::NvidiaGBx00,
@@ -127,12 +127,32 @@ impl ServiceRoot {
 
 #[cfg(test)]
 mod test {
-    use crate::model::service_root::RedfishVendor;
+    use crate::model::service_root::{RedfishVendor, ServiceRoot};
 
     #[test]
     fn test_supermicro_service_root() {
         let data = include_str!("testdata/supermicro_service_root.json");
         let result: super::ServiceRoot = serde_json::from_str(data).unwrap();
         assert_eq!(result.vendor().unwrap(), RedfishVendor::Supermicro);
+    }
+
+    #[test]
+    fn test_nvidia_gb_bmc_service_root() {
+        let result = ServiceRoot {
+            vendor: Some("NVIDIA".to_string()),
+            product: Some("GB BMC".to_string()),
+            ..Default::default()
+        };
+        assert_eq!(result.vendor().unwrap(), RedfishVendor::NvidiaGBx00);
+    }
+
+    #[test]
+    fn test_nvidia_bluefield_service_root() {
+        let result = ServiceRoot {
+            vendor: Some("NVIDIA".to_string()),
+            product: Some("BlueField-3".to_string()),
+            ..Default::default()
+        };
+        assert_eq!(result.vendor().unwrap(), RedfishVendor::NvidiaDpu);
     }
 }

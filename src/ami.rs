@@ -1058,6 +1058,7 @@ impl Bmc {
         HashMap::from([
             ("VMXEN".to_string(), "Enable".into()), // VMX (Intel Virtualization)
             ("PCIS007".to_string(), "Enabled".into()), // SR-IOV Support
+            ("LEM0001".to_string(), 3.into()),      // PXE retry count (remove on future FW update)
             ("NWSK000".to_string(), "Enabled".into()), // Network Stack
             ("NWSK001".to_string(), "Disabled".into()), // IPv4 PXE Support
             ("NWSK006".to_string(), "Enabled".into()), // IPv4 HTTP Support
