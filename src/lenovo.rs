@@ -231,7 +231,27 @@ impl Redfish for Bmc {
     ) -> Result<(), RedfishError> {
         self.setup_serial_console().await?;
         self.clear_tpm().await?;
-        self.boot_first(Boot::Pxe).await?;
+        match self.boot_first(Boot::Pxe).await {
+            Ok(()) => {}
+            Err(RedfishError::MissingBootOption(_)) => {
+                tracing::info!(
+                    "Network boot option not found, setting it via OEM general boot order"
+                );
+                match self.set_general_boot_order_network_first().await {
+                    Ok(()) => {}
+                    Err(RedfishError::HTTPErrorCode {
+                        status_code: StatusCode::NOT_FOUND,
+                        ..
+                    }) => {
+                        tracing::info!(
+                            "OEM BootOrder.BootOrder not found, skipping (newer firmware)"
+                        );
+                    }
+                    Err(e) => return Err(e),
+                }
+            }
+            Err(e) => return Err(e),
+        }
         self.set_virt_enable().await?;
         self.set_uefi_boot_only().await?;
         if let Some(lenovo) = bios_profiles.get(&RedfishVendor::Lenovo) {
@@ -1726,6 +1746,40 @@ impl Bmc {
         })
     }
 
+    /// Set "Network" as the first entry in the OEM Lenovo general boot order
+    /// (`BootOrder.BootOrder`). This must happen before setting the DPU-first
+    /// network boot order, because the network boot options list is empty
+    /// when "Network" is not already present in the general boot order.
+    async fn set_general_boot_order_network_first(&self) -> Result<(), RedfishError> {
+        let url = format!("{}/BootOrder.BootOrder", self.get_boot_settings_uri());
+        let (_status_code, mut boot_order): (_, LenovoBootOrder) =
+            self.s.client.get(&url).await?;
+        const NETWORK: &str = "Network";
+
+        if let Some(pos) = boot_order
+            .boot_order_next
+            .iter()
+            .position(|s| s == NETWORK)
+        {
+            if pos == 0 {
+                tracing::info!("NO-OP: Network is already the first general boot option");
+                return Ok(());
+            }
+            boot_order.boot_order_next.swap(0, pos);
+        } else {
+            boot_order
+                .boot_order_next
+                .insert(0, NETWORK.to_string());
+        }
+
+        let body = HashMap::from([("BootOrderNext", boot_order.boot_order_next)]);
+        self.s
+            .client
+            .patch(&url, body)
+            .await
+            .map(|_status_code| ())
+    }
+    
     async fn get_expected_and_actual_first_boot_option(
         &self,
         boot_interface_mac: &str,
