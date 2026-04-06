@@ -53,8 +53,8 @@ impl RedfishClientPoolBuilder {
     ///
     /// By default self signed certificates will be accepted, since BMCs usually
     /// use those.
-    pub fn reject_invalid_certs(mut self) -> Self {
-        self.accept_invalid_certs = false;
+    pub fn danger_accept_invalid_certs(mut self) -> Self {
+        self.accept_invalid_certs = true;
         self
     }
 
@@ -133,7 +133,7 @@ impl RedfishClientPool {
             connect_timeout: DEFAULT_CONNECT_TIMEOUT,
             timeout: DEFAULT_TIMEOUT,
             // BMCs often have a self-signed cert, so usually this has to be true
-            accept_invalid_certs: true,
+            accept_invalid_certs: false,
             proxy: None,
         }
     }
