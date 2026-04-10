@@ -1939,7 +1939,8 @@ impl Bmc {
                 target: "BIOS".to_string(),
             },
             import_buffer: format!(
-                r##"<SystemConfiguration><Component FQDD="BIOS.Setup.1-1"><!-- <Attribute Name="OldSysPassword"></Attribute>--><!-- <Attribute Name="NewSysPassword"></Attribute>--><Attribute Name="OldSetupPassword">{current_uefi_password}</Attribute><Attribute Name="NewSetupPassword"></Attribute></Component></SystemConfiguration>"##
+                r##"<SystemConfiguration><Component FQDD="BIOS.Setup.1-1"><!-- <Attribute Name="OldSysPassword"></Attribute>--><!-- <Attribute Name="NewSysPassword"></Attribute>--><Attribute Name="OldSetupPassword">{}</Attribute><Attribute Name="NewSetupPassword"></Attribute></Component></SystemConfiguration>"##,
+                XmlPcdata(current_uefi_password)
             ),
         };
 
@@ -2298,8 +2299,37 @@ impl UpdateParameters {
     }
 }
 
+// Escapes XML character data for element text content (PCDATA).
+// Use this for values inserted between tags, e.g. <x>value</x>.
+//
+// Do not use for XML attributes; attribute values require different escaping.
+struct XmlPcdata<'a>(&'a str);
+
+impl std::fmt::Display for XmlPcdata<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // XML: 2.4 Character Data and Markup
+        for c in self.0.chars() {
+            match c {
+                // The ampersand character (&) and the left angle
+                // bracket (<) MUST NOT appear in their literal form,
+                // except ... . If they are needed elsewhere, they
+                // MUST be escaped.
+                '&' => "&amp;".fmt(f)?,
+                '<' => "&lt;".fmt(f)?,
+                // The right angle bracket (>) may be represented
+                // using the string " &gt; ", and MUST, for
+                // compatibility, be escaped using ... "&gt;"
+                '>' => "&gt;".fmt(f)?,
+                _ => c.fmt(f)?,
+            }
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use super::XmlPcdata;
     use std::collections::HashMap;
 
     // Mirrors the attribute-merge logic in machine_setup_oem so we can test it
@@ -2366,5 +2396,32 @@ mod tests {
         );
         let attrs = build_oem_attributes(&extra, false);
         assert_eq!(attrs["IPMILan.1.Enable"], serde_json::json!("Disabled"));
+    }
+
+    #[test]
+    fn test_xml_pcdata_escapes_markup_chars() {
+        let input = r#"before & <tag> > after"#;
+        let escaped = XmlPcdata(input).to_string();
+        assert_eq!(escaped, "before &amp; &lt;tag&gt; &gt; after");
+    }
+
+    #[test]
+    fn test_xml_pcdata_leaves_plain_text_unchanged() {
+        let input = "abcXYZ123_- ";
+        let escaped = XmlPcdata(input).to_string();
+        assert_eq!(escaped, input);
+    }
+
+    #[test]
+    fn test_xml_pcdata_in_import_buffer_context() {
+        let password = r#"a&<b>c"#;
+        let xml = format!(
+            r##"<Attribute Name="OldSetupPassword">{}</Attribute>"##,
+            XmlPcdata(password)
+        );
+        assert_eq!(
+            xml,
+            r#"<Attribute Name="OldSetupPassword">a&amp;&lt;b&gt;c</Attribute>"#
+        );
     }
 }
