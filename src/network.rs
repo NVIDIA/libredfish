@@ -97,7 +97,7 @@ impl RedfishClientPoolBuilder {
 }
 
 /// The endpoint that the redfish client connects to
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)] // WARN: Do not derive Debug: Endpoint may contain credentials and must not be logged accidentally.
 pub struct Endpoint {
     /// Hostname or IP address of BMC
     pub host: String,
