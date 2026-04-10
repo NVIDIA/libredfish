@@ -215,19 +215,19 @@ impl RedfishClientPool {
 
         let vendor = match vendor {
             Some(v) => v,
-            None => {
-                let Some(mut v) = service_root.vendor() else {
-                    return Err(RedfishError::MissingVendor);
-                };
-                if v == RedfishVendor::P3809 {
-                    if chassis.contains(&"MGX_NVSwitch_0".to_string()) {
-                        v = RedfishVendor::NvidiaGBSwitch;
-                    } else {
-                        v = RedfishVendor::NvidiaGH200;
-                    }
-                }
-                v
+            None => service_root.vendor().ok_or(RedfishError::MissingVendor)?,
+        };
+
+        // P3809 is a placeholder — always resolve it based on chassis
+        // contents, whether it was auto-detected or explicitly provided.
+        let vendor = if vendor == RedfishVendor::P3809 {
+            if chassis.contains(&"MGX_NVSwitch_0".to_string()) {
+                RedfishVendor::NvidiaGBSwitch
+            } else {
+                RedfishVendor::NvidiaGH200
             }
+        } else {
+            vendor
         };
 
         s.set_vendor(vendor).await
