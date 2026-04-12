@@ -93,7 +93,8 @@ impl Redfish for Bmc {
     }
 
     async fn get_power_state(&self) -> Result<crate::PowerState, RedfishError> {
-        self.s.get_power_state().await
+        let system = self.get_system().await?;
+        Ok(system.power_state)
     }
 
     async fn get_power_metrics(&self) -> Result<crate::Power, RedfishError> {
@@ -360,7 +361,10 @@ impl Redfish for Bmc {
     }
 
     async fn get_system(&self) -> Result<ComputerSystem, RedfishError> {
-        self.s.get_system().await
+        let mut system = self.s.get_system().await?;
+        let power = self.get_power_metrics().await;
+        system.power_state = power_state_from_psus(&power);
+        Ok(system)
     }
 
     async fn get_secure_boot(&self) -> Result<crate::model::secure_boot::SecureBoot, RedfishError> {
@@ -734,5 +738,33 @@ impl Bmc {
             self.s.client.get(&url).await?;
         let log_entries = log_entry_collection.members;
         Ok(log_entries)
+    }
+}
+
+/// Derives the overall powershelf `PowerState` from individual PSU states.
+/// All On → On, all Off → Off, mixed or no PSUs or fetch failure → Unknown.
+fn power_state_from_psus(power: &Result<Power, RedfishError>) -> crate::PowerState {
+    let supplies = match power {
+        Ok(p) => p.power_supplies.as_deref().unwrap_or_default(),
+        Err(_) => return crate::PowerState::Unknown,
+    };
+
+    if supplies.is_empty() {
+        return crate::PowerState::Unknown;
+    }
+
+    let all_on = supplies
+        .iter()
+        .all(|ps| ps.power_state == Some(crate::PowerState::On));
+    let all_off = supplies
+        .iter()
+        .all(|ps| ps.power_state == Some(crate::PowerState::Off));
+
+    if all_on {
+        crate::PowerState::On
+    } else if all_off {
+        crate::PowerState::Off
+    } else {
+        crate::PowerState::Unknown
     }
 }

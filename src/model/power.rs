@@ -21,11 +21,12 @@
  */
 use super::{LinkType, ODataId, ODataLinks, ResourceStatus, StatusVec};
 use crate::model::sensor::Sensor;
+use crate::model::system::PowerState;
 use serde::{Deserialize, Serialize};
 
 /// Deserializes `PowerState` from either a bool (Lite-On: `true`/`false`)
-/// or a string (GB200: `"On"`/`"Off"`), normalizing to `Option<String>`.
-fn deserialize_power_state<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+/// or a string (GB200: `"On"`/`"Off"`), normalizing to `Option<PowerState>`.
+fn deserialize_power_state<'de, D>(deserializer: D) -> Result<Option<PowerState>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -34,18 +35,20 @@ where
     struct PowerStateVisitor;
 
     impl<'de> de::Visitor<'de> for PowerStateVisitor {
-        type Value = Option<String>;
+        type Value = Option<PowerState>;
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            formatter.write_str("a bool, a string, or null")
+            formatter.write_str("a bool, a PowerState string, or null")
         }
 
         fn visit_bool<E: de::Error>(self, v: bool) -> Result<Self::Value, E> {
-            Ok(Some(if v { "On" } else { "Off" }.to_string()))
+            Ok(Some(if v { PowerState::On } else { PowerState::Off }))
         }
 
         fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
-            Ok(Some(v.to_string()))
+            serde_json::from_value::<PowerState>(serde_json::Value::String(v.to_string()))
+                .map(Some)
+                .map_err(de::Error::custom)
         }
 
         fn visit_none<E: de::Error>(self) -> Result<Self::Value, E> {
@@ -178,7 +181,7 @@ pub struct PowerSupply {
     pub power_input_watts: Option<f64>,
     pub power_output_watts: Option<f64>,
     #[serde(default, deserialize_with = "deserialize_power_state")]
-    pub power_state: Option<String>,
+    pub power_state: Option<PowerState>,
     pub power_supply_type: Option<String>,
     pub serial_number: Option<String>,
     pub spare_part_number: Option<String>,
