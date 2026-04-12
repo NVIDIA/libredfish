@@ -23,6 +23,50 @@ use super::{LinkType, ODataId, ODataLinks, ResourceStatus, StatusVec};
 use crate::model::sensor::Sensor;
 use serde::{Deserialize, Serialize};
 
+/// Deserializes `PowerState` from either a bool (Lite-On: `true`/`false`)
+/// or a string (GB200: `"On"`/`"Off"`), normalizing to `Option<String>`.
+fn deserialize_power_state<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de;
+
+    struct PowerStateVisitor;
+
+    impl<'de> de::Visitor<'de> for PowerStateVisitor {
+        type Value = Option<String>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a bool, a string, or null")
+        }
+
+        fn visit_bool<E: de::Error>(self, v: bool) -> Result<Self::Value, E> {
+            Ok(Some(if v { "On" } else { "Off" }.to_string()))
+        }
+
+        fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
+            Ok(Some(v.to_string()))
+        }
+
+        fn visit_none<E: de::Error>(self) -> Result<Self::Value, E> {
+            Ok(None)
+        }
+
+        fn visit_unit<E: de::Error>(self) -> Result<Self::Value, E> {
+            Ok(None)
+        }
+
+        fn visit_some<D: serde::Deserializer<'de>>(
+            self,
+            deserializer: D,
+        ) -> Result<Self::Value, D::Error> {
+            deserializer.deserialize_any(PowerStateVisitor)
+        }
+    }
+
+    deserializer.deserialize_any(PowerStateVisitor)
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct OemHpSnmppowerthresholdalert {
@@ -114,6 +158,7 @@ pub struct InputRanges {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct PowerSupply {
+    pub id: Option<String>,
     pub firmware_version: Option<String>,
     // we need to track this metric
     pub last_power_output_watts: Option<f64>, // not in Supermicro or NVIDIA DPU
@@ -132,7 +177,7 @@ pub struct PowerSupply {
     pub power_capacity_watts: Option<f64>, // present but 'null' on Supermicro
     pub power_input_watts: Option<f64>,
     pub power_output_watts: Option<f64>,
-    #[serde(skip)] // gb200 has this as string and liteon has it as bool
+    #[serde(default, deserialize_with = "deserialize_power_state")]
     pub power_state: Option<String>,
     pub power_supply_type: Option<String>,
     pub serial_number: Option<String>,
