@@ -402,6 +402,8 @@ pub enum ResourceState {
     Updating,
     Qualified,
     Unknown,
+    // Lite-On powershelf PSUs report "Sleep" when powered off
+    Sleep,
 }
 
 impl fmt::Display for ResourceState {
