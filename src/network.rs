@@ -279,6 +279,11 @@ impl RedfishHttpClient {
         }
     }
 
+    /// Returns `true` if this client has no credentials (i.e. anonymous/unauthenticated).
+    pub fn is_anonymous(&self) -> bool {
+        self.endpoint.user.is_none()
+    }
+
     pub async fn get<T>(&self, api: &str) -> Result<(StatusCode, T), RedfishError>
     where
         T: DeserializeOwned + ::std::fmt::Debug,

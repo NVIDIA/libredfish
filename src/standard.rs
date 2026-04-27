@@ -632,7 +632,16 @@ impl Redfish for RedfishStandard {
     }
 
     async fn get_service_root(&self) -> Result<ServiceRoot, RedfishError> {
-        let (_status_code, body) = self.client.get("").await?;
+        let (_status_code, mut body): (StatusCode, ServiceRoot) = self.client.get("").await?;
+        if body.vendor.is_none() && !self.client.is_anonymous() {
+            let chassis_all = self.get_chassis_all().await?;
+            if chassis_all.contains(&"powershelf".to_string()) {
+                let chassis = self.get_chassis("powershelf").await?;
+                if let Some(x) = chassis.manufacturer {
+                    body.vendor = Some(x);
+                }
+            }
+        }
         Ok(body)
     }
 
