@@ -70,882 +70,1042 @@ impl Bmc {
         Ok(Bmc { s })
     }
 }
-
-#[async_trait::async_trait]
 impl Redfish for Bmc {
-    async fn create_user(
-        &self,
-        username: &str,
-        password: &str,
+    fn create_user<'a>(
+        &'a self,
+        username: &'a str,
+        password: &'a str,
         role_id: RoleId,
-    ) -> Result<(), RedfishError> {
-        self.s.create_user(username, password, role_id).await
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.create_user(username, password, role_id).await })
     }
 
-    async fn delete_user(&self, username: &str) -> Result<(), RedfishError> {
-        self.s.delete_user(username).await
+    fn delete_user<'a>(
+        &'a self,
+        username: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.delete_user(username).await })
     }
 
-    async fn change_username(&self, old_name: &str, new_name: &str) -> Result<(), RedfishError> {
-        self.s.change_username(old_name, new_name).await
+    fn change_username<'a>(
+        &'a self,
+        old_name: &'a str,
+        new_name: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.change_username(old_name, new_name).await })
     }
 
-    async fn change_password(
-        &self,
-        username: &str,
-        new_password: &str,
-    ) -> Result<(), RedfishError> {
-        self.s.change_password(username, new_password).await
+    fn change_password<'a>(
+        &'a self,
+        username: &'a str,
+        new_password: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.change_password(username, new_password).await })
     }
 
-    async fn change_password_by_id(
-        &self,
-        account_id: &str,
-        new_pass: &str,
-    ) -> Result<(), RedfishError> {
-        self.s.change_password_by_id(account_id, new_pass).await
+    fn change_password_by_id<'a>(
+        &'a self,
+        account_id: &'a str,
+        new_pass: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.change_password_by_id(account_id, new_pass).await })
     }
 
-    async fn get_accounts(&self) -> Result<Vec<ManagerAccount>, RedfishError> {
-        self.s.get_accounts().await
+    fn get_accounts<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<Vec<ManagerAccount>, RedfishError>> {
+        Box::pin(async move { self.s.get_accounts().await })
     }
 
-    async fn get_power_state(&self) -> Result<PowerState, RedfishError> {
-        self.s.get_power_state().await
+    fn get_power_state<'a>(&'a self) -> crate::RedfishFuture<'a, Result<PowerState, RedfishError>> {
+        Box::pin(async move { self.s.get_power_state().await })
     }
 
-    async fn get_power_metrics(&self) -> Result<Power, RedfishError> {
-        self.s.get_power_metrics().await
+    fn get_power_metrics<'a>(&'a self) -> crate::RedfishFuture<'a, Result<Power, RedfishError>> {
+        Box::pin(async move { self.s.get_power_metrics().await })
     }
 
-    async fn power(&self, action: SystemPowerControl) -> Result<(), RedfishError> {
-        if action == SystemPowerControl::ACPowercycle {
-            let args: HashMap<String, String> =
-                HashMap::from([("ResetType".to_string(), "ACCycle".to_string())]);
-            let url = format!(
-                "Systems/{}/Actions/Oem/OemSystemExtensions.Reset",
-                self.s.system_id()
-            );
-            return self.s.client.post(&url, args).await.map(|_status_code| ());
-        }
-        self.s.power(action).await
+    fn power<'a>(
+        &'a self,
+        action: SystemPowerControl,
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move {
+            if action == SystemPowerControl::ACPowercycle {
+                let args: HashMap<String, String> =
+                    HashMap::from([("ResetType".to_string(), "ACCycle".to_string())]);
+                let url = format!(
+                    "Systems/{}/Actions/Oem/OemSystemExtensions.Reset",
+                    self.s.system_id()
+                );
+                return self.s.client.post(&url, args).await.map(|_status_code| ());
+            }
+            self.s.power(action).await
+        })
     }
 
     fn ac_powercycle_supported_by_power(&self) -> bool {
         true
     }
 
-    async fn bmc_reset(&self) -> Result<(), RedfishError> {
-        self.s.bmc_reset().await
+    fn bmc_reset<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.bmc_reset().await })
     }
 
-    async fn chassis_reset(
-        &self,
-        chassis_id: &str,
+    fn chassis_reset<'a>(
+        &'a self,
+        chassis_id: &'a str,
         reset_type: SystemPowerControl,
-    ) -> Result<(), RedfishError> {
-        self.s.chassis_reset(chassis_id, reset_type).await
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.chassis_reset(chassis_id, reset_type).await })
     }
 
-    async fn get_thermal_metrics(&self) -> Result<Thermal, RedfishError> {
-        self.s.get_thermal_metrics().await
+    fn get_thermal_metrics<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<Thermal, RedfishError>> {
+        Box::pin(async move { self.s.get_thermal_metrics().await })
     }
 
-    async fn get_gpu_sensors(&self) -> Result<Vec<GPUSensors>, RedfishError> {
-        self.s.get_gpu_sensors().await
+    fn get_gpu_sensors<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<Vec<GPUSensors>, RedfishError>> {
+        Box::pin(async move { self.s.get_gpu_sensors().await })
     }
 
-    async fn get_system_event_log(&self) -> Result<Vec<LogEntry>, RedfishError> {
-        self.s.get_system_event_log().await
+    fn get_system_event_log<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<Vec<LogEntry>, RedfishError>> {
+        Box::pin(async move { self.s.get_system_event_log().await })
     }
 
-    async fn get_bmc_event_log(
-        &self,
+    fn get_bmc_event_log<'a>(
+        &'a self,
         from: Option<chrono::DateTime<chrono::Utc>>,
-    ) -> Result<Vec<LogEntry>, RedfishError> {
-        self.s.get_bmc_event_log(from).await
+    ) -> crate::RedfishFuture<'a, Result<Vec<LogEntry>, RedfishError>> {
+        Box::pin(async move { self.s.get_bmc_event_log(from).await })
     }
 
-    async fn get_drives_metrics(&self) -> Result<Vec<Drives>, RedfishError> {
-        self.s.get_drives_metrics().await
+    fn get_drives_metrics<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<Vec<Drives>, RedfishError>> {
+        Box::pin(async move { self.s.get_drives_metrics().await })
     }
 
-    async fn bios(&self) -> Result<HashMap<String, serde_json::Value>, RedfishError> {
-        self.s.bios().await
+    fn bios<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<HashMap<String, serde_json::Value>, RedfishError>> {
+        Box::pin(async move { self.s.bios().await })
     }
 
-    async fn set_bios(
-        &self,
+    fn set_bios<'a>(
+        &'a self,
         values: HashMap<String, serde_json::Value>,
-    ) -> Result<(), RedfishError> {
-        self.s.set_bios(values).await
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.set_bios(values).await })
     }
 
-    async fn reset_bios(&self) -> Result<(), RedfishError> {
-        self.s.factory_reset_bios().await
+    fn reset_bios<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.factory_reset_bios().await })
     }
 
     /// Note that you can't use this for initial setup unless you reboot and run it twice.
     /// `boot_first` won't find the Mellanox HTTP device. `uefi_nic_boot_attrs` enables it,
     /// but it won't show until after reboot so that step will fail on first time through.
-    async fn machine_setup(
-        &self,
-        _boot_interface_mac: Option<&str>,
-        _bios_profiles: &HashMap<
+    fn machine_setup<'a>(
+        &'a self,
+        _boot_interface_mac: Option<&'a str>,
+        _bios_profiles: &'a HashMap<
             RedfishVendor,
             HashMap<String, HashMap<BiosProfileType, HashMap<String, serde_json::Value>>>,
         >,
         _selected_profile: BiosProfileType,
-        _oem_manager_profiles: &HashMap<
+        _oem_manager_profiles: &'a HashMap<
             RedfishVendor,
             HashMap<String, HashMap<BiosProfileType, HashMap<String, serde_json::Value>>>,
         >,
-    ) -> Result<Option<String>, RedfishError> {
-        self.setup_serial_console().await?;
+    ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
+        Box::pin(async move {
+            self.setup_serial_console().await?;
 
-        let bios_attrs = self.machine_setup_attrs().await?;
-        let mut attrs = HashMap::new();
-        attrs.extend(bios_attrs);
-        let body = HashMap::from([("Attributes", attrs)]);
-        let url = format!("Systems/{}/Bios", self.s.system_id());
-        self.s
-            .client
-            .patch(&url, body)
-            .await
-            .map(|_status_code| None)
-    }
-
-    async fn machine_setup_status(
-        &self,
-        boot_interface_mac: Option<&str>,
-    ) -> Result<MachineSetupStatus, RedfishError> {
-        // Check BIOS and BMC attributes
-        let mut diffs = self.diff_bios_bmc_attr().await?;
-
-        // Check the first boot option
-        if let Some(mac) = boot_interface_mac {
-            let (expected, actual) = self.get_expected_and_actual_first_boot_option(mac).await?;
-            if expected.is_none() || expected != actual {
-                diffs.push(MachineSetupDiff {
-                    key: "boot_first".to_string(),
-                    expected: expected.unwrap_or_else(|| "Not found".to_string()),
-                    actual: actual.unwrap_or_else(|| "Not found".to_string()),
-                });
-            }
-        }
-
-        // Check lockdown status
-        let lockdown = self.lockdown_status().await?;
-        if !lockdown.is_fully_enabled() {
-            diffs.push(MachineSetupDiff {
-                key: "lockdown".to_string(),
-                expected: "Enabled".to_string(),
-                actual: lockdown.status.to_string(),
-            });
-        }
-
-        Ok(MachineSetupStatus {
-            is_done: diffs.is_empty(),
-            diffs,
+            let bios_attrs = self.machine_setup_attrs().await?;
+            let mut attrs = HashMap::new();
+            attrs.extend(bios_attrs);
+            let body = HashMap::from([("Attributes", attrs)]);
+            let url = format!("Systems/{}/Bios", self.s.system_id());
+            self.s
+                .client
+                .patch(&url, body)
+                .await
+                .map(|_status_code| None)
         })
     }
 
-    async fn set_machine_password_policy(&self) -> Result<(), RedfishError> {
-        use serde_json::Value::Number;
-        let body = HashMap::from([
-            ("AccountLockoutThreshold", Number(0.into())),
-            ("AccountLockoutDuration", Number(0.into())),
-            ("AccountLockoutCounterResetAfter", Number(0.into())),
-        ]);
-        self.s
-            .client
-            .patch("AccountService", body)
-            .await
-            .map(|_status_code| ())
-    }
+    fn machine_setup_status<'a>(
+        &'a self,
+        boot_interface_mac: Option<&'a str>,
+    ) -> crate::RedfishFuture<'a, Result<MachineSetupStatus, RedfishError>> {
+        Box::pin(async move {
+            // Check BIOS and BMC attributes
+            let mut diffs = self.diff_bios_bmc_attr().await?;
 
-    async fn lockdown(&self, target: EnabledDisabled) -> Result<(), RedfishError> {
-        use EnabledDisabled::*;
-        match target {
-            Enabled => {
-                // Grace-Grace SMCs can't PXE boot if host interface is disabled
-                if !self.is_grace_grace_smc().await? {
-                    self.set_host_interfaces(Disabled).await?;
+            // Check the first boot option
+            if let Some(mac) = boot_interface_mac {
+                let (expected, actual) =
+                    self.get_expected_and_actual_first_boot_option(mac).await?;
+                if expected.is_none() || expected != actual {
+                    diffs.push(MachineSetupDiff {
+                        key: "boot_first".to_string(),
+                        expected: expected.unwrap_or_else(|| "Not found".to_string()),
+                        actual: actual.unwrap_or_else(|| "Not found".to_string()),
+                    });
                 }
-                self.set_kcs_privilege(supermicro::Privilege::Callback)
-                    .await?;
-                self.set_syslockdown(Enabled).await?; // Lock last
             }
-            Disabled => {
-                self.set_syslockdown(Disabled).await?; // Unlock first
-                self.set_kcs_privilege(supermicro::Privilege::Administrator)
-                    .await?;
-                self.set_host_interfaces(Enabled).await?;
+
+            // Check lockdown status
+            let lockdown = self.lockdown_status().await?;
+            if !lockdown.is_fully_enabled() {
+                diffs.push(MachineSetupDiff {
+                    key: "lockdown".to_string(),
+                    expected: "Enabled".to_string(),
+                    actual: lockdown.status.to_string(),
+                });
             }
-        }
-        Ok(())
+
+            Ok(MachineSetupStatus {
+                is_done: diffs.is_empty(),
+                diffs,
+            })
+        })
     }
 
-    async fn lockdown_status(&self) -> Result<Status, RedfishError> {
-        let is_hi_on = self.is_host_interface_enabled().await?;
-        let kcs_privilege = match self.get_kcs_privilege().await {
-            Ok(priviledge) => Ok(Some(priviledge)),
-            Err(e) => {
-                // The Grace-Grace Supermicros in our GB200 lab do not seem to support
-                // querying KCS access from the host to its BMC. Use this workaround to
-                // temporarily enable ingesting these servers.
-                if e.not_found() {
-                    Ok(None)
+    fn set_machine_password_policy<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move {
+            use serde_json::Value::Number;
+            let body = HashMap::from([
+                ("AccountLockoutThreshold", Number(0.into())),
+                ("AccountLockoutDuration", Number(0.into())),
+                ("AccountLockoutCounterResetAfter", Number(0.into())),
+            ]);
+            self.s
+                .client
+                .patch("AccountService", body)
+                .await
+                .map(|_status_code| ())
+        })
+    }
+
+    fn lockdown<'a>(
+        &'a self,
+        target: EnabledDisabled,
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move {
+            use EnabledDisabled::*;
+            match target {
+                Enabled => {
+                    // Grace-Grace SMCs can't PXE boot if host interface is disabled
+                    if !self.is_grace_grace_smc().await? {
+                        self.set_host_interfaces(Disabled).await?;
+                    }
+                    self.set_kcs_privilege(supermicro::Privilege::Callback)
+                        .await?;
+                    self.set_syslockdown(Enabled).await?; // Lock last
+                }
+                Disabled => {
+                    self.set_syslockdown(Disabled).await?; // Unlock first
+                    self.set_kcs_privilege(supermicro::Privilege::Administrator)
+                        .await?;
+                    self.set_host_interfaces(Enabled).await?;
+                }
+            }
+            Ok(())
+        })
+    }
+
+    fn lockdown_status<'a>(&'a self) -> crate::RedfishFuture<'a, Result<Status, RedfishError>> {
+        Box::pin(async move {
+            let is_hi_on = self.is_host_interface_enabled().await?;
+            let kcs_privilege = match self.get_kcs_privilege().await {
+                Ok(priviledge) => Ok(Some(priviledge)),
+                Err(e) => {
+                    // The Grace-Grace Supermicros in our GB200 lab do not seem to support
+                    // querying KCS access from the host to its BMC. Use this workaround to
+                    // temporarily enable ingesting these servers.
+                    if e.not_found() {
+                        Ok(None)
+                    } else {
+                        Err(e)
+                    }
+                }
+            }?;
+
+            let is_syslockdown = self.get_syslockdown().await?;
+            let message = format!("SysLockdownEnabled={is_syslockdown}, kcs_privilege={kcs_privilege:#?}, host_interface_enabled={is_hi_on}");
+
+            // Grace-Grace SMCs (ARS-121L-DNR) need host_interface enabled even with lockdown
+            let is_grace_grace = self.is_grace_grace_smc().await?;
+
+            let is_locked = is_syslockdown
+                && kcs_privilege
+                    .clone()
+                    .unwrap_or(supermicro::Privilege::Callback)
+                    == supermicro::Privilege::Callback
+                && (is_grace_grace || !is_hi_on);
+            let is_unlocked = !is_syslockdown
+                && kcs_privilege.unwrap_or(supermicro::Privilege::Administrator)
+                    == supermicro::Privilege::Administrator
+                && is_hi_on;
+            Ok(Status {
+                message,
+                status: if is_locked {
+                    StatusInternal::Enabled
+                } else if is_unlocked {
+                    StatusInternal::Disabled
                 } else {
-                    Err(e)
-                }
-            }
-        }?;
-
-        let is_syslockdown = self.get_syslockdown().await?;
-        let message = format!("SysLockdownEnabled={is_syslockdown}, kcs_privilege={kcs_privilege:#?}, host_interface_enabled={is_hi_on}");
-
-        // Grace-Grace SMCs (ARS-121L-DNR) need host_interface enabled even with lockdown
-        let is_grace_grace = self.is_grace_grace_smc().await?;
-
-        let is_locked = is_syslockdown
-            && kcs_privilege
-                .clone()
-                .unwrap_or(supermicro::Privilege::Callback)
-                == supermicro::Privilege::Callback
-            && (is_grace_grace || !is_hi_on);
-        let is_unlocked = !is_syslockdown
-            && kcs_privilege.unwrap_or(supermicro::Privilege::Administrator)
-                == supermicro::Privilege::Administrator
-            && is_hi_on;
-        Ok(Status {
-            message,
-            status: if is_locked {
-                StatusInternal::Enabled
-            } else if is_unlocked {
-                StatusInternal::Disabled
-            } else {
-                StatusInternal::Partial
-            },
+                    StatusInternal::Partial
+                },
+            })
         })
     }
 
     /// On Supermicro this does nothing. Serial Console is on by default and can't be disabled
     /// or enabled via redfish. The properties under Systems/1, key SerialConsole are read only.
-    async fn setup_serial_console(&self) -> Result<(), RedfishError> {
-        Ok(())
+    fn setup_serial_console<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { Ok(()) })
     }
 
-    async fn serial_console_status(&self) -> Result<Status, RedfishError> {
-        let s_interface = self.s.get_serial_interface().await?;
-        let system = self.s.get_system().await?;
-        let Some(sr) = &system.serial_console else {
-            return Err(RedfishError::NotSupported(
+    fn serial_console_status<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<Status, RedfishError>> {
+        Box::pin(async move {
+            let s_interface = self.s.get_serial_interface().await?;
+            let system = self.s.get_system().await?;
+            let Some(sr) = &system.serial_console else {
+                return Err(RedfishError::NotSupported(
                 "No SerialConsole in System object. Maybe it's in Manager and you have old firmware?".to_string(),
             ));
-        };
-        let is_enabled = sr.ssh.service_enabled
-            && sr.max_concurrent_sessions != Some(0)
-            && s_interface.is_supermicro_default();
-        let status = if is_enabled {
-            StatusInternal::Enabled
-        } else {
-            StatusInternal::Disabled
-        };
-        Ok(Status {
-            message: String::new(),
-            status,
+            };
+            let is_enabled = sr.ssh.service_enabled
+                && sr.max_concurrent_sessions != Some(0)
+                && s_interface.is_supermicro_default();
+            let status = if is_enabled {
+                StatusInternal::Enabled
+            } else {
+                StatusInternal::Disabled
+            };
+            Ok(Status {
+                message: String::new(),
+                status,
+            })
         })
     }
 
-    async fn get_boot_options(&self) -> Result<BootOptions, RedfishError> {
-        self.s.get_boot_options().await
+    fn get_boot_options<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<BootOptions, RedfishError>> {
+        Box::pin(async move { self.s.get_boot_options().await })
     }
 
-    async fn get_boot_option(&self, option_id: &str) -> Result<BootOption, RedfishError> {
-        self.s.get_boot_option(option_id).await
+    fn get_boot_option<'a>(
+        &'a self,
+        option_id: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<BootOption, RedfishError>> {
+        Box::pin(async move { self.s.get_boot_option(option_id).await })
     }
 
     /// Boot from this device once then go back to the normal boot order
-    async fn boot_once(&self, target: Boot) -> Result<(), RedfishError> {
-        self.set_boot_override(target, true).await
+    fn boot_once<'a>(&'a self, target: Boot) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.set_boot_override(target, true).await })
     }
 
     /// Set which device we should boot from first.
-    async fn boot_first(&self, target: Boot) -> Result<(), RedfishError> {
-        // Try with FixedBootOptions and fallback to BootOptions if fails
-        match self.set_boot_order(target).await {
-            Err(RedfishError::HTTPErrorCode {
-                status_code: StatusCode::NOT_FOUND,
-                ..
-            }) => self.set_boot_override(target, false).await,
-            res => res,
-        }
+    fn boot_first<'a>(
+        &'a self,
+        target: Boot,
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move {
+            // Try with FixedBootOptions and fallback to BootOptions if fails
+            match self.set_boot_order(target).await {
+                Err(RedfishError::HTTPErrorCode {
+                    status_code: StatusCode::NOT_FOUND,
+                    ..
+                }) => self.set_boot_override(target, false).await,
+                res => res,
+            }
+        })
     }
 
     /// Supermicro BMC does not appear to have this.
     /// TODO: Verify that this really clear the TPM.
-    async fn clear_tpm(&self) -> Result<(), RedfishError> {
-        let bios_attrs = self.s.bios_attributes().await?;
-        let Some(attrs_map) = bios_attrs.as_object() else {
-            return Err(RedfishError::InvalidKeyType {
-                key: "Attributes".to_string(),
-                expected_type: "Map".to_string(),
-                url: String::new(),
-            });
-        };
+    fn clear_tpm<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move {
+            let bios_attrs = self.s.bios_attributes().await?;
+            let Some(attrs_map) = bios_attrs.as_object() else {
+                return Err(RedfishError::InvalidKeyType {
+                    key: "Attributes".to_string(),
+                    expected_type: "Map".to_string(),
+                    url: String::new(),
+                });
+            };
 
-        // Yes the BIOS attribute to clear the TPM is called "PendingOperation<something>"
-        let Some(name) = attrs_map.keys().find(|k| k.starts_with("PendingOperation")) else {
-            return Err(RedfishError::NotSupported(
-                "Cannot clear_tpm, PendingOperation BIOS attr missing".to_string(),
-            ));
-        };
+            // Yes the BIOS attribute to clear the TPM is called "PendingOperation<something>"
+            let Some(name) = attrs_map.keys().find(|k| k.starts_with("PendingOperation")) else {
+                return Err(RedfishError::NotSupported(
+                    "Cannot clear_tpm, PendingOperation BIOS attr missing".to_string(),
+                ));
+            };
 
-        let body = HashMap::from([("Attributes", HashMap::from([(name, "TPM Clear")]))]);
-        let url = format!("Systems/{}/Bios", self.s.system_id());
-        self.s.client.patch(&url, body).await.map(|_status_code| ())
+            let body = HashMap::from([("Attributes", HashMap::from([(name, "TPM Clear")]))]);
+            let url = format!("Systems/{}/Bios", self.s.system_id());
+            self.s.client.patch(&url, body).await.map(|_status_code| ())
+        })
     }
 
-    async fn pending(&self) -> Result<HashMap<String, serde_json::Value>, RedfishError> {
-        let url = format!("Systems/{}/Bios/SD", self.s.system_id());
-        // Supermicro doesn't include the Attributes key if there are no pending changes
-        self.s
-            .pending_attributes(&url)
-            .await
-            .map(|m| {
-                m.into_iter()
-                    .collect::<HashMap<String, serde_json::Value>>()
-            })
-            .or_else(|err| match err {
-                RedfishError::MissingKey { .. } => Ok(HashMap::new()),
-                err => Err(err),
-            })
+    fn pending<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<HashMap<String, serde_json::Value>, RedfishError>> {
+        Box::pin(async move {
+            let url = format!("Systems/{}/Bios/SD", self.s.system_id());
+            // Supermicro doesn't include the Attributes key if there are no pending changes
+            self.s
+                .pending_attributes(&url)
+                .await
+                .map(|m| {
+                    m.into_iter()
+                        .collect::<HashMap<String, serde_json::Value>>()
+                })
+                .or_else(|err| match err {
+                    RedfishError::MissingKey { .. } => Ok(HashMap::new()),
+                    err => Err(err),
+                })
+        })
     }
 
     // TODO: This resets the pending Bios changes to their default values,
     // but DOES NOT CLEAR THEM. We don't know how to do that, or if Supermicro supports it at all.
-    async fn clear_pending(&self) -> Result<(), RedfishError> {
-        let url = format!("Systems/{}/Bios/SD", self.s.system_id());
-        self.s.clear_pending_with_url(&url).await
+    fn clear_pending<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move {
+            let url = format!("Systems/{}/Bios/SD", self.s.system_id());
+            self.s.clear_pending_with_url(&url).await
+        })
     }
 
-    async fn pcie_devices(&self) -> Result<Vec<PCIeDevice>, RedfishError> {
-        let Some(chassis_id) = self.get_chassis_all().await?.into_iter().next() else {
-            return Err(RedfishError::NoContent);
-        };
-        let url = format!("Chassis/{chassis_id}/PCIeDevices");
-        let device_ids = self.s.get_members(&url).await?;
-        let mut out = Vec::with_capacity(device_ids.len());
-        for device_id in device_ids {
-            out.push(self.get_pcie_device(&chassis_id, &device_id).await?);
-        }
-        Ok(out)
+    fn pcie_devices<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<Vec<PCIeDevice>, RedfishError>> {
+        Box::pin(async move {
+            let Some(chassis_id) = self.get_chassis_all().await?.into_iter().next() else {
+                return Err(RedfishError::NoContent);
+            };
+            let url = format!("Chassis/{chassis_id}/PCIeDevices");
+            let device_ids = self.s.get_members(&url).await?;
+            let mut out = Vec::with_capacity(device_ids.len());
+            for device_id in device_ids {
+                out.push(self.get_pcie_device(&chassis_id, &device_id).await?);
+            }
+            Ok(out)
+        })
     }
 
-    async fn update_firmware(
-        &self,
+    fn update_firmware<'a>(
+        &'a self,
         firmware: tokio::fs::File,
-    ) -> Result<crate::model::task::Task, RedfishError> {
-        self.s.update_firmware(firmware).await
+    ) -> crate::RedfishFuture<'a, Result<crate::model::task::Task, RedfishError>> {
+        Box::pin(async move { self.s.update_firmware(firmware).await })
     }
 
-    async fn update_firmware_multipart(
-        &self,
-        filename: &Path,
+    fn update_firmware_multipart<'a>(
+        &'a self,
+        filename: &'a Path,
         _reboot: bool,
         timeout: Duration,
         component_type: ComponentType,
-    ) -> Result<String, RedfishError> {
-        let firmware = File::open(&filename)
-            .await
-            .map_err(|e| RedfishError::FileError(format!("Could not open file: {}", e)))?;
+    ) -> crate::RedfishFuture<'a, Result<String, RedfishError>> {
+        Box::pin(async move {
+            let firmware = File::open(&filename)
+                .await
+                .map_err(|e| RedfishError::FileError(format!("Could not open file: {}", e)))?;
 
-        let update_service = self.s.get_update_service().await?;
+            let update_service = self.s.get_update_service().await?;
 
-        if update_service.multipart_http_push_uri.is_empty() {
-            return Err(RedfishError::NotSupported(
-                "Host BMC does not support HTTP multipart push".to_string(),
-            ));
-        }
+            if update_service.multipart_http_push_uri.is_empty() {
+                return Err(RedfishError::NotSupported(
+                    "Host BMC does not support HTTP multipart push".to_string(),
+                ));
+            }
 
-        let parameters =
-            serde_json::to_string(&UpdateParameters::new(component_type)).map_err(|e| {
-                RedfishError::JsonSerializeError {
+            let parameters = serde_json::to_string(&UpdateParameters::new(component_type))
+                .map_err(|e| RedfishError::JsonSerializeError {
                     url: "".to_string(),
                     object_debug: "".to_string(),
                     source: e,
-                }
-            })?;
-        let (_status_code, _loc, body) = self
-            .s
-            .client
-            .req_update_firmware_multipart(
-                filename,
-                firmware,
-                parameters,
-                &update_service.multipart_http_push_uri,
-                true,
-                timeout,
-            )
-            .await?;
+                })?;
+            let (_status_code, _loc, body) = self
+                .s
+                .client
+                .req_update_firmware_multipart(
+                    filename,
+                    firmware,
+                    parameters,
+                    &update_service.multipart_http_push_uri,
+                    true,
+                    timeout,
+                )
+                .await?;
 
-        let task: Task =
-            serde_json::from_str(&body).map_err(|e| RedfishError::JsonDeserializeError {
-                url: update_service.multipart_http_push_uri,
-                body,
-                source: e,
-            })?;
+            let task: Task =
+                serde_json::from_str(&body).map_err(|e| RedfishError::JsonDeserializeError {
+                    url: update_service.multipart_http_push_uri,
+                    body,
+                    source: e,
+                })?;
 
-        Ok(task.id)
+            Ok(task.id)
+        })
     }
 
-    async fn get_update_service(&self) -> Result<UpdateService, RedfishError> {
-        self.s.get_update_service().await
+    fn get_update_service<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<UpdateService, RedfishError>> {
+        Box::pin(async move { self.s.get_update_service().await })
     }
 
-    async fn get_tasks(&self) -> Result<Vec<String>, RedfishError> {
-        self.s.get_tasks().await
+    fn get_tasks<'a>(&'a self) -> crate::RedfishFuture<'a, Result<Vec<String>, RedfishError>> {
+        Box::pin(async move { self.s.get_tasks().await })
     }
 
-    async fn get_task(&self, id: &str) -> Result<crate::model::task::Task, RedfishError> {
-        self.s.get_task(id).await
+    fn get_task<'a>(
+        &'a self,
+        id: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<crate::model::task::Task, RedfishError>> {
+        Box::pin(async move { self.s.get_task(id).await })
     }
 
-    async fn get_firmware(&self, id: &str) -> Result<SoftwareInventory, RedfishError> {
-        self.s.get_firmware(id).await
+    fn get_firmware<'a>(
+        &'a self,
+        id: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<SoftwareInventory, RedfishError>> {
+        Box::pin(async move { self.s.get_firmware(id).await })
     }
 
-    async fn get_software_inventories(&self) -> Result<Vec<String>, RedfishError> {
-        self.s.get_software_inventories().await
+    fn get_software_inventories<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<Vec<String>, RedfishError>> {
+        Box::pin(async move { self.s.get_software_inventories().await })
     }
 
-    async fn get_system(&self) -> Result<ComputerSystem, RedfishError> {
-        self.s.get_system().await
+    fn get_system<'a>(&'a self) -> crate::RedfishFuture<'a, Result<ComputerSystem, RedfishError>> {
+        Box::pin(async move { self.s.get_system().await })
     }
 
-    async fn get_secure_boot_certificates(
-        &self,
-        database_id: &str,
-    ) -> Result<Vec<String>, RedfishError> {
-        self.s.get_secure_boot_certificates(database_id).await
+    fn get_secure_boot_certificates<'a>(
+        &'a self,
+        database_id: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<Vec<String>, RedfishError>> {
+        Box::pin(async move { self.s.get_secure_boot_certificates(database_id).await })
     }
 
-    async fn get_secure_boot_certificate(
-        &self,
-        database_id: &str,
-        certificate_id: &str,
-    ) -> Result<Certificate, RedfishError> {
-        self.s
-            .get_secure_boot_certificate(database_id, certificate_id)
-            .await
+    fn get_secure_boot_certificate<'a>(
+        &'a self,
+        database_id: &'a str,
+        certificate_id: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<Certificate, RedfishError>> {
+        Box::pin(async move {
+            self.s
+                .get_secure_boot_certificate(database_id, certificate_id)
+                .await
+        })
     }
 
-    async fn add_secure_boot_certificate(
-        &self,
-        pem_cert: &str,
-        database_id: &str,
-    ) -> Result<Task, RedfishError> {
-        self.s
-            .add_secure_boot_certificate(pem_cert, database_id)
-            .await
+    fn add_secure_boot_certificate<'a>(
+        &'a self,
+        pem_cert: &'a str,
+        database_id: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<Task, RedfishError>> {
+        Box::pin(async move {
+            self.s
+                .add_secure_boot_certificate(pem_cert, database_id)
+                .await
+        })
     }
 
-    async fn get_secure_boot(&self) -> Result<SecureBoot, RedfishError> {
-        self.s.get_secure_boot().await
+    fn get_secure_boot<'a>(&'a self) -> crate::RedfishFuture<'a, Result<SecureBoot, RedfishError>> {
+        Box::pin(async move { self.s.get_secure_boot().await })
     }
 
-    async fn enable_secure_boot(&self) -> Result<(), RedfishError> {
-        self.s.enable_secure_boot().await
+    fn enable_secure_boot<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.enable_secure_boot().await })
     }
 
-    async fn disable_secure_boot(&self) -> Result<(), RedfishError> {
-        self.s.disable_secure_boot().await
+    fn disable_secure_boot<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.disable_secure_boot().await })
     }
 
-    async fn get_network_device_function(
-        &self,
-        chassis_id: &str,
-        id: &str,
-        port: Option<&str>,
-    ) -> Result<NetworkDeviceFunction, RedfishError> {
-        self.s
-            .get_network_device_function(chassis_id, id, port)
-            .await
+    fn get_network_device_function<'a>(
+        &'a self,
+        chassis_id: &'a str,
+        id: &'a str,
+        port: Option<&'a str>,
+    ) -> crate::RedfishFuture<'a, Result<NetworkDeviceFunction, RedfishError>> {
+        Box::pin(async move {
+            self.s
+                .get_network_device_function(chassis_id, id, port)
+                .await
+        })
     }
 
-    async fn get_network_device_functions(
-        &self,
-        chassis_id: &str,
-    ) -> Result<Vec<String>, RedfishError> {
-        self.s.get_network_device_functions(chassis_id).await
+    fn get_network_device_functions<'a>(
+        &'a self,
+        chassis_id: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<Vec<String>, RedfishError>> {
+        Box::pin(async move { self.s.get_network_device_functions(chassis_id).await })
     }
 
-    async fn get_chassis_all(&self) -> Result<Vec<String>, RedfishError> {
-        self.s.get_chassis_all().await
+    fn get_chassis_all<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<Vec<String>, RedfishError>> {
+        Box::pin(async move { self.s.get_chassis_all().await })
     }
 
-    async fn get_chassis(&self, id: &str) -> Result<Chassis, RedfishError> {
-        self.s.get_chassis(id).await
+    fn get_chassis<'a>(
+        &'a self,
+        id: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<Chassis, RedfishError>> {
+        Box::pin(async move { self.s.get_chassis(id).await })
     }
 
-    async fn get_chassis_assembly(&self, chassis_id: &str) -> Result<Assembly, RedfishError> {
-        self.s.get_chassis_assembly(chassis_id).await
+    fn get_chassis_assembly<'a>(
+        &'a self,
+        chassis_id: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<Assembly, RedfishError>> {
+        Box::pin(async move { self.s.get_chassis_assembly(chassis_id).await })
     }
 
-    async fn get_chassis_network_adapters(
-        &self,
-        chassis_id: &str,
-    ) -> Result<Vec<String>, RedfishError> {
-        self.s.get_chassis_network_adapters(chassis_id).await
+    fn get_chassis_network_adapters<'a>(
+        &'a self,
+        chassis_id: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<Vec<String>, RedfishError>> {
+        Box::pin(async move { self.s.get_chassis_network_adapters(chassis_id).await })
     }
 
-    async fn get_chassis_network_adapter(
-        &self,
-        chassis_id: &str,
-        id: &str,
-    ) -> Result<NetworkAdapter, RedfishError> {
-        self.s.get_chassis_network_adapter(chassis_id, id).await
+    fn get_chassis_network_adapter<'a>(
+        &'a self,
+        chassis_id: &'a str,
+        id: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<NetworkAdapter, RedfishError>> {
+        Box::pin(async move { self.s.get_chassis_network_adapter(chassis_id, id).await })
     }
 
-    async fn get_base_network_adapters(
-        &self,
-        system_id: &str,
-    ) -> Result<Vec<String>, RedfishError> {
-        self.s.get_base_network_adapters(system_id).await
+    fn get_base_network_adapters<'a>(
+        &'a self,
+        system_id: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<Vec<String>, RedfishError>> {
+        Box::pin(async move { self.s.get_base_network_adapters(system_id).await })
     }
 
-    async fn get_base_network_adapter(
-        &self,
-        system_id: &str,
-        id: &str,
-    ) -> Result<NetworkAdapter, RedfishError> {
-        self.s.get_base_network_adapter(system_id, id).await
+    fn get_base_network_adapter<'a>(
+        &'a self,
+        system_id: &'a str,
+        id: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<NetworkAdapter, RedfishError>> {
+        Box::pin(async move { self.s.get_base_network_adapter(system_id, id).await })
     }
 
-    async fn get_ports(
-        &self,
-        chassis_id: &str,
-        network_adapter: &str,
-    ) -> Result<Vec<String>, RedfishError> {
-        self.s.get_ports(chassis_id, network_adapter).await
+    fn get_ports<'a>(
+        &'a self,
+        chassis_id: &'a str,
+        network_adapter: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<Vec<String>, RedfishError>> {
+        Box::pin(async move { self.s.get_ports(chassis_id, network_adapter).await })
     }
 
-    async fn get_port(
-        &self,
-        chassis_id: &str,
-        network_adapter: &str,
-        id: &str,
-    ) -> Result<crate::NetworkPort, RedfishError> {
-        self.s.get_port(chassis_id, network_adapter, id).await
+    fn get_port<'a>(
+        &'a self,
+        chassis_id: &'a str,
+        network_adapter: &'a str,
+        id: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<crate::NetworkPort, RedfishError>> {
+        Box::pin(async move { self.s.get_port(chassis_id, network_adapter, id).await })
     }
 
-    async fn get_manager_ethernet_interfaces(&self) -> Result<Vec<String>, RedfishError> {
-        self.s.get_manager_ethernet_interfaces().await
+    fn get_manager_ethernet_interfaces<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<Vec<String>, RedfishError>> {
+        Box::pin(async move { self.s.get_manager_ethernet_interfaces().await })
     }
 
-    async fn get_manager_ethernet_interface(
-        &self,
-        id: &str,
-    ) -> Result<crate::EthernetInterface, RedfishError> {
-        self.s.get_manager_ethernet_interface(id).await
+    fn get_manager_ethernet_interface<'a>(
+        &'a self,
+        id: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<crate::EthernetInterface, RedfishError>> {
+        Box::pin(async move { self.s.get_manager_ethernet_interface(id).await })
     }
 
-    async fn get_system_ethernet_interfaces(&self) -> Result<Vec<String>, RedfishError> {
-        self.s.get_system_ethernet_interfaces().await
+    fn get_system_ethernet_interfaces<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<Vec<String>, RedfishError>> {
+        Box::pin(async move { self.s.get_system_ethernet_interfaces().await })
     }
 
-    async fn get_system_ethernet_interface(
-        &self,
-        id: &str,
-    ) -> Result<crate::EthernetInterface, RedfishError> {
-        self.s.get_system_ethernet_interface(id).await
+    fn get_system_ethernet_interface<'a>(
+        &'a self,
+        id: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<crate::EthernetInterface, RedfishError>> {
+        Box::pin(async move { self.s.get_system_ethernet_interface(id).await })
     }
 
-    async fn change_uefi_password(
-        &self,
-        current_uefi_password: &str,
-        new_uefi_password: &str,
-    ) -> Result<Option<String>, RedfishError> {
-        self.s
-            .change_uefi_password(current_uefi_password, new_uefi_password)
-            .await
+    fn change_uefi_password<'a>(
+        &'a self,
+        current_uefi_password: &'a str,
+        new_uefi_password: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
+        Box::pin(async move {
+            self.s
+                .change_uefi_password(current_uefi_password, new_uefi_password)
+                .await
+        })
     }
 
-    async fn change_boot_order(&self, boot_array: Vec<String>) -> Result<(), RedfishError> {
-        let body = HashMap::from([("Boot", HashMap::from([("BootOrder", boot_array)]))]);
-        let url = format!("Systems/{}", self.s.system_id());
-        self.s.client.patch(&url, body).await.map(|_status_code| ())
+    fn change_boot_order<'a>(
+        &'a self,
+        boot_array: Vec<String>,
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move {
+            let body = HashMap::from([("Boot", HashMap::from([("BootOrder", boot_array)]))]);
+            let url = format!("Systems/{}", self.s.system_id());
+            self.s.client.patch(&url, body).await.map(|_status_code| ())
+        })
     }
 
-    async fn get_service_root(&self) -> Result<ServiceRoot, RedfishError> {
-        self.s.get_service_root().await
+    fn get_service_root<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<ServiceRoot, RedfishError>> {
+        Box::pin(async move { self.s.get_service_root().await })
     }
 
-    async fn get_systems(&self) -> Result<Vec<String>, RedfishError> {
-        self.s.get_systems().await
+    fn get_systems<'a>(&'a self) -> crate::RedfishFuture<'a, Result<Vec<String>, RedfishError>> {
+        Box::pin(async move { self.s.get_systems().await })
     }
 
-    async fn get_managers(&self) -> Result<Vec<String>, RedfishError> {
-        self.s.get_managers().await
+    fn get_managers<'a>(&'a self) -> crate::RedfishFuture<'a, Result<Vec<String>, RedfishError>> {
+        Box::pin(async move { self.s.get_managers().await })
     }
 
-    async fn get_manager(&self) -> Result<Manager, RedfishError> {
-        self.s.get_manager().await
+    fn get_manager<'a>(&'a self) -> crate::RedfishFuture<'a, Result<Manager, RedfishError>> {
+        Box::pin(async move { self.s.get_manager().await })
     }
 
-    async fn bmc_reset_to_defaults(&self) -> Result<(), RedfishError> {
-        self.s.bmc_reset_to_defaults().await
+    fn bmc_reset_to_defaults<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.bmc_reset_to_defaults().await })
     }
 
-    async fn get_job_state(&self, job_id: &str) -> Result<JobState, RedfishError> {
-        self.s.get_job_state(job_id).await
+    fn get_job_state<'a>(
+        &'a self,
+        job_id: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<JobState, RedfishError>> {
+        Box::pin(async move { self.s.get_job_state(job_id).await })
     }
 
-    async fn get_collection(&self, id: ODataId) -> Result<Collection, RedfishError> {
-        self.s.get_collection(id).await
+    fn get_collection<'a>(
+        &'a self,
+        id: ODataId,
+    ) -> crate::RedfishFuture<'a, Result<Collection, RedfishError>> {
+        Box::pin(async move { self.s.get_collection(id).await })
     }
 
-    async fn get_resource(&self, id: ODataId) -> Result<Resource, RedfishError> {
-        self.s.get_resource(id).await
+    fn get_resource<'a>(
+        &'a self,
+        id: ODataId,
+    ) -> crate::RedfishFuture<'a, Result<Resource, RedfishError>> {
+        Box::pin(async move { self.s.get_resource(id).await })
     }
 
     /// Set the DPU to be our first netboot device.
     /// The HTTP adapter will only appear after IPv4HTTPSupport bios setting is enabled and the host rebooted.
-    async fn set_boot_order_dpu_first(
-        &self,
-        mac_address: &str,
-    ) -> Result<Option<String>, RedfishError> {
-        match self.set_mellanox_first(mac_address).await {
-            Ok(_) => return Ok(None),
-            Err(RedfishError::HTTPErrorCode {
-                status_code,
-                response_body,
-                ..
-            }) if status_code == reqwest::StatusCode::BAD_REQUEST
-                && response_body.contains("PropertyUnknown")
-                && response_body.contains("BootOrder") =>
-            {
-                // Fall back to the following method if we get this error:
-                // HTTP 400 - "The property BootOrder is not in the list of valid properties for the resource"
+    fn set_boot_order_dpu_first<'a>(
+        &'a self,
+        mac_address: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
+        Box::pin(async move {
+            match self.set_mellanox_first(mac_address).await {
+                Ok(_) => return Ok(None),
+                Err(RedfishError::HTTPErrorCode {
+                    status_code,
+                    response_body,
+                    ..
+                }) if status_code == reqwest::StatusCode::BAD_REQUEST
+                    && response_body.contains("PropertyUnknown")
+                    && response_body.contains("BootOrder") =>
+                {
+                    // Fall back to the following method if we get this error:
+                    // HTTP 400 - "The property BootOrder is not in the list of valid properties for the resource"
+                }
+                Err(e) => return Err(e),
             }
-            Err(e) => return Err(e),
-        }
 
-        // Some supermicro models don't support the set_mellanox_first method, so we fall back to this method
-        let mut fbo = self.get_boot_order().await?;
+            // Some supermicro models don't support the set_mellanox_first method, so we fall back to this method
+            let mut fbo = self.get_boot_order().await?;
 
-        // The network name is not consistent because it includes the interface name.
-        // Falls back to 'UEFI Network' if no specific entry is found to enable network boot options.
-        let network = fbo
-            .fixed_boot_order
-            .iter()
-            .find(|entry| entry.starts_with(NETWORK))
-            .map(|s| s.as_str())
-            .unwrap_or(NETWORK);
+            // The network name is not consistent because it includes the interface name.
+            // Falls back to 'UEFI Network' if no specific entry is found to enable network boot options.
+            let network = fbo
+                .fixed_boot_order
+                .iter()
+                .find(|entry| entry.starts_with(NETWORK))
+                .map(|s| s.as_str())
+                .unwrap_or(NETWORK);
 
-        // The hard disk name is also not consistent because it includes the device specifics.
-        // Falls back to 'UEFI Hard Disk' if no specific entry is found to enable hard disk boot options.
-        let hard_disk = fbo
-            .fixed_boot_order
-            .iter()
-            .find(|entry| entry.starts_with(HARD_DISK))
-            .map(|s| s.as_str())
-            .unwrap_or(HARD_DISK);
+            // The hard disk name is also not consistent because it includes the device specifics.
+            // Falls back to 'UEFI Hard Disk' if no specific entry is found to enable hard disk boot options.
+            let hard_disk = fbo
+                .fixed_boot_order
+                .iter()
+                .find(|entry| entry.starts_with(HARD_DISK))
+                .map(|s| s.as_str())
+                .unwrap_or(HARD_DISK);
 
-        // Make network the first option, hard disk second, and everything else disabled
-        let mut order = ["Disabled"].repeat(fbo.fixed_boot_order.len());
-        order[0] = network;
-        order[1] = hard_disk;
+            // Make network the first option, hard disk second, and everything else disabled
+            let mut order = ["Disabled"].repeat(fbo.fixed_boot_order.len());
+            order[0] = network;
+            order[1] = hard_disk;
 
-        // Set the DPU to be the first network device to boot from
-        let Some(pos) = fbo
-            .uefi_network
-            .iter()
-            .position(|s| s.contains("UEFI HTTP IPv4 Mellanox") && s.contains(mac_address))
-            .or_else(|| {
-                fbo.uefi_network
-                    .iter()
-                    .position(|s| s.contains("UEFI HTTP IPv4 Nvidia") && s.contains(mac_address))
-            })
-        else {
-            return Err(RedfishError::NotSupported(
+            // Set the DPU to be the first network device to boot from
+            let Some(pos) = fbo
+                .uefi_network
+                .iter()
+                .position(|s| s.contains("UEFI HTTP IPv4 Mellanox") && s.contains(mac_address))
+                .or_else(|| {
+                    fbo.uefi_network.iter().position(|s| {
+                        s.contains("UEFI HTTP IPv4 Nvidia") && s.contains(mac_address)
+                    })
+                })
+            else {
+                return Err(RedfishError::NotSupported(
                 format!("No match for Mellanox/Nvidia HTTP adapter with MAC address {} in network boot order", mac_address)
             ));
-        };
-        fbo.uefi_network.swap(0, pos);
+            };
+            fbo.uefi_network.swap(0, pos);
 
-        let url = format!(
-            "Systems/{}/Oem/Supermicro/FixedBootOrder",
-            self.s.system_id()
-        );
-        let body = HashMap::from([
-            ("FixedBootOrder", order),
-            (
-                "UEFINetwork",
-                fbo.uefi_network.iter().map(|s| s.as_ref()).collect(),
-            ),
-        ]);
-        self.s
-            .client
-            .patch(&url, body)
-            .await
-            .map(|_status_code| ())?;
-        Ok(None)
+            let url = format!(
+                "Systems/{}/Oem/Supermicro/FixedBootOrder",
+                self.s.system_id()
+            );
+            let body = HashMap::from([
+                ("FixedBootOrder", order),
+                (
+                    "UEFINetwork",
+                    fbo.uefi_network.iter().map(|s| s.as_ref()).collect(),
+                ),
+            ]);
+            self.s
+                .client
+                .patch(&url, body)
+                .await
+                .map(|_status_code| ())?;
+            Ok(None)
+        })
     }
 
-    async fn clear_uefi_password(
-        &self,
-        current_uefi_password: &str,
-    ) -> Result<Option<String>, RedfishError> {
-        self.change_uefi_password(current_uefi_password, "").await
+    fn clear_uefi_password<'a>(
+        &'a self,
+        current_uefi_password: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
+        Box::pin(async move { self.change_uefi_password(current_uefi_password, "").await })
     }
 
-    async fn get_base_mac_address(&self) -> Result<Option<String>, RedfishError> {
-        self.s.get_base_mac_address().await
+    fn get_base_mac_address<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
+        Box::pin(async move { self.s.get_base_mac_address().await })
     }
 
-    async fn lockdown_bmc(&self, target: crate::EnabledDisabled) -> Result<(), RedfishError> {
-        self.set_syslockdown(target).await
-    }
-
-    async fn is_ipmi_over_lan_enabled(&self) -> Result<bool, RedfishError> {
-        self.s.is_ipmi_over_lan_enabled().await
-    }
-
-    async fn enable_ipmi_over_lan(
-        &self,
+    fn lockdown_bmc<'a>(
+        &'a self,
         target: crate::EnabledDisabled,
-    ) -> Result<(), RedfishError> {
-        self.s.enable_ipmi_over_lan(target).await
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.set_syslockdown(target).await })
     }
 
-    async fn update_firmware_simple_update(
-        &self,
-        image_uri: &str,
+    fn is_ipmi_over_lan_enabled<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<bool, RedfishError>> {
+        Box::pin(async move { self.s.is_ipmi_over_lan_enabled().await })
+    }
+
+    fn enable_ipmi_over_lan<'a>(
+        &'a self,
+        target: crate::EnabledDisabled,
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.enable_ipmi_over_lan(target).await })
+    }
+
+    fn update_firmware_simple_update<'a>(
+        &'a self,
+        image_uri: &'a str,
         targets: Vec<String>,
         transfer_protocol: TransferProtocolType,
-    ) -> Result<Task, RedfishError> {
-        self.s
-            .update_firmware_simple_update(image_uri, targets, transfer_protocol)
-            .await
+    ) -> crate::RedfishFuture<'a, Result<Task, RedfishError>> {
+        Box::pin(async move {
+            self.s
+                .update_firmware_simple_update(image_uri, targets, transfer_protocol)
+                .await
+        })
     }
 
-    async fn enable_rshim_bmc(&self) -> Result<(), RedfishError> {
-        self.s.enable_rshim_bmc().await
+    fn enable_rshim_bmc<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.enable_rshim_bmc().await })
     }
 
-    async fn clear_nvram(&self) -> Result<(), RedfishError> {
-        self.s.clear_nvram().await
+    fn clear_nvram<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.clear_nvram().await })
     }
 
-    async fn get_nic_mode(&self) -> Result<Option<NicMode>, RedfishError> {
-        self.s.get_nic_mode().await
+    fn get_nic_mode<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<Option<NicMode>, RedfishError>> {
+        Box::pin(async move { self.s.get_nic_mode().await })
     }
 
-    async fn set_nic_mode(&self, mode: NicMode) -> Result<(), RedfishError> {
-        self.s.set_nic_mode(mode).await
+    fn set_nic_mode<'a>(
+        &'a self,
+        mode: NicMode,
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.set_nic_mode(mode).await })
     }
 
-    async fn enable_infinite_boot(&self) -> Result<(), RedfishError> {
-        self.s.enable_infinite_boot().await
+    fn enable_infinite_boot<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.enable_infinite_boot().await })
     }
 
-    async fn is_infinite_boot_enabled(&self) -> Result<Option<bool>, RedfishError> {
-        self.s.is_infinite_boot_enabled().await
+    fn is_infinite_boot_enabled<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<Option<bool>, RedfishError>> {
+        Box::pin(async move { self.s.is_infinite_boot_enabled().await })
     }
 
-    async fn set_host_rshim(&self, enabled: EnabledDisabled) -> Result<(), RedfishError> {
-        self.s.set_host_rshim(enabled).await
+    fn set_host_rshim<'a>(
+        &'a self,
+        enabled: EnabledDisabled,
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.set_host_rshim(enabled).await })
     }
 
-    async fn get_host_rshim(&self) -> Result<Option<EnabledDisabled>, RedfishError> {
-        self.s.get_host_rshim().await
+    fn get_host_rshim<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<Option<EnabledDisabled>, RedfishError>> {
+        Box::pin(async move { self.s.get_host_rshim().await })
     }
 
-    async fn set_idrac_lockdown(&self, enabled: EnabledDisabled) -> Result<(), RedfishError> {
-        self.s.set_idrac_lockdown(enabled).await
+    fn set_idrac_lockdown<'a>(
+        &'a self,
+        enabled: EnabledDisabled,
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.set_idrac_lockdown(enabled).await })
     }
 
-    async fn get_boss_controller(&self) -> Result<Option<String>, RedfishError> {
-        self.s.get_boss_controller().await
+    fn get_boss_controller<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
+        Box::pin(async move { self.s.get_boss_controller().await })
     }
 
-    async fn decommission_storage_controller(
-        &self,
-        controller_id: &str,
-    ) -> Result<Option<String>, RedfishError> {
-        self.s.decommission_storage_controller(controller_id).await
+    fn decommission_storage_controller<'a>(
+        &'a self,
+        controller_id: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
+        Box::pin(async move { self.s.decommission_storage_controller(controller_id).await })
     }
 
-    async fn create_storage_volume(
-        &self,
-        controller_id: &str,
-        volume_name: &str,
-    ) -> Result<Option<String>, RedfishError> {
-        self.s
-            .create_storage_volume(controller_id, volume_name)
-            .await
+    fn create_storage_volume<'a>(
+        &'a self,
+        controller_id: &'a str,
+        volume_name: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
+        Box::pin(async move {
+            self.s
+                .create_storage_volume(controller_id, volume_name)
+                .await
+        })
     }
 
-    async fn is_boot_order_setup(&self, boot_interface_mac: &str) -> Result<bool, RedfishError> {
-        let (expected, actual) = self
-            .get_expected_and_actual_first_boot_option(boot_interface_mac)
-            .await?;
-        Ok(expected.is_some() && expected == actual)
+    fn is_boot_order_setup<'a>(
+        &'a self,
+        boot_interface_mac: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<bool, RedfishError>> {
+        Box::pin(async move {
+            let (expected, actual) = self
+                .get_expected_and_actual_first_boot_option(boot_interface_mac)
+                .await?;
+            Ok(expected.is_some() && expected == actual)
+        })
     }
 
-    async fn is_bios_setup(&self, _boot_interface_mac: Option<&str>) -> Result<bool, RedfishError> {
-        let diffs = self.diff_bios_bmc_attr().await?;
-        Ok(diffs.is_empty())
+    fn is_bios_setup<'a>(
+        &'a self,
+        _boot_interface_mac: Option<&'a str>,
+    ) -> crate::RedfishFuture<'a, Result<bool, RedfishError>> {
+        Box::pin(async move {
+            let diffs = self.diff_bios_bmc_attr().await?;
+            Ok(diffs.is_empty())
+        })
     }
 
-    async fn get_component_integrities(&self) -> Result<ComponentIntegrities, RedfishError> {
-        self.s.get_component_integrities().await
+    fn get_component_integrities<'a>(
+        &'a self,
+    ) -> crate::RedfishFuture<'a, Result<ComponentIntegrities, RedfishError>> {
+        Box::pin(async move { self.s.get_component_integrities().await })
     }
 
-    async fn get_firmware_for_component(
-        &self,
-        componnent_integrity_id: &str,
-    ) -> Result<crate::model::software_inventory::SoftwareInventory, RedfishError> {
-        self.s
-            .get_firmware_for_component(componnent_integrity_id)
-            .await
+    fn get_firmware_for_component<'a>(
+        &'a self,
+        componnent_integrity_id: &'a str,
+    ) -> crate::RedfishFuture<
+        'a,
+        Result<crate::model::software_inventory::SoftwareInventory, RedfishError>,
+    > {
+        Box::pin(async move {
+            self.s
+                .get_firmware_for_component(componnent_integrity_id)
+                .await
+        })
     }
 
-    async fn get_component_ca_certificate(
-        &self,
-        url: &str,
-    ) -> Result<crate::model::component_integrity::CaCertificate, RedfishError> {
-        self.s.get_component_ca_certificate(url).await
+    fn get_component_ca_certificate<'a>(
+        &'a self,
+        url: &'a str,
+    ) -> crate::RedfishFuture<
+        'a,
+        Result<crate::model::component_integrity::CaCertificate, RedfishError>,
+    > {
+        Box::pin(async move { self.s.get_component_ca_certificate(url).await })
     }
 
-    async fn trigger_evidence_collection(
-        &self,
-        url: &str,
-        nonce: &str,
-    ) -> Result<Task, RedfishError> {
-        self.s.trigger_evidence_collection(url, nonce).await
+    fn trigger_evidence_collection<'a>(
+        &'a self,
+        url: &'a str,
+        nonce: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<Task, RedfishError>> {
+        Box::pin(async move { self.s.trigger_evidence_collection(url, nonce).await })
     }
 
-    async fn get_evidence(
-        &self,
-        url: &str,
-    ) -> Result<crate::model::component_integrity::Evidence, RedfishError> {
-        self.s.get_evidence(url).await
+    fn get_evidence<'a>(
+        &'a self,
+        url: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<crate::model::component_integrity::Evidence, RedfishError>>
+    {
+        Box::pin(async move { self.s.get_evidence(url).await })
     }
 
-    async fn set_host_privilege_level(
-        &self,
+    fn set_host_privilege_level<'a>(
+        &'a self,
         level: HostPrivilegeLevel,
-    ) -> Result<(), RedfishError> {
-        self.s.set_host_privilege_level(level).await
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.set_host_privilege_level(level).await })
     }
 
-    async fn set_utc_timezone(&self) -> Result<(), RedfishError> {
-        self.s.set_utc_timezone().await
+    fn set_utc_timezone<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.set_utc_timezone().await })
     }
-
 }
 
 impl Bmc {

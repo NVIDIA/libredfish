@@ -19,7 +19,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-use std::{collections::HashMap, fmt, path::Path, time::Duration};
+use std::{collections::HashMap, fmt, future::Future, path::Path, pin::Pin, time::Duration};
 
 pub mod model;
 use model::account_service::ManagerAccount;
@@ -70,134 +70,152 @@ use crate::model::sel::LogEntry;
 use crate::model::storage::Drives;
 use crate::model::thermal::Thermal;
 
+pub type RedfishFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
+
 /// Interface to a BMC Redfish server. All calls will include one or more HTTP network calls.
-#[async_trait::async_trait]
 pub trait Redfish: Send + Sync + 'static {
     /// Rename a user
-    async fn change_username(&self, old_name: &str, new_name: &str) -> Result<(), RedfishError>;
+    fn change_username<'a>(
+        &'a self,
+        old_name: &'a str,
+        new_name: &'a str,
+    ) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     /// Change password by username
     /// This looks up the ID for given username before calling change_password_by_id.
     /// That lookup makes it unsuitable for changing the initial password on
     /// PasswordChangeRequired.
-    async fn change_password(&self, username: &str, new_pass: &str) -> Result<(), RedfishError>;
+    fn change_password<'a>(
+        &'a self,
+        username: &'a str,
+        new_pass: &'a str,
+    ) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     /// Change password by id
-    async fn change_password_by_id(
-        &self,
-        account_id: &str,
-        new_pass: &str,
-    ) -> Result<(), RedfishError>;
+    fn change_password_by_id<'a>(
+        &'a self,
+        account_id: &'a str,
+        new_pass: &'a str,
+    ) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     /// List current user accounts
-    async fn get_accounts(&self) -> Result<Vec<ManagerAccount>, RedfishError>;
+    fn get_accounts<'a>(&'a self) -> RedfishFuture<'a, Result<Vec<ManagerAccount>, RedfishError>>;
 
     /// Create a new user
-    async fn create_user(
-        &self,
-        username: &str,
-        password: &str,
+    fn create_user<'a>(
+        &'a self,
+        username: &'a str,
+        password: &'a str,
         role_id: RoleId,
-    ) -> Result<(), RedfishError>;
+    ) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     /// Delete a BMC user
-    async fn delete_user(&self, username: &str) -> Result<(), RedfishError>;
+    fn delete_user<'a>(&'a self, username: &'a str) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     // Get firmware version for particular firmware inventory id
-    async fn get_firmware(&self, id: &str) -> Result<SoftwareInventory, RedfishError>;
+    fn get_firmware<'a>(
+        &'a self,
+        id: &'a str,
+    ) -> RedfishFuture<'a, Result<SoftwareInventory, RedfishError>>;
 
     // Get software inventory collection
-    async fn get_software_inventories(&self) -> Result<Vec<String>, RedfishError>;
+    fn get_software_inventories<'a>(
+        &'a self,
+    ) -> RedfishFuture<'a, Result<Vec<String>, RedfishError>>;
 
     // List all Tasks
-    async fn get_tasks(&self) -> Result<Vec<String>, RedfishError>;
+    fn get_tasks<'a>(&'a self) -> RedfishFuture<'a, Result<Vec<String>, RedfishError>>;
 
     // Get information about a task
-    async fn get_task(&self, id: &str) -> Result<Task, RedfishError>;
+    fn get_task<'a>(&'a self, id: &'a str) -> RedfishFuture<'a, Result<Task, RedfishError>>;
 
     /// Is this thing even on?
-    async fn get_power_state(&self) -> Result<PowerState, RedfishError>;
+    fn get_power_state<'a>(&'a self) -> RedfishFuture<'a, Result<PowerState, RedfishError>>;
 
     /// Returns info about operations that the service supports.
-    async fn get_service_root(&self) -> Result<ServiceRoot, RedfishError>;
+    fn get_service_root<'a>(&'a self) -> RedfishFuture<'a, Result<ServiceRoot, RedfishError>>;
 
     /// Returns info about available computer systems.
-    async fn get_systems(&self) -> Result<Vec<String>, RedfishError>;
+    fn get_systems<'a>(&'a self) -> RedfishFuture<'a, Result<Vec<String>, RedfishError>>;
 
     /// Returns info about computer system.
-    async fn get_system(&self) -> Result<ComputerSystem, RedfishError>;
+    fn get_system<'a>(&'a self) -> RedfishFuture<'a, Result<ComputerSystem, RedfishError>>;
 
     /// Returns info about available managers.
-    async fn get_managers(&self) -> Result<Vec<String>, RedfishError>;
+    fn get_managers<'a>(&'a self) -> RedfishFuture<'a, Result<Vec<String>, RedfishError>>;
 
     /// Returns info about managers
-    async fn get_manager(&self) -> Result<Manager, RedfishError>;
+    fn get_manager<'a>(&'a self) -> RedfishFuture<'a, Result<Manager, RedfishError>>;
 
     /// Get Secure Boot state
-    async fn get_secure_boot(&self) -> Result<SecureBoot, RedfishError>;
+    fn get_secure_boot<'a>(&'a self) -> RedfishFuture<'a, Result<SecureBoot, RedfishError>>;
 
     /// Disables Secure Boot
-    async fn disable_secure_boot(&self) -> Result<(), RedfishError>;
+    fn disable_secure_boot<'a>(&'a self) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     /// Enables Secure Boot
-    async fn enable_secure_boot(&self) -> Result<(), RedfishError>;
+    fn enable_secure_boot<'a>(&'a self) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
-    async fn get_secure_boot_certificate(
-        &self,
-        database_id: &str,
-        certificate_id: &str,
-    ) -> Result<Certificate, RedfishError>;
+    fn get_secure_boot_certificate<'a>(
+        &'a self,
+        database_id: &'a str,
+        certificate_id: &'a str,
+    ) -> RedfishFuture<'a, Result<Certificate, RedfishError>>;
 
-    async fn get_secure_boot_certificates(
-        &self,
-        database_id: &str,
-    ) -> Result<Vec<String>, RedfishError>;
+    fn get_secure_boot_certificates<'a>(
+        &'a self,
+        database_id: &'a str,
+    ) -> RedfishFuture<'a, Result<Vec<String>, RedfishError>>;
 
     /// Adds certificate to secure boot DB
     /// database_id: "db" for database, "pk" for PK database
     /// Need to reboot DPU for UEFI Redfish client to execute.
-    async fn add_secure_boot_certificate(
-        &self,
-        pem_cert: &str,
-        database_id: &str,
-    ) -> Result<Task, RedfishError>;
+    fn add_secure_boot_certificate<'a>(
+        &'a self,
+        pem_cert: &'a str,
+        database_id: &'a str,
+    ) -> RedfishFuture<'a, Result<Task, RedfishError>>;
 
     /// Power supplies and voltages metrics
-    async fn get_power_metrics(&self) -> Result<Power, RedfishError>;
+    fn get_power_metrics<'a>(&'a self) -> RedfishFuture<'a, Result<Power, RedfishError>>;
 
     /// Change power state: on, off, reboot, etc
-    async fn power(&self, action: SystemPowerControl) -> Result<(), RedfishError>;
+    fn power<'a>(
+        &'a self,
+        action: SystemPowerControl,
+    ) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     /// Reboot the BMC itself
-    async fn bmc_reset(&self) -> Result<(), RedfishError>;
+    fn bmc_reset<'a>(&'a self) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     /// Reset Chassis
-    async fn chassis_reset(
-        &self,
-        chassis_id: &str,
+    fn chassis_reset<'a>(
+        &'a self,
+        chassis_id: &'a str,
         reset_type: SystemPowerControl,
-    ) -> Result<(), RedfishError>;
+    ) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     /// Reset BMC to the factory defaults.
-    async fn bmc_reset_to_defaults(&self) -> Result<(), RedfishError>;
+    fn bmc_reset_to_defaults<'a>(&'a self) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     /// Fans and temperature sensors
-    async fn get_thermal_metrics(&self) -> Result<Thermal, RedfishError>;
+    fn get_thermal_metrics<'a>(&'a self) -> RedfishFuture<'a, Result<Thermal, RedfishError>>;
 
     /// Voltage, temperature, etc sensors for gpus if they exist.
-    async fn get_gpu_sensors(&self) -> Result<Vec<GPUSensors>, RedfishError>;
+    fn get_gpu_sensors<'a>(&'a self) -> RedfishFuture<'a, Result<Vec<GPUSensors>, RedfishError>>;
 
     /// get system event log similar to ipmitool sel
-    async fn get_system_event_log(&self) -> Result<Vec<LogEntry>, RedfishError>;
+    fn get_system_event_log<'a>(&'a self)
+        -> RedfishFuture<'a, Result<Vec<LogEntry>, RedfishError>>;
 
     /// get bmc event log (power events, etc.)
-    async fn get_bmc_event_log(
-        &self,
+    fn get_bmc_event_log<'a>(
+        &'a self,
         from: Option<chrono::DateTime<chrono::Utc>>,
-    ) -> Result<Vec<LogEntry>, RedfishError>;
+    ) -> RedfishFuture<'a, Result<Vec<LogEntry>, RedfishError>>;
 
     /// get drives metrics
-    async fn get_drives_metrics(&self) -> Result<Vec<Drives>, RedfishError>;
+    fn get_drives_metrics<'a>(&'a self) -> RedfishFuture<'a, Result<Vec<Drives>, RedfishError>>;
 
     /// Sets up a reasonable UEFI configuration.
     /// remember to call lockdown() afterwards to secure the server
@@ -209,197 +227,228 @@ pub trait Redfish: Send + Sync + 'static {
     /// selected_profile: Profile to use (if present)
     /// Returns Ok(Some(job_id)) when the vendor creates a job for the BIOS PATCH (e.g. Dell);
     /// Ok(None) when no job is created. Caller should wait for job completion before configuring boot order.
-    async fn machine_setup(
-        &self,
-        boot_interface_mac: Option<&str>,
-        bios_profiles: &BiosProfileVendor,
+    fn machine_setup<'a>(
+        &'a self,
+        boot_interface_mac: Option<&'a str>,
+        bios_profiles: &'a BiosProfileVendor,
         selected_profile: BiosProfileType,
-        oem_manager_profiles: &BiosProfileVendor,
-    ) -> Result<Option<String>, RedfishError>;
+        oem_manager_profiles: &'a BiosProfileVendor,
+    ) -> RedfishFuture<'a, Result<Option<String>, RedfishError>>;
 
     /// Is everything that machine_setup does already done?
-    async fn machine_setup_status(
-        &self,
-        boot_interface_mac: Option<&str>,
-    ) -> Result<MachineSetupStatus, RedfishError>;
+    fn machine_setup_status<'a>(
+        &'a self,
+        boot_interface_mac: Option<&'a str>,
+    ) -> RedfishFuture<'a, Result<MachineSetupStatus, RedfishError>>;
 
     /// Check if only the BIOS/BMC setup is done
-    async fn is_bios_setup(&self, boot_interface_mac: Option<&str>) -> Result<bool, RedfishError>;
+    fn is_bios_setup<'a>(
+        &'a self,
+        boot_interface_mac: Option<&'a str>,
+    ) -> RedfishFuture<'a, Result<bool, RedfishError>>;
 
     /// Apply a standard BMC password policy. This varies a lot by vendor,
     /// but at a minimum we want passwords to never expire, because our BMCs are
     /// not actively used by humans.
-    async fn set_machine_password_policy(&self) -> Result<(), RedfishError>;
+    fn set_machine_password_policy<'a>(&'a self) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     /// Lock the BIOS and BMC ready for tenant use. Disabled reverses the changes.
-    async fn lockdown(&self, target: EnabledDisabled) -> Result<(), RedfishError>;
+    fn lockdown<'a>(
+        &'a self,
+        target: EnabledDisabled,
+    ) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     /// Are the BIOS and BMC currently locked down?
-    async fn lockdown_status(&self) -> Result<Status, RedfishError>;
+    fn lockdown_status<'a>(&'a self) -> RedfishFuture<'a, Result<Status, RedfishError>>;
 
     /// Enable SSH access to console
-    async fn setup_serial_console(&self) -> Result<(), RedfishError>;
+    fn setup_serial_console<'a>(&'a self) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     /// Is the serial console setup?
-    async fn serial_console_status(&self) -> Result<Status, RedfishError>;
+    fn serial_console_status<'a>(&'a self) -> RedfishFuture<'a, Result<Status, RedfishError>>;
 
     /// Show available boot options
-    async fn get_boot_options(&self) -> Result<BootOptions, RedfishError>;
+    fn get_boot_options<'a>(&'a self) -> RedfishFuture<'a, Result<BootOptions, RedfishError>>;
 
     /// Show available boot options
-    async fn get_boot_option(&self, option_id: &str) -> Result<BootOption, RedfishError>;
+    fn get_boot_option<'a>(
+        &'a self,
+        option_id: &'a str,
+    ) -> RedfishFuture<'a, Result<BootOption, RedfishError>>;
 
     /// Boot a single time of the given target. Does not change boot order after that.
-    async fn boot_once(&self, target: Boot) -> Result<(), RedfishError>;
+    fn boot_once<'a>(&'a self, target: Boot) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     /// Change boot order putting this target first
-    async fn boot_first(&self, target: Boot) -> Result<(), RedfishError>;
+    fn boot_first<'a>(&'a self, target: Boot) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     /// Change boot order by setting boot array.
-    async fn change_boot_order(&self, boot_array: Vec<String>) -> Result<(), RedfishError>;
+    fn change_boot_order<'a>(
+        &'a self,
+        boot_array: Vec<String>,
+    ) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     /// Reset and enable the TPM
-    async fn clear_tpm(&self) -> Result<(), RedfishError>;
+    fn clear_tpm<'a>(&'a self) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     /// List PCIe devices
-    async fn pcie_devices(&self) -> Result<Vec<PCIeDevice>, RedfishError>;
+    fn pcie_devices<'a>(&'a self) -> RedfishFuture<'a, Result<Vec<PCIeDevice>, RedfishError>>;
 
     /// Update BMC firmware
-    async fn update_firmware(&self, filename: tokio::fs::File) -> Result<Task, RedfishError>;
+    fn update_firmware<'a>(
+        &'a self,
+        filename: tokio::fs::File,
+    ) -> RedfishFuture<'a, Result<Task, RedfishError>>;
 
     /// Update UEFI firmware, returns a task ID
-    async fn update_firmware_multipart(
-        &self,
-        firmware: &Path,
+    fn update_firmware_multipart<'a>(
+        &'a self,
+        firmware: &'a Path,
         reboot: bool,
         timeout: Duration,
         component_type: ComponentType,
-    ) -> Result<String, RedfishError>;
+    ) -> RedfishFuture<'a, Result<String, RedfishError>>;
 
     /// This action shall update installed software components in a software image file located at an ImageURI parameter-specified URI.
     /// image_uri - The URI of the software image to install.
     /// transfer_protocol - The network protocol that the update service uses to retrieve the software image file located at the URI provided in ImageURI.
     /// This parameter is ignored if the URI provided in ImageURI contains a scheme.
     /// targets - An array of URIs that indicate where to apply the update image.
-    async fn update_firmware_simple_update(
-        &self,
-        image_uri: &str,
+    fn update_firmware_simple_update<'a>(
+        &'a self,
+        image_uri: &'a str,
         targets: Vec<String>,
         transfer_protocol: TransferProtocolType,
-    ) -> Result<Task, RedfishError>;
+    ) -> RedfishFuture<'a, Result<Task, RedfishError>>;
 
     /*
      * Diagnostic calls
      */
     /// All the BIOS values for this provider. Very OEM specific.
-    async fn bios(&self) -> Result<HashMap<String, serde_json::Value>, RedfishError>;
+    fn bios<'a>(
+        &'a self,
+    ) -> RedfishFuture<'a, Result<HashMap<String, serde_json::Value>, RedfishError>>;
 
     /// Modify specific BIOS values.  Also very OEM and model specific.
-    async fn set_bios(
-        &self,
+    fn set_bios<'a>(
+        &'a self,
         values: HashMap<String, serde_json::Value>,
-    ) -> Result<(), RedfishError>;
+    ) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     /// Reset BIOS to factory settings
-    async fn reset_bios(&self) -> Result<(), RedfishError>;
+    fn reset_bios<'a>(&'a self) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     /// Pending BIOS attributes. Changes that were requested but not applied yet because
     /// they need a reboot.
-    async fn pending(&self) -> Result<HashMap<String, serde_json::Value>, RedfishError>;
+    fn pending<'a>(
+        &'a self,
+    ) -> RedfishFuture<'a, Result<HashMap<String, serde_json::Value>, RedfishError>>;
 
     /// Clear all pending jobs
-    async fn clear_pending(&self) -> Result<(), RedfishError>;
+    fn clear_pending<'a>(&'a self) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     // List all Network Device Functions of a given Chassis
-    async fn get_network_device_functions(
-        &self,
-        chassis_id: &str,
-    ) -> Result<Vec<String>, RedfishError>;
+    fn get_network_device_functions<'a>(
+        &'a self,
+        chassis_id: &'a str,
+    ) -> RedfishFuture<'a, Result<Vec<String>, RedfishError>>;
 
     // Get Network Device Function details
-    async fn get_network_device_function(
-        &self,
-        chassis_id: &str,
-        id: &str,
-        port: Option<&str>,
-    ) -> Result<NetworkDeviceFunction, RedfishError>;
+    fn get_network_device_function<'a>(
+        &'a self,
+        chassis_id: &'a str,
+        id: &'a str,
+        port: Option<&'a str>,
+    ) -> RedfishFuture<'a, Result<NetworkDeviceFunction, RedfishError>>;
 
     // List all Chassises
-    async fn get_chassis_all(&self) -> Result<Vec<String>, RedfishError>;
+    fn get_chassis_all<'a>(&'a self) -> RedfishFuture<'a, Result<Vec<String>, RedfishError>>;
 
     // Get Chassis details
-    async fn get_chassis(&self, id: &str) -> Result<Chassis, RedfishError>;
+    fn get_chassis<'a>(&'a self, id: &'a str) -> RedfishFuture<'a, Result<Chassis, RedfishError>>;
 
     // Get Chassis Assembly details
-    async fn get_chassis_assembly(&self, chassis_id: &str) -> Result<Assembly, RedfishError>;
+    fn get_chassis_assembly<'a>(
+        &'a self,
+        chassis_id: &'a str,
+    ) -> RedfishFuture<'a, Result<Assembly, RedfishError>>;
 
     // List all Network Adapters for the specific Chassis
-    async fn get_chassis_network_adapters(
-        &self,
-        chassis_id: &str,
-    ) -> Result<Vec<String>, RedfishError>;
+    fn get_chassis_network_adapters<'a>(
+        &'a self,
+        chassis_id: &'a str,
+    ) -> RedfishFuture<'a, Result<Vec<String>, RedfishError>>;
 
     // Get Network Adapter details for the specific Chassis and Network Adapter
-    async fn get_chassis_network_adapter(
-        &self,
-        chassis_id: &str,
-        id: &str,
-    ) -> Result<NetworkAdapter, RedfishError>;
+    fn get_chassis_network_adapter<'a>(
+        &'a self,
+        chassis_id: &'a str,
+        id: &'a str,
+    ) -> RedfishFuture<'a, Result<NetworkAdapter, RedfishError>>;
 
     // List all Base Network Adapters for the specific Chassis
     // Only implemented in iLO5
-    async fn get_base_network_adapters(&self, system_id: &str)
-        -> Result<Vec<String>, RedfishError>;
+    fn get_base_network_adapters<'a>(
+        &'a self,
+        system_id: &'a str,
+    ) -> RedfishFuture<'a, Result<Vec<String>, RedfishError>>;
 
     // Get Base Network Adapter details for the specific Chassis and Network Adapter
     // Only implemented in iLO5
-    async fn get_base_network_adapter(
-        &self,
-        system_id: &str,
-        id: &str,
-    ) -> Result<NetworkAdapter, RedfishError>;
+    fn get_base_network_adapter<'a>(
+        &'a self,
+        system_id: &'a str,
+        id: &'a str,
+    ) -> RedfishFuture<'a, Result<NetworkAdapter, RedfishError>>;
 
     // List all High Speed Ports of a given Chassis
-    async fn get_ports(
-        &self,
-        chassis_id: &str,
-        network_adapter: &str,
-    ) -> Result<Vec<String>, RedfishError>;
+    fn get_ports<'a>(
+        &'a self,
+        chassis_id: &'a str,
+        network_adapter: &'a str,
+    ) -> RedfishFuture<'a, Result<Vec<String>, RedfishError>>;
 
     // Get High Speed Port details
-    async fn get_port(
-        &self,
-        chassis_id: &str,
-        network_adapter: &str,
-        id: &str,
-    ) -> Result<NetworkPort, RedfishError>;
+    fn get_port<'a>(
+        &'a self,
+        chassis_id: &'a str,
+        network_adapter: &'a str,
+        id: &'a str,
+    ) -> RedfishFuture<'a, Result<NetworkPort, RedfishError>>;
 
     // List all Ethernet Interfaces for the default `Manager`
-    async fn get_manager_ethernet_interfaces(&self) -> Result<Vec<String>, RedfishError>;
+    fn get_manager_ethernet_interfaces<'a>(
+        &'a self,
+    ) -> RedfishFuture<'a, Result<Vec<String>, RedfishError>>;
 
     // Get Ethernet Interface details for an interface on the default `Manager`
-    async fn get_manager_ethernet_interface(
-        &self,
-        id: &str,
-    ) -> Result<EthernetInterface, RedfishError>;
+    fn get_manager_ethernet_interface<'a>(
+        &'a self,
+        id: &'a str,
+    ) -> RedfishFuture<'a, Result<EthernetInterface, RedfishError>>;
 
     // List all Ethernet Interfaces for the default `System`
-    async fn get_system_ethernet_interfaces(&self) -> Result<Vec<String>, RedfishError>;
+    fn get_system_ethernet_interfaces<'a>(
+        &'a self,
+    ) -> RedfishFuture<'a, Result<Vec<String>, RedfishError>>;
 
     // Get Ethernet Interface details for an interface on the default `System`
-    async fn get_system_ethernet_interface(
-        &self,
-        id: &str,
-    ) -> Result<EthernetInterface, RedfishError>;
+    fn get_system_ethernet_interface<'a>(
+        &'a self,
+        id: &'a str,
+    ) -> RedfishFuture<'a, Result<EthernetInterface, RedfishError>>;
 
     // Change UEFI Password
-    async fn change_uefi_password(
-        &self,
-        current_uefi_password: &str,
-        new_uefi_password: &str,
-    ) -> Result<Option<String>, RedfishError>;
+    fn change_uefi_password<'a>(
+        &'a self,
+        current_uefi_password: &'a str,
+        new_uefi_password: &'a str,
+    ) -> RedfishFuture<'a, Result<Option<String>, RedfishError>>;
 
-    async fn get_job_state(&self, job_id: &str) -> Result<JobState, RedfishError>;
+    fn get_job_state<'a>(
+        &'a self,
+        job_id: &'a str,
+    ) -> RedfishFuture<'a, Result<JobState, RedfishError>>;
 
     /// A kind-of-generic method to retrieve any Redfish resource. A resource is a top level object defined by Redfish spec snd
     /// implements trait named IsResource. A resource should have @odata.type and @odata.id annotations as defined by the spec.
@@ -425,7 +474,8 @@ pub trait Redfish: Send + Sync + 'static {
     ///                              .and_then(|r| {r.try_get()})?;
     ///
     ///
-    async fn get_resource(&self, id: ODataId) -> Result<Resource, RedfishError>;
+    fn get_resource<'a>(&'a self, id: ODataId)
+        -> RedfishFuture<'a, Result<Resource, RedfishError>>;
 
     /// A kind-of-generic api to retrieve any resource. See get_resource() api for more details.
     /// This method returns Collection object that contains raw JSON and can be conveted to
@@ -446,119 +496,147 @@ pub trait Redfish: Send + Sync + 'static {
     ///
     /// This method fetches all member objects of the collection in a single request by appending
     /// '?$expand=.($levels=1)' to the URI as defined by the spec.
-    async fn get_collection(&self, id: ODataId) -> Result<Collection, RedfishError>;
+    fn get_collection<'a>(
+        &'a self,
+        id: ODataId,
+    ) -> RedfishFuture<'a, Result<Collection, RedfishError>>;
 
     /// This method will change the boot order so that system will attempt to boot from the dpu first.
     /// Method will make a platforn specifc best errert to identify the dpu specific boot option.
     /// It will choose Uefi Http IPv4 option if any.
     /// If dpu's mac can be passed in as  mac_address to identify the dpu, otherwise method will attempt to find the dpu
     /// by enumeration NetworkAdapters and associated resources.
-    async fn set_boot_order_dpu_first(
-        &self,
-        mac_address: &str,
-    ) -> Result<Option<String>, RedfishError>;
+    fn set_boot_order_dpu_first<'a>(
+        &'a self,
+        mac_address: &'a str,
+    ) -> RedfishFuture<'a, Result<Option<String>, RedfishError>>;
 
-    async fn clear_uefi_password(
-        &self,
-        current_uefi_password: &str,
-    ) -> Result<Option<String>, RedfishError>;
+    fn clear_uefi_password<'a>(
+        &'a self,
+        current_uefi_password: &'a str,
+    ) -> RedfishFuture<'a, Result<Option<String>, RedfishError>>;
 
-    async fn get_update_service(&self) -> Result<UpdateService, RedfishError>;
+    fn get_update_service<'a>(&'a self) -> RedfishFuture<'a, Result<UpdateService, RedfishError>>;
 
-    async fn get_base_mac_address(&self) -> Result<Option<String>, RedfishError>;
+    fn get_base_mac_address<'a>(
+        &'a self,
+    ) -> RedfishFuture<'a, Result<Option<String>, RedfishError>>;
 
-    async fn lockdown_bmc(&self, target: EnabledDisabled) -> Result<(), RedfishError>;
+    fn lockdown_bmc<'a>(
+        &'a self,
+        target: EnabledDisabled,
+    ) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
-    async fn is_ipmi_over_lan_enabled(&self) -> Result<bool, RedfishError>;
+    fn is_ipmi_over_lan_enabled<'a>(&'a self) -> RedfishFuture<'a, Result<bool, RedfishError>>;
 
-    async fn enable_ipmi_over_lan(&self, target: EnabledDisabled) -> Result<(), RedfishError>;
+    fn enable_ipmi_over_lan<'a>(
+        &'a self,
+        target: EnabledDisabled,
+    ) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
-    async fn enable_rshim_bmc(&self) -> Result<(), RedfishError>;
+    fn enable_rshim_bmc<'a>(&'a self) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     // Only applicable to Vikings
-    async fn clear_nvram(&self) -> Result<(), RedfishError>;
+    fn clear_nvram<'a>(&'a self) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     // Only applicable to DPUs
-    async fn get_nic_mode(&self) -> Result<Option<NicMode>, RedfishError>;
+    fn get_nic_mode<'a>(&'a self) -> RedfishFuture<'a, Result<Option<NicMode>, RedfishError>>;
 
     // Only applicable to DPUs
-    async fn set_nic_mode(&self, mode: NicMode) -> Result<(), RedfishError>;
+    fn set_nic_mode<'a>(&'a self, mode: NicMode) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     /// Enable infinite boot
-    async fn enable_infinite_boot(&self) -> Result<(), RedfishError>;
+    fn enable_infinite_boot<'a>(&'a self) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     /// Check if infinite boot is enabled
-    async fn is_infinite_boot_enabled(&self) -> Result<Option<bool>, RedfishError>;
+    fn is_infinite_boot_enabled<'a>(
+        &'a self,
+    ) -> RedfishFuture<'a, Result<Option<bool>, RedfishError>>;
 
     // Only applicable to DPUs
-    async fn set_host_rshim(&self, enabled: EnabledDisabled) -> Result<(), RedfishError>;
+    fn set_host_rshim<'a>(
+        &'a self,
+        enabled: EnabledDisabled,
+    ) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     // Only applicable to DPUs
-    async fn get_host_rshim(&self) -> Result<Option<EnabledDisabled>, RedfishError>;
+    fn get_host_rshim<'a>(
+        &'a self,
+    ) -> RedfishFuture<'a, Result<Option<EnabledDisabled>, RedfishError>>;
 
     // Only applicable to Dells
-    async fn set_idrac_lockdown(&self, enabled: EnabledDisabled) -> Result<(), RedfishError>;
+    fn set_idrac_lockdown<'a>(
+        &'a self,
+        enabled: EnabledDisabled,
+    ) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     // Only applicable to Dells
-    async fn get_boss_controller(&self) -> Result<Option<String>, RedfishError>;
+    fn get_boss_controller<'a>(&'a self)
+        -> RedfishFuture<'a, Result<Option<String>, RedfishError>>;
 
     // Only applicable to Dells
-    async fn decommission_storage_controller(
-        &self,
-        controller_id: &str,
-    ) -> Result<Option<String>, RedfishError>;
+    fn decommission_storage_controller<'a>(
+        &'a self,
+        controller_id: &'a str,
+    ) -> RedfishFuture<'a, Result<Option<String>, RedfishError>>;
 
     // Only applicable to Dells
-    async fn create_storage_volume(
-        &self,
-        controller_id: &str,
-        volume_name: &str,
-    ) -> Result<Option<String>, RedfishError>;
+    fn create_storage_volume<'a>(
+        &'a self,
+        controller_id: &'a str,
+        volume_name: &'a str,
+    ) -> RedfishFuture<'a, Result<Option<String>, RedfishError>>;
 
     fn ac_powercycle_supported_by_power(&self) -> bool;
 
     /// Check if the boot order is configured as we expect (Network boot)
-    async fn is_boot_order_setup(&self, mac_address: &str) -> Result<bool, RedfishError>;
+    fn is_boot_order_setup<'a>(
+        &'a self,
+        mac_address: &'a str,
+    ) -> RedfishFuture<'a, Result<bool, RedfishError>>;
 
     /// Returns info about component integrity
-    async fn get_component_integrities(&self) -> Result<ComponentIntegrities, RedfishError>;
+    fn get_component_integrities<'a>(
+        &'a self,
+    ) -> RedfishFuture<'a, Result<ComponentIntegrities, RedfishError>>;
 
     /// Returns info about component integrity
-    async fn get_firmware_for_component(
-        &self,
-        component_integrity_id: &str,
-    ) -> Result<SoftwareInventory, RedfishError>;
+    fn get_firmware_for_component<'a>(
+        &'a self,
+        component_integrity_id: &'a str,
+    ) -> RedfishFuture<'a, Result<SoftwareInventory, RedfishError>>;
 
     /// Component/evidence apis are taking URL as of now since not sure if all vendors keep
     /// certificate and evidence in chassis/same place. Once tested with all vendors, the url can
     /// be changed into id and device parameters.
     /// Fetches component certificate
-    async fn get_component_ca_certificate(
-        &self,
-        url: &str,
-    ) -> Result<model::component_integrity::CaCertificate, RedfishError>;
+    fn get_component_ca_certificate<'a>(
+        &'a self,
+        url: &'a str,
+    ) -> RedfishFuture<'a, Result<model::component_integrity::CaCertificate, RedfishError>>;
 
     /// Trigger evidence collection
-    async fn trigger_evidence_collection(
-        &self,
-        url: &str,
-        nonce: &str,
-    ) -> Result<Task, RedfishError>;
+    fn trigger_evidence_collection<'a>(
+        &'a self,
+        url: &'a str,
+        nonce: &'a str,
+    ) -> RedfishFuture<'a, Result<Task, RedfishError>>;
 
     /// Fetches component certificate
-    async fn get_evidence(
-        &self,
-        url: &str,
-    ) -> Result<model::component_integrity::Evidence, RedfishError>;
+    fn get_evidence<'a>(
+        &'a self,
+        url: &'a str,
+    ) -> RedfishFuture<'a, Result<model::component_integrity::Evidence, RedfishError>>;
 
     // Sets the host privilege level for a DPU
-    async fn set_host_privilege_level(&self, level: HostPrivilegeLevel)
-        -> Result<(), RedfishError>;
+    fn set_host_privilege_level<'a>(
+        &'a self,
+        level: HostPrivilegeLevel,
+    ) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     // Sets the timezone to UTC
     // Only applicable to Dells
-    async fn set_utc_timezone(&self) -> Result<(), RedfishError>;
-
+    fn set_utc_timezone<'a>(&'a self) -> RedfishFuture<'a, Result<(), RedfishError>>;
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]

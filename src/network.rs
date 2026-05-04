@@ -594,7 +594,10 @@ impl RedfishHttpClient {
                 url: url.clone(),
                 source: e,
             })?;
-        debug!("RX {status_code} {}", truncate(&redact_sensitive_fields(&response_body), 1500));
+        debug!(
+            "RX {status_code} {}",
+            truncate(&redact_sensitive_fields(&response_body), 1500)
+        );
 
         if !status_code.is_success() {
             if status_code == StatusCode::FORBIDDEN && !response_body.is_empty() {
@@ -745,7 +748,10 @@ impl RedfishHttpClient {
                 url: url.to_string(),
                 source: e,
             })?;
-        debug!("RX {status_code} {}", truncate(&redact_sensitive_fields(&response_body), 1500));
+        debug!(
+            "RX {status_code} {}",
+            truncate(&redact_sensitive_fields(&response_body), 1500)
+        );
 
         if !status_code.is_success() {
             return Err(RedfishError::HTTPErrorCode {
@@ -826,29 +832,53 @@ mod tests {
     fn redact_password_field() {
         let body = r#"{"UserName":"admin","Password":"s3cr3t!"}"#;
         let redacted = redact_sensitive_fields(body);
-        assert!(!redacted.contains("s3cr3t!"), "plaintext password must not appear in log output");
+        assert!(
+            !redacted.contains("s3cr3t!"),
+            "plaintext password must not appear in log output"
+        );
         assert!(redacted.contains("[REDACTED]"));
-        assert!(redacted.contains("UserName"), "non-sensitive fields must be preserved");
+        assert!(
+            redacted.contains("UserName"),
+            "non-sensitive fields must be preserved"
+        );
     }
 
     #[test]
     fn redact_old_and_new_password_fields() {
-        let body =
-            r#"{"PasswordName":"AdministratorPassword","OldPassword":"old123","NewPassword":"new456"}"#;
+        let body = r#"{"PasswordName":"AdministratorPassword","OldPassword":"old123","NewPassword":"new456"}"#;
         let redacted = redact_sensitive_fields(body);
-        assert!(!redacted.contains("old123"), "OldPassword value must be redacted");
-        assert!(!redacted.contains("new456"), "NewPassword value must be redacted");
+        assert!(
+            !redacted.contains("old123"),
+            "OldPassword value must be redacted"
+        );
+        assert!(
+            !redacted.contains("new456"),
+            "NewPassword value must be redacted"
+        );
         // PasswordName is a slot name, not a secret — must NOT be redacted.
-        assert!(redacted.contains("AdministratorPassword"), "PasswordName value must not be redacted");
+        assert!(
+            redacted.contains("AdministratorPassword"),
+            "PasswordName value must not be redacted"
+        );
     }
 
     #[test]
     fn nvidia_dpu_uefi_password_fields_are_redacted() {
-        let body = r#"{"Attributes":{"CurrentUefiPassword":"old_secret","UefiPassword":"new_secret"}}"#;
+        let body =
+            r#"{"Attributes":{"CurrentUefiPassword":"old_secret","UefiPassword":"new_secret"}}"#;
         let redacted = redact_sensitive_fields(body);
-        assert!(!redacted.contains("old_secret"), "CurrentUefiPassword value must be redacted");
-        assert!(!redacted.contains("new_secret"), "UefiPassword value must be redacted");
-        assert!(redacted.contains("CurrentUefiPassword"), "key name must be preserved");
+        assert!(
+            !redacted.contains("old_secret"),
+            "CurrentUefiPassword value must be redacted"
+        );
+        assert!(
+            !redacted.contains("new_secret"),
+            "UefiPassword value must be redacted"
+        );
+        assert!(
+            redacted.contains("CurrentUefiPassword"),
+            "key name must be preserved"
+        );
     }
 
     #[test]
@@ -859,9 +889,15 @@ mod tests {
             xml.replace('"', "\\\"")
         );
         let redacted = redact_sensitive_fields(&body);
-        assert!(!redacted.contains("my_uefi_pass"), "UEFI password in ImportBuffer XML must not appear in log output");
+        assert!(
+            !redacted.contains("my_uefi_pass"),
+            "UEFI password in ImportBuffer XML must not appear in log output"
+        );
         assert!(redacted.contains("[REDACTED]"));
-        assert!(redacted.contains("ShutdownType"), "non-sensitive fields must be preserved");
+        assert!(
+            redacted.contains("ShutdownType"),
+            "non-sensitive fields must be preserved"
+        );
     }
 
     #[test]
@@ -885,15 +921,20 @@ mod tests {
     fn wire_payload_is_unaffected() {
         let body_enc = r#"{"UserName":"newuser","Password":"myP@ssw0rd"}"#.to_string();
         let _log_safe = redact_sensitive_fields(&body_enc);
-        assert_eq!(body_enc, r#"{"UserName":"newuser","Password":"myP@ssw0rd"}"#,
-            "wire payload must never be modified");
+        assert_eq!(
+            body_enc, r#"{"UserName":"newuser","Password":"myP@ssw0rd"}"#,
+            "wire payload must never be modified"
+        );
     }
 
     #[test]
     fn escaped_characters_in_password_are_redacted() {
         let body = r#"{"Password":"p@ss\"w\\ord"}"#;
         let redacted = redact_sensitive_fields(body);
-        assert!(!redacted.contains("p@ss"), "escaped password value must be redacted");
+        assert!(
+            !redacted.contains("p@ss"),
+            "escaped password value must be redacted"
+        );
         assert!(redacted.contains("[REDACTED]"));
     }
 
@@ -902,10 +943,16 @@ mod tests {
         let filler = "x".repeat(1490);
         let secret = "supersecret_password_value";
         let body = format!(r#"{{"Data":"{}","Password":"{}"}}"#, filler, secret);
-        assert!(body.len() > 1500, "body must exceed truncation limit for this test to be valid");
+        assert!(
+            body.len() > 1500,
+            "body must exceed truncation limit for this test to be valid"
+        );
 
         let redacted = redact_sensitive_fields(&body);
         let logged = truncate(&redacted, 1500);
-        assert!(!logged.contains("supersecret"), "no part of the secret must appear after truncation");
+        assert!(
+            !logged.contains("supersecret"),
+            "no part of the secret must appear after truncation"
+        );
     }
 }

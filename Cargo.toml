@@ -13,7 +13,6 @@ edition = "2021"
 publish = [ "internal" ]
 
 [dependencies]
-async-trait = { version = "*" }
 clap = { version = "4", features = ["derive", "env"] }
 log = { version = "0.4" }
 reqwest = { version = "0.12", default-features = false, features = [
