@@ -142,7 +142,9 @@ async fn test_forbidden_error_handling() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    let pool = libredfish::RedfishClientPool::builder().build()?;
+    let pool = libredfish::RedfishClientPool::builder()
+        .danger_accept_invalid_certs()
+        .build()?;
     let redfish = pool.create_standard_client(endpoint)?;
 
     match redfish.get_chassis_all().await {
@@ -301,7 +303,9 @@ async fn run_integration_test(
         ..Default::default()
     };
 
-    let pool = libredfish::RedfishClientPool::builder().build()?;
+    let pool = libredfish::RedfishClientPool::builder()
+        .danger_accept_invalid_certs()
+        .build()?;
     let redfish = pool.create_client(endpoint).await?;
 
     if vendor_dir == "nvidia_dpu" {
