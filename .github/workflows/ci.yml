@@ -21,10 +21,11 @@ jobs:
           apt-get install -y python3-full python3-pip
 
       - name: Install Clippy
-        run: rustup component add clippy
+        run: rustup component add clippy rustfmt
       
       - name: Build, Lint, and Test
         run: |
           cargo build
-          cargo clippy
+          cargo fmt --check
+          cargo clippy --all -- -D warnings
           cargo test
