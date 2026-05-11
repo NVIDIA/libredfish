@@ -222,10 +222,12 @@ pub trait Redfish: Send + Sync + 'static {
     /// - boot_interface_mac: MAC Address of the NIC you wish to boot from
     ///   If not given we look for a Mellanox Bluefield DPU and use that.
     ///   Not applicable to Supermicro and the DPU itself.
-    /// bios_profiles: Map of vendor/model (with spaces replaced by underscores)/profile/type
+    ///   bios_profiles: Map of vendor/model (with spaces replaced by underscores)/profile/type
     ///   to extra settings; expected to come from config rather than hardcoded.
-    /// selected_profile: Profile to use (if present)
+    ///   selected_profile: Profile to use (if present)
+    ///
     /// Returns Ok(Some(job_id)) when the vendor creates a job for the BIOS PATCH (e.g. Dell);
+    ///
     /// Ok(None) when no job is created. Caller should wait for job completion before configuring boot order.
     fn machine_setup<'a>(
         &'a self,

@@ -1037,7 +1037,7 @@ impl Redfish for Bmc {
                 }
             }
 
-            return Err(RedfishError::MissingBootOption(expected_boot_option_name));
+            Err(RedfishError::MissingBootOption(expected_boot_option_name))
         })
     }
 

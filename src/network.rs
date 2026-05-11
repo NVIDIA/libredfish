@@ -781,7 +781,7 @@ fn truncate(s: &str, len: usize) -> &str {
 ///   `Password`, `OldPassword`, `NewPassword`   — standard Redfish account/BIOS ops
 ///   `CurrentUefiPassword`, `UefiPassword`       — NVIDIA DPU Bios/Settings PATCH
 ///   `ImportBuffer`                              — Dell ImportSystemConfiguration XML blob
-
+///
 /// A `Display` wrapper that redacts sensitive JSON fields on formatting.
 ///
 /// Passing this to `tracing::debug!` defers evaluation until the macro decides the
