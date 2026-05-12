@@ -42,22 +42,22 @@ pub struct Managers {
 pub struct Manager {
     #[serde(flatten)]
     pub odata: ODataLinks,
-    pub actions: Action,
+    pub actions: Option<Action>,
     pub command_shell: Option<Commandshell>,
     pub date_time: Option<DateTime<Utc>>,
     pub description: Option<String>,
-    pub ethernet_interfaces: ODataId,
-    pub firmware_version: String,
+    pub ethernet_interfaces: Option<ODataId>,
+    pub firmware_version: Option<String>,
     pub graphical_console: Option<Commandshell>,
     pub id: String,
-    pub log_services: ODataId,
-    pub manager_type: String,
+    pub log_services: Option<ODataId>,
+    pub manager_type: Option<String>,
     pub model: Option<String>,
     pub name: String,
-    pub network_protocol: ODataId,
-    pub status: Status,
+    pub network_protocol: Option<ODataId>,
+    pub status: Option<Status>,
     #[serde(rename = "UUID")]
-    pub uuid: String,
+    pub uuid: Option<String>,
     pub oem: Option<ManagerExtensions>,
 }
 
