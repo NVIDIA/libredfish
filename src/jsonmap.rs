@@ -246,8 +246,8 @@ mod tests {
         });
         let map = value.as_object().unwrap();
 
-        assert_eq!(get_bool(map, "Enabled", "http://test/url").unwrap(), true);
-        assert_eq!(get_bool(map, "Disabled", "http://test/url").unwrap(), false);
+        assert!(get_bool(map, "Enabled", "http://test/url").unwrap());
+        assert!(!get_bool(map, "Disabled", "http://test/url").unwrap());
     }
 
     // test_get_i64_success tests that get_i64 correctly extracts an integer value.
