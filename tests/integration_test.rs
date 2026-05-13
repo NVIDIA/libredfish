@@ -447,7 +447,7 @@ async fn run_integration_test(
     if vendor_dir == "lenovo" {
         assert!(redfish.lockdown_status().await?.is_fully_enabled());
     }
-    if vendor_dir != "nvidia_gh200" {
+    if vendor_dir != "nvidia_gh200" && vendor_dir != "liteon_powershelf" {
         let tm = redfish.get_thermal_metrics().await?;
         if vendor_dir == "nvidia_gb200" {
             assert!(tm.leak_detectors.is_some());
@@ -456,7 +456,7 @@ async fn run_integration_test(
             _ = redfish.get_power_metrics().await?;
         }
     }
-    if vendor_dir != "supermicro" {
+    if vendor_dir != "supermicro" && vendor_dir != "liteon_powershelf" {
         _ = redfish.get_system_event_log().await?;
     }
 
