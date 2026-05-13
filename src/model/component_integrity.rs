@@ -44,6 +44,7 @@ pub struct ComponentIntegrity {
     pub id: String,
     pub name: String,
     pub target_component_uri: Option<String>,
+    #[serde(rename = "SPDM")]
     pub spdm: Option<SPDMData>,
     pub actions: Option<SPDMActions>,
     pub links: Option<ComponentsProtectedLinks>,
@@ -58,8 +59,14 @@ pub struct ComponentsProtectedLinks {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct SPDMData {
-    pub identity_authentication: ResponderAuthentication,
+    pub identity_authentication: IdentityAuthentication,
     pub requester: ODataId,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
+pub struct IdentityAuthentication {
+    pub responder_authentication: ResponderAuthentication,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
