@@ -58,6 +58,20 @@ use crate::{
 
 const MELLANOX_UEFI_HTTP_IPV4: &str = "UEFI HTTP IPv4 Mellanox Network Adapter";
 const NVIDIA_UEFI_HTTP_IPV4: &str = "UEFI HTTP IPv4 Nvidia Network Adapter";
+
+/// MGX C2 systems use SSIF instead of x86 KCS for in-band BMC communication,
+/// so the KCSInterface endpoint doesn't exist. These models require the
+/// IPMIHostInterface fallback on Systems/{id}.
+const MGX_C2_MODELS: [&str; 4] = [
+    "ARS-121L-DNR",
+    "ARS-221GL-NR",
+    "SYS-221H-TNR",
+    "SYS-221H-TN24R",
+];
+
+/// Minimum BMC firmware version that exposes `IPMIHostInterface` on
+/// `Systems/{id}` for MGX C2 systems.
+const MIN_BMC_FW_IPMI_HOST_IFACE: &str = "01.05.01";
 const HARD_DISK: &str = "UEFI Hard Disk";
 const NETWORK: &str = "UEFI Network";
 
@@ -325,19 +339,7 @@ impl Redfish for Bmc {
     fn lockdown_status<'a>(&'a self) -> crate::RedfishFuture<'a, Result<Status, RedfishError>> {
         Box::pin(async move {
             let is_hi_on = self.is_host_interface_enabled().await?;
-            let kcs_privilege = match self.get_kcs_privilege().await {
-                Ok(priviledge) => Ok(Some(priviledge)),
-                Err(e) => {
-                    // The Grace-Grace Supermicros in our GB200 lab do not seem to support
-                    // querying KCS access from the host to its BMC. Use this workaround to
-                    // temporarily enable ingesting these servers.
-                    if e.not_found() {
-                        Ok(None)
-                    } else {
-                        Err(e)
-                    }
-                }
-            }?;
+            let kcs_privilege = self.get_kcs_privilege().await?;
 
             let is_syslockdown = self.get_syslockdown().await?;
             let message = format!("SysLockdownEnabled={is_syslockdown}, kcs_privilege={kcs_privilege:#?}, host_interface_enabled={is_hi_on}");
@@ -346,14 +348,10 @@ impl Redfish for Bmc {
             let is_grace_grace = self.is_grace_grace_smc().await?;
 
             let is_locked = is_syslockdown
-                && kcs_privilege
-                    .clone()
-                    .unwrap_or(supermicro::Privilege::Callback)
-                    == supermicro::Privilege::Callback
+                && kcs_privilege == supermicro::Privilege::Callback
                 && (is_grace_grace || !is_hi_on);
             let is_unlocked = !is_syslockdown
-                && kcs_privilege.unwrap_or(supermicro::Privilege::Administrator)
-                    == supermicro::Privilege::Administrator
+                && kcs_privilege == supermicro::Privilege::Administrator
                 && is_hi_on;
             Ok(Status {
                 message,
@@ -1286,11 +1284,24 @@ impl Bmc {
     }
 
     async fn get_kcs_privilege(&self) -> Result<supermicro::Privilege, RedfishError> {
+        if self.is_mgx_c2().await? {
+            let enabled = self.get_ipmi_host_interface_enabled().await?;
+            return if enabled {
+                Ok(supermicro::Privilege::Administrator)
+            } else {
+                Ok(supermicro::Privilege::Callback)
+            };
+        }
+
         let url = format!(
             "Managers/{}/Oem/Supermicro/KCSInterface",
             self.s.manager_id()
         );
-        let (_, body): (_, HashMap<String, serde_json::Value>) = self.s.client.get(&url).await?;
+        let (_, body) = self
+            .s
+            .client
+            .get::<HashMap<String, serde_json::Value>>(&url)
+            .await?;
         let key = "Privilege";
         let p_str = body
             .get(key)
@@ -1315,29 +1326,86 @@ impl Bmc {
         &self,
         privilege: supermicro::Privilege,
     ) -> Result<(), RedfishError> {
+        if self.is_mgx_c2().await? {
+            let enabled = privilege == supermicro::Privilege::Administrator;
+            return self.set_ipmi_host_interface(enabled).await;
+        }
+
         let url = format!(
             "Managers/{}/Oem/Supermicro/KCSInterface",
             self.s.manager_id()
         );
         let body = HashMap::from([("Privilege", privilege.to_string())]);
+        self.s.client.patch(&url, body).await?;
+        Ok(())
+    }
+
+    /// Returns `true` when the BMC firmware version is at least
+    /// [`MIN_BMC_FW_IPMI_HOST_IFACE`] (`01.05.01`), which is the first
+    /// version to expose `IPMIHostInterface` on `Systems/{id}`.
+    async fn bmc_supports_ipmi_host_iface(&self) -> Result<bool, RedfishError> {
+        let manager = self.s.get_manager().await?;
+        let fw = manager.firmware_version.unwrap_or_default();
+        Ok(
+            version_compare::compare(&fw, MIN_BMC_FW_IPMI_HOST_IFACE)
+                .is_ok_and(|c| c != version_compare::Cmp::Lt),
+        )
+    }
+
+    /// Disable/enable SSIF in-band access via `IPMIHostInterface` on `Systems/{id}`.
+    /// Used for MGX C2 systems that lack the KCSInterface endpoint.
+    /// No-op when the BMC firmware is older than 01.05.01.
+    async fn set_ipmi_host_interface(
+        &self,
+        enabled: bool,
+    ) -> Result<(), RedfishError> {
+        if !self.bmc_supports_ipmi_host_iface().await? {
+            let smc_bmc_ip = self.s.client.host();
+            tracing::warn!(
+                smc_bmc_ip,
+                "MGX C2 BMC firmware is older than {MIN_BMC_FW_IPMI_HOST_IFACE}; \
+                 skipping IPMIHostInterface write"
+            );
+            return Ok(());
+        }
+
+        use crate::model::system::IpmiHostInterface;
+        let url = format!("Systems/{}", self.s.system_id());
+        let body = HashMap::from([(
+            "IPMIHostInterface",
+            IpmiHostInterface {
+                service_enabled: enabled,
+            },
+        )]);
         self.s
             .client
             .patch(&url, body)
             .await
-            .or_else(|err| {
-                // The Grace-Grace Supermicros in our GB200 lab do not seem to support
-                // disabling KCS access from the host to its BMC. Use this workaround to
-                // temporarily enable ingesting these servers.
-                if err.not_found() {
-                    tracing::warn!(
-                        "Supermicro was uanble to find {url}: {err}; not returning error to caller"
-                    );
-                    Ok((StatusCode::OK, None))
-                } else {
-                    Err(err)
-                }
-            })
             .map(|_status_code| ())
+    }
+
+    /// Get whether SSIF in-band access is enabled via `IPMIHostInterface` on `Systems/{id}`.
+    /// Used for MGX C2 systems that lack the KCSInterface endpoint.
+    /// Returns `false` when the BMC firmware is older than 01.05.01.
+    async fn get_ipmi_host_interface_enabled(&self) -> Result<bool, RedfishError> {
+        if !self.bmc_supports_ipmi_host_iface().await? {
+            let smc_bmc_ip = self.s.client.host();
+            tracing::warn!(
+                smc_bmc_ip,
+                "MGX C2 BMC firmware is older than {MIN_BMC_FW_IPMI_HOST_IFACE}; \
+                 IPMIHostInterface unavailable, reporting disabled"
+            );
+            return Ok(false);
+        }
+
+        let system = self.s.get_system().await?;
+        let iface = system.ipmi_host_interface.ok_or_else(|| {
+            RedfishError::MissingKey {
+                key: "IPMIHostInterface".to_string(),
+                url: format!("Systems/{}", self.s.system_id()),
+            }
+        })?;
+        Ok(iface.service_enabled)
     }
 
     async fn is_host_interface_enabled(&self) -> Result<bool, RedfishError> {
@@ -1581,7 +1649,13 @@ impl Bmc {
         Ok(by_name)
     }
 
-    // Check if this is a Grace-Grace SMC (ARS-121L-DNR) that needs host_interface enabled
+    /// MGX C2 systems use SSIF instead of x86 KCS, so the KCSInterface
+    /// endpoint doesn't exist. Detect them by matching the system model.
+    async fn is_mgx_c2(&self) -> Result<bool, RedfishError> {
+        let model = self.s.get_system().await?.model.unwrap_or_default();
+        Ok(MGX_C2_MODELS.iter().any(|m| model.contains(m)))
+    }
+
     async fn is_grace_grace_smc(&self) -> Result<bool, RedfishError> {
         Ok(self
             .s

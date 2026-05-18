@@ -201,6 +201,16 @@ pub struct ComputerSystem {
     pub serial_console: Option<SerialConsole>, // Newer Redfish impls, inc Supermicro
     pub links: Option<ComputerSystemLinks>,
     pub boot_progress: Option<BootProgress>,
+    #[serde(rename = "IPMIHostInterface")]
+    pub ipmi_host_interface: Option<IpmiHostInterface>, // MGX C2 Supermicro (SSIF, not KCS); BMC firmware 01.05.01+
+}
+
+/// SSIF in-band host-to-BMC interface on MGX C2 Supermicro systems.
+/// Present at `Systems/{id}` when the BMC firmware is 01.05.01+.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
+pub struct IpmiHostInterface {
+    pub service_enabled: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]

@@ -279,6 +279,11 @@ impl RedfishHttpClient {
         }
     }
 
+    /// Returns the hostname or IP address of the BMC this client connects to.
+    pub fn host(&self) -> &str {
+        &self.endpoint.host
+    }
+
     /// Returns `true` if this client has no credentials (i.e. anonymous/unauthenticated).
     pub fn is_anonymous(&self) -> bool {
         self.endpoint.user.is_none()
