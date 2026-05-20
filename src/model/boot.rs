@@ -113,6 +113,27 @@ pub enum BootSourceOverrideMode {
     InvalidValue,
 }
 
+impl fmt::Display for BootSourceOverrideMode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(self, f)
+    }
+}
+
+/// Settings for a Redfish boot source override, applied via
+/// [`Redfish::set_boot_override`](crate::Redfish::set_boot_override).
+///
+/// `target` and `enabled` are required. `mode` is typically `UEFI` for modern
+/// systems and can be left `None` to keep the current mode unchanged. `http_boot_uri`
+/// only applies when `target` is `UefiHttp`; if `None`, the firmware obtains the
+/// boot URL from DHCP option 67 as specified by the UEFI HTTP Boot specification.
+#[derive(Debug, Clone)]
+pub struct BootOverride {
+    pub target: BootSourceOverrideTarget,
+    pub enabled: BootSourceOverrideEnabled,
+    pub mode: Option<BootSourceOverrideMode>,
+    pub http_boot_uri: Option<String>,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub enum TrustedModuleRequiredToBoot {
     Disabled,

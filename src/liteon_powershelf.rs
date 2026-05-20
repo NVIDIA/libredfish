@@ -4,6 +4,7 @@ use std::{collections::HashMap, path::Path, time::Duration};
 use tokio::fs::File;
 
 use crate::model::account_service::ManagerAccount;
+use crate::model::boot::BootOverride;
 use crate::model::certificate::Certificate;
 use crate::model::component_integrity::ComponentIntegrities;
 use crate::model::oem::nvidia_dpu::{HostPrivilegeLevel, NicMode};
@@ -338,6 +339,17 @@ impl Redfish for Bmc {
         Box::pin(async move {
             Err(RedfishError::NotSupported(
                 "Lite-on powershelf does not support changing boot order".to_string(),
+            ))
+        })
+    }
+
+    fn set_boot_override<'a>(
+        &'a self,
+        _settings: BootOverride,
+    ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
+        Box::pin(async move {
+            Err(RedfishError::NotSupported(
+                "Lite-on powershelf does not support boot source overrides".to_string(),
             ))
         })
     }

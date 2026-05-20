@@ -31,6 +31,7 @@ use crate::{
     jsonmap,
     model::{
         account_service::ManagerAccount,
+        boot::BootOverride,
         certificate::Certificate,
         chassis::{Assembly, Chassis, NetworkAdapter},
         component_integrity::ComponentIntegrities,
@@ -600,6 +601,21 @@ impl Redfish for Bmc {
                     "No Dell UefiHttp implementation".to_string(),
                 )),
             }
+        })
+    }
+
+    /// Not yet implemented on Dell iDRAC. Dell does not expose the standard
+    /// Redfish `Boot.HttpBootUri` property; setting an HTTP boot URI on Dell
+    /// requires PATCHing the `HttpDev1Uri` and related BIOS attributes via
+    /// `/Systems/{id}/Bios/Settings`. Planned as a follow-up PR.
+    fn set_boot_override<'a>(
+        &'a self,
+        _settings: BootOverride,
+    ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
+        Box::pin(async move {
+            Err(RedfishError::NotSupported(
+                "No Dell set_boot_override implementation".to_string(),
+            ))
         })
     }
 

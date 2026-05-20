@@ -33,7 +33,10 @@ use version_compare::Version;
 use crate::{
     model::{
         account_service::ManagerAccount,
-        boot::{BootSourceOverrideEnabled, BootSourceOverrideTarget},
+        boot::{
+            BootOverride, BootSourceOverrideEnabled, BootSourceOverrideMode,
+            BootSourceOverrideTarget,
+        },
         certificate::Certificate,
         chassis::{Assembly, Chassis, NetworkAdapter},
         component_integrity::ComponentIntegrities,
@@ -426,29 +429,22 @@ impl Redfish for Bmc {
 
     fn boot_once<'a>(&'a self, target: Boot) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
         Box::pin(async move {
-            match target {
-                Boot::Pxe => {
-                    self.set_boot_override(
-                        BootSourceOverrideTarget::Pxe,
-                        BootSourceOverrideEnabled::Once,
-                    )
-                    .await
-                }
-                Boot::HardDisk => {
-                    self.set_boot_override(
-                        BootSourceOverrideTarget::Hdd,
-                        BootSourceOverrideEnabled::Once,
-                    )
-                    .await
-                }
-                Boot::UefiHttp => {
-                    self.set_boot_override(
-                        BootSourceOverrideTarget::UefiHttp,
-                        BootSourceOverrideEnabled::Once,
-                    )
-                    .await
-                }
-            }
+            let override_target = match target {
+                Boot::Pxe => BootSourceOverrideTarget::Pxe,
+                Boot::HardDisk => BootSourceOverrideTarget::Hdd,
+                Boot::UefiHttp => BootSourceOverrideTarget::UefiHttp,
+            };
+            Redfish::set_boot_override(
+                self,
+                BootOverride {
+                    target: override_target,
+                    enabled: BootSourceOverrideEnabled::Once,
+                    mode: None,
+                    http_boot_uri: None,
+                },
+            )
+            .await?;
+            Ok(())
         })
     }
 
@@ -462,6 +458,71 @@ impl Redfish for Bmc {
                 Boot::HardDisk => self.set_boot_order(BootDevices::Hdd).await,
                 Boot::UefiHttp => self.set_boot_order(BootDevices::UefiHttp).await,
             }
+        })
+    }
+
+    fn set_boot_override<'a>(
+        &'a self,
+        settings: BootOverride,
+    ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
+        Box::pin(async move {
+            let mut boot_data: HashMap<String, serde_json::Value> = HashMap::new();
+            boot_data.insert(
+                "BootSourceOverrideTarget".to_string(),
+                settings.target.to_string().into(),
+            );
+            boot_data.insert(
+                "BootSourceOverrideEnabled".to_string(),
+                settings.enabled.to_string().into(),
+            );
+            // Viking BMCs default to UEFI mode when the caller doesn't specify one.
+            let mode = settings.mode.unwrap_or(BootSourceOverrideMode::UEFI);
+            boot_data.insert(
+                "BootSourceOverrideMode".to_string(),
+                mode.to_string().into(),
+            );
+            if let Some(uri) = settings.http_boot_uri {
+                boot_data.insert("HttpBootUri".to_string(), uri.into());
+            }
+            let data = HashMap::from([("Boot", boot_data)]);
+            // Viking BMCs use a pending-settings `SD` endpoint that requires an If-Match
+            // ETag from a prior GET to succeed.
+            let url = format!("Systems/{}/SD", self.s.system_id());
+            let (_, body): (_, HashMap<String, serde_json::Value>) =
+                self.s.client.get(&url).await?;
+            let key = "@odata.etag";
+            let etag = body
+                .get(key)
+                .ok_or_else(|| RedfishError::MissingKey {
+                    key: key.to_string(),
+                    url: url.to_string(),
+                })?
+                .as_str()
+                .ok_or_else(|| RedfishError::InvalidKeyType {
+                    key: key.to_string(),
+                    expected_type: "Object".to_string(),
+                    url: url.to_string(),
+                })?;
+
+            let headers: Vec<(HeaderName, String)> = vec![(IF_MATCH, etag.to_string())];
+            let timeout = Duration::from_secs(60);
+            let (_status_code, _resp_body, _resp_headers): (
+                _,
+                Option<HashMap<String, serde_json::Value>>,
+                Option<HeaderMap>,
+            ) = self
+                .s
+                .client
+                .req(
+                    Method::PATCH,
+                    &url,
+                    Some(data),
+                    Some(timeout),
+                    None,
+                    headers,
+                )
+                .await?;
+            Ok(None)
         })
     }
 
@@ -1547,59 +1608,6 @@ impl Bmc {
             ordered.push(format!("Boot{}", b.id).to_string());
         }
         Ok(Some(ordered))
-    }
-
-    async fn set_boot_override(
-        &self,
-        override_target: BootSourceOverrideTarget,
-        override_enabled: BootSourceOverrideEnabled,
-    ) -> Result<(), RedfishError> {
-        let mut boot_data: HashMap<String, String> = HashMap::new();
-        boot_data.insert("BootSourceOverrideMode".to_string(), "UEFI".to_string());
-        boot_data.insert(
-            "BootSourceOverrideEnabled".to_string(),
-            format!("{}", override_enabled),
-        );
-        boot_data.insert(
-            "BootSourceOverrideTarget".to_string(),
-            format!("{}", override_target),
-        );
-        let data = HashMap::from([("Boot", boot_data)]);
-        let url = format!("Systems/{}/SD ", self.s.system_id());
-        let (_, body): (_, HashMap<String, serde_json::Value>) = self.s.client.get(&url).await?;
-        let key = "@odata.etag";
-        let etag = body
-            .get(key)
-            .ok_or_else(|| RedfishError::MissingKey {
-                key: key.to_string(),
-                url: url.to_string(),
-            })?
-            .as_str()
-            .ok_or_else(|| RedfishError::InvalidKeyType {
-                key: key.to_string(),
-                expected_type: "Object".to_string(),
-                url: url.to_string(),
-            })?;
-
-        let headers: Vec<(HeaderName, String)> = vec![(IF_MATCH, etag.to_string())];
-        let timeout = Duration::from_secs(60);
-        let (_status_code, _resp_body, _resp_headers): (
-            _,
-            Option<HashMap<String, serde_json::Value>>,
-            Option<HeaderMap>,
-        ) = self
-            .s
-            .client
-            .req(
-                Method::PATCH,
-                &url,
-                Some(data),
-                Some(timeout),
-                None,
-                headers,
-            )
-            .await?;
-        Ok(())
     }
 
     // nvidia dgx stores the sel as part of the manager

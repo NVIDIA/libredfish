@@ -431,6 +431,65 @@ async fn run_integration_test(
         redfish.boot_once(libredfish::Boot::Pxe).await?;
         redfish.boot_first(libredfish::Boot::HardDisk).await?;
     }
+
+    // Exercise set_boot_override on vendors that support it. The mockup server
+    // does not validate the PATCH body fwiw -- this just verifies the call path
+    // compiles, dispatches to the right impl, and reaches a writable endpoint.
+    // Mirrors the boot_once/boot_first exclusion above: gbswitch + liteon
+    // mockups don't model the boot-config endpoints, and dell/lenovo return
+    // NotSupported (tested separately below).
+    if vendor_dir != "dell"
+        && vendor_dir != "dell_multi_dpu"
+        && vendor_dir != "lenovo"
+        && vendor_dir != "liteon_powershelf"
+        && vendor_dir != "nvidia_gbswitch"
+    {
+        // Bare override (no mode, no URI). Matches what boot_once/boot_first
+        // do internally for backwards-compatible callers.
+        redfish
+            .set_boot_override(libredfish::BootOverride {
+                target: libredfish::BootSourceOverrideTarget::Pxe,
+                enabled: libredfish::BootSourceOverrideEnabled::Once,
+                mode: None,
+                http_boot_uri: None,
+            })
+            .await?;
+
+        // Full override with explicit UEFI mode and a pinned HTTP boot URI.
+        // This is the new capability -- pinning the URL via the BMC so the host
+        // doesn't have to rely on DHCP option 67.
+        redfish
+            .set_boot_override(libredfish::BootOverride {
+                target: libredfish::BootSourceOverrideTarget::UefiHttp,
+                enabled: libredfish::BootSourceOverrideEnabled::Continuous,
+                mode: Some(libredfish::BootSourceOverrideMode::UEFI),
+                http_boot_uri: Some(
+                    "http://example.invalid/public/blobs/internal/x86_64/ipxe.efi".to_string(),
+                ),
+            })
+            .await?;
+    }
+
+    // Dell and Lenovo return NotSupported until follow-up PRs implement the
+    // BIOS-attribute path (HttpDev1Uri etc. on Dell, equivalent on Lenovo XCC).
+    if vendor_dir == "dell" || vendor_dir == "dell_multi_dpu" || vendor_dir == "lenovo" {
+        match redfish
+            .set_boot_override(libredfish::BootOverride {
+                target: libredfish::BootSourceOverrideTarget::UefiHttp,
+                enabled: libredfish::BootSourceOverrideEnabled::Continuous,
+                mode: Some(libredfish::BootSourceOverrideMode::UEFI),
+                http_boot_uri: Some("http://example.invalid/ipxe.efi".to_string()),
+            })
+            .await
+        {
+            Err(libredfish::RedfishError::NotSupported(_)) => {}
+            other => panic!(
+                "Expected NotSupported for {vendor_dir}, got {:?}",
+                other.map(|_| ())
+            ),
+        }
+    }
+
     redfish
         .power(libredfish::SystemPowerControl::ForceRestart)
         .await?;

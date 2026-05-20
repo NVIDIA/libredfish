@@ -27,7 +27,10 @@ use crate::{
     jsonmap,
     model::{
         account_service::ManagerAccount,
-        boot::{BootSourceOverrideEnabled, BootSourceOverrideTarget},
+        boot::{
+            BootOverride, BootSourceOverrideEnabled, BootSourceOverrideMode,
+            BootSourceOverrideTarget,
+        },
         certificate::Certificate,
         chassis::{Assembly, Chassis, NetworkAdapter},
         component_integrity::ComponentIntegrities,
@@ -586,8 +589,17 @@ impl Redfish for Bmc {
                 Boot::HardDisk => BootSourceOverrideTarget::Hdd,
                 Boot::UefiHttp => BootSourceOverrideTarget::UefiHttp,
             };
-            self.set_boot_override(override_target, BootSourceOverrideEnabled::Once)
-                .await
+            Redfish::set_boot_override(
+                self,
+                BootOverride {
+                    target: override_target,
+                    enabled: BootSourceOverrideEnabled::Once,
+                    mode: None,
+                    http_boot_uri: None,
+                },
+            )
+            .await?;
+            Ok(())
         })
     }
 
@@ -602,6 +614,39 @@ impl Redfish for Bmc {
                 Boot::UefiHttp => "UefiHttp",
             };
             self.set_boot_order(alias).await
+        })
+    }
+
+    /// AMI requires patching `/Systems/{id}` (NOT `/SD`) with an `If-Match` header.
+    fn set_boot_override<'a>(
+        &'a self,
+        settings: BootOverride,
+    ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
+        Box::pin(async move {
+            let mut boot_data: HashMap<String, serde_json::Value> = HashMap::new();
+            boot_data.insert(
+                "BootSourceOverrideTarget".to_string(),
+                settings.target.to_string().into(),
+            );
+            boot_data.insert(
+                "BootSourceOverrideEnabled".to_string(),
+                settings.enabled.to_string().into(),
+            );
+            // AMI BMCs default to UEFI mode when the caller doesn't specify one.
+            let mode = settings.mode.unwrap_or(BootSourceOverrideMode::UEFI);
+            boot_data.insert(
+                "BootSourceOverrideMode".to_string(),
+                mode.to_string().into(),
+            );
+            if let Some(uri) = settings.http_boot_uri {
+                boot_data.insert("HttpBootUri".to_string(), uri.into());
+            }
+            let url = format!("Systems/{}", self.s.system_id());
+            self.s
+                .client
+                .patch_with_if_match(&url, HashMap::from([("Boot", boot_data)]))
+                .await?;
+            Ok(None)
         })
     }
 
@@ -1124,28 +1169,6 @@ impl Redfish for Bmc {
 }
 
 impl Bmc {
-    /// AMI requires patching to /Systems/{id} (NOT /SD) with If-Match header
-    async fn set_boot_override(
-        &self,
-        override_target: BootSourceOverrideTarget,
-        override_enabled: BootSourceOverrideEnabled,
-    ) -> Result<(), RedfishError> {
-        let boot_data = HashMap::from([
-            ("BootSourceOverrideMode".to_string(), "UEFI".to_string()),
-            (
-                "BootSourceOverrideEnabled".to_string(),
-                override_enabled.to_string(),
-            ),
-            (
-                "BootSourceOverrideTarget".to_string(),
-                override_target.to_string(),
-            ),
-        ]);
-        let data = HashMap::from([("Boot", boot_data)]);
-        let url = format!("Systems/{}", self.s.system_id());
-        self.s.client.patch_with_if_match(&url, data).await
-    }
-
     async fn get_system_and_boot_options(
         &self,
     ) -> Result<(ComputerSystem, Vec<BootOption>), RedfishError> {

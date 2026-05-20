@@ -49,8 +49,8 @@ use crate::model::{storage::Drives, storage::Storage};
 use crate::network::{RedfishHttpClient, REDFISH_ENDPOINT};
 use crate::{jsonmap, BootOptions, Collection, PCIeDevice, RedfishError, Resource};
 use crate::{
-    model, BiosProfileType, Boot, EnabledDisabled, JobState, NetworkDeviceFunction, NetworkPort,
-    PowerState, Redfish, RoleId, Status, Systems,
+    model, BiosProfileType, Boot, BootOverride, EnabledDisabled, JobState, NetworkDeviceFunction,
+    NetworkPort, PowerState, Redfish, RoleId, Status, Systems,
 };
 use crate::{
     model::chassis::{Chassis, NetworkAdapter},
@@ -421,6 +421,13 @@ impl Redfish for RedfishStandard {
         _target: Boot,
     ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
         Box::pin(async move { Err(RedfishError::NotSupported("boot_first".to_string())) })
+    }
+
+    fn set_boot_override<'a>(
+        &'a self,
+        _settings: BootOverride,
+    ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
+        Box::pin(async move { Err(RedfishError::NotSupported("set_boot_override".to_string())) })
     }
 
     fn clear_tpm<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {

@@ -29,7 +29,10 @@ use tokio::fs::File;
 use crate::{
     model::{
         account_service::ManagerAccount,
-        boot,
+        boot::{
+            self, BootOverride, BootSourceOverrideEnabled, BootSourceOverrideMode,
+            BootSourceOverrideTarget,
+        },
         certificate::Certificate,
         chassis::{Assembly, Chassis, NetworkAdapter},
         component_integrity::ComponentIntegrities,
@@ -415,7 +418,23 @@ impl Redfish for Bmc {
 
     /// Boot from this device once then go back to the normal boot order
     fn boot_once<'a>(&'a self, target: Boot) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
-        Box::pin(async move { self.set_boot_override(target, true).await })
+        Box::pin(async move {
+            Redfish::set_boot_override(
+                self,
+                BootOverride {
+                    target: match target {
+                        Boot::Pxe => BootSourceOverrideTarget::Pxe,
+                        Boot::HardDisk => BootSourceOverrideTarget::Hdd,
+                        Boot::UefiHttp => BootSourceOverrideTarget::UefiHttp,
+                    },
+                    enabled: BootSourceOverrideEnabled::Once,
+                    mode: None,
+                    http_boot_uri: None,
+                },
+            )
+            .await?;
+            Ok(())
+        })
     }
 
     /// Set which device we should boot from first.
@@ -429,9 +448,50 @@ impl Redfish for Bmc {
                 Err(RedfishError::HTTPErrorCode {
                     status_code: StatusCode::NOT_FOUND,
                     ..
-                }) => self.set_boot_override(target, false).await,
+                }) => {
+                    Redfish::set_boot_override(
+                        self,
+                        BootOverride {
+                            target: match target {
+                                Boot::Pxe => BootSourceOverrideTarget::Pxe,
+                                Boot::HardDisk => BootSourceOverrideTarget::Hdd,
+                                Boot::UefiHttp => BootSourceOverrideTarget::UefiHttp,
+                            },
+                            enabled: BootSourceOverrideEnabled::Continuous,
+                            mode: None,
+                            http_boot_uri: None,
+                        },
+                    )
+                    .await?;
+                    Ok(())
+                }
                 res => res,
             }
+        })
+    }
+
+    fn set_boot_override<'a>(
+        &'a self,
+        settings: BootOverride,
+    ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
+        Box::pin(async move {
+            // Supermicro BMCs default to UEFI mode when the caller doesn't specify one.
+            let mode = Some(settings.mode.unwrap_or(BootSourceOverrideMode::UEFI));
+            let boot = boot::Boot {
+                boot_source_override_target: Some(settings.target),
+                boot_source_override_enabled: Some(settings.enabled),
+                boot_source_override_mode: mode,
+                http_boot_uri: settings.http_boot_uri,
+                ..Default::default()
+            };
+            let body = HashMap::from([("Boot", boot)]);
+            let url = format!("Systems/{}", self.s.system_id());
+            self.s
+                .client
+                .patch(&url, body)
+                .await
+                .map(|_status_code| ())?;
+            Ok(None)
         })
     }
 
@@ -1421,30 +1481,6 @@ impl Bmc {
             self.s.manager_id()
         );
         let body = HashMap::from([("SysLockdownEnabled", target.is_enabled())]);
-        self.s.client.patch(&url, body).await.map(|_status_code| ())
-    }
-
-    async fn set_boot_override(&self, target: Boot, once: bool) -> Result<(), RedfishError> {
-        let url = format!("Systems/{}", self.s.system_id());
-        let boot = boot::Boot {
-            boot_source_override_target: Some(match target {
-                // In UEFI mode Pxe gets converted to UefiBootNext, but it won't accept
-                // UefiBootNext directly.
-                Boot::Pxe => boot::BootSourceOverrideTarget::Pxe,
-                Boot::HardDisk => boot::BootSourceOverrideTarget::Hdd,
-                // For this one to appear you have to set boot_source_override_mode to UEFI and
-                // reboot, then choose it, then reboot to use it.
-                Boot::UefiHttp => boot::BootSourceOverrideTarget::UefiHttp,
-            }),
-            boot_source_override_enabled: Some(if once {
-                boot::BootSourceOverrideEnabled::Once
-            } else {
-                boot::BootSourceOverrideEnabled::Continuous
-            }),
-            boot_source_override_mode: Some(boot::BootSourceOverrideMode::UEFI),
-            ..Default::default()
-        };
-        let body = HashMap::from([("Boot", boot)]);
         self.s.client.patch(&url, body).await.map(|_status_code| ())
     }
 

@@ -13,7 +13,7 @@ use crate::model::update_service::{ComponentType, TransferProtocolType, UpdateSe
 use crate::Boot::UefiHttp;
 use crate::{
     model::{
-        boot::{BootSourceOverrideEnabled, BootSourceOverrideTarget},
+        boot::{BootOverride, BootSourceOverrideEnabled, BootSourceOverrideTarget},
         chassis::{Assembly, NetworkAdapter},
         sel::{LogEntry, LogEntryCollection},
         service_root::ServiceRoot,
@@ -331,30 +331,23 @@ impl Redfish for Bmc {
         target: crate::Boot,
     ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
         Box::pin(async move {
-            match target {
-                crate::Boot::Pxe => {
-                    self.set_boot_override(
-                        BootSourceOverrideTarget::Pxe,
-                        BootSourceOverrideEnabled::Once,
-                    )
-                    .await
-                }
-                crate::Boot::HardDisk => {
-                    self.set_boot_override(
-                        BootSourceOverrideTarget::Hdd,
-                        BootSourceOverrideEnabled::Once,
-                    )
-                    .await
-                }
-                crate::Boot::UefiHttp => {
-                    // : UefiHttp isn't in the GH200's list of AllowableValues, but it seems to work
-                    self.set_boot_override(
-                        BootSourceOverrideTarget::UefiHttp,
-                        BootSourceOverrideEnabled::Once,
-                    )
-                    .await
-                }
-            }
+            // UefiHttp isn't in the GH200's list of AllowableValues, but it seems to work.
+            let override_target = match target {
+                crate::Boot::Pxe => BootSourceOverrideTarget::Pxe,
+                crate::Boot::HardDisk => BootSourceOverrideTarget::Hdd,
+                crate::Boot::UefiHttp => BootSourceOverrideTarget::UefiHttp,
+            };
+            Redfish::set_boot_override(
+                self,
+                BootOverride {
+                    target: override_target,
+                    enabled: BootSourceOverrideEnabled::Once,
+                    mode: None,
+                    http_boot_uri: None,
+                },
+            )
+            .await?;
+            Ok(())
         })
     }
 
@@ -379,6 +372,38 @@ impl Redfish for Bmc {
                 }
                 crate::Boot::UefiHttp => self.set_boot_order(BootOptionName::Http).await,
             }
+        })
+    }
+
+    fn set_boot_override<'a>(
+        &'a self,
+        settings: BootOverride,
+    ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
+        Box::pin(async move {
+            let mut boot_data: HashMap<String, serde_json::Value> = HashMap::new();
+            boot_data.insert(
+                "BootSourceOverrideTarget".to_string(),
+                settings.target.to_string().into(),
+            );
+            boot_data.insert(
+                "BootSourceOverrideEnabled".to_string(),
+                settings.enabled.to_string().into(),
+            );
+            if let Some(mode) = settings.mode {
+                boot_data.insert(
+                    "BootSourceOverrideMode".to_string(),
+                    mode.to_string().into(),
+                );
+            }
+            if let Some(uri) = settings.http_boot_uri {
+                boot_data.insert("HttpBootUri".to_string(), uri.into());
+            }
+            let url = format!("Systems/{}/Settings", self.s.system_id());
+            self.s
+                .client
+                .patch(&url, HashMap::from([("Boot", boot_data)]))
+                .await?;
+            Ok(None)
         })
     }
 
@@ -1001,28 +1026,6 @@ impl Redfish for Bmc {
 }
 
 impl Bmc {
-    async fn set_boot_override(
-        &self,
-        override_target: BootSourceOverrideTarget,
-        override_enabled: BootSourceOverrideEnabled,
-    ) -> Result<(), RedfishError> {
-        let mut data: HashMap<String, String> = HashMap::new();
-        data.insert(
-            "BootSourceOverrideEnabled".to_string(),
-            format!("{}", override_enabled),
-        );
-        data.insert(
-            "BootSourceOverrideTarget".to_string(),
-            format!("{}", override_target),
-        );
-        let url = format!("Systems/{}/Settings ", self.s.system_id());
-        self.s
-            .client
-            .patch(&url, HashMap::from([("Boot", data)]))
-            .await?;
-        Ok(())
-    }
-
     // name: The name of the device you want to make the first boot choice.
     async fn set_boot_order(&self, name: BootOptionName) -> Result<(), RedfishError> {
         let boot_array = self

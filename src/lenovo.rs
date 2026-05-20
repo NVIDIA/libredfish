@@ -34,6 +34,7 @@ use tokio::time::sleep;
 use tracing::debug;
 
 use crate::model::account_service::ManagerAccount;
+use crate::model::boot::BootOverride;
 use crate::model::certificate::Certificate;
 use crate::model::component_integrity::ComponentIntegrities;
 use crate::model::oem::lenovo::{BootSettings, FrontPanelUSB, LenovoBootOrder};
@@ -583,6 +584,21 @@ impl Redfish for Bmc {
                     "No Lenovo UefiHttp implementation".to_string(),
                 )),
             }
+        })
+    }
+
+    /// Not yet implemented on Lenovo XCC. Like Dell, Lenovo does not expose
+    /// the standard Redfish `Boot.HttpBootUri` property; setting an HTTP boot
+    /// URI on Lenovo requires a vendor-specific BIOS attribute path. Planned
+    /// as a follow-up PR.
+    fn set_boot_override<'a>(
+        &'a self,
+        _settings: BootOverride,
+    ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
+        Box::pin(async move {
+            Err(RedfishError::NotSupported(
+                "No Lenovo set_boot_override implementation".to_string(),
+            ))
         })
     }
 

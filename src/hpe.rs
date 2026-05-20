@@ -27,6 +27,7 @@ use serde_json::Value;
 use crate::{
     model::{
         account_service::ManagerAccount,
+        boot::{BootOverride, BootSourceOverrideMode},
         certificate::Certificate,
         chassis::{Assembly, Chassis, NetworkAdapter},
         component_integrity::ComponentIntegrities,
@@ -473,6 +474,38 @@ impl Redfish for Bmc {
 
     fn boot_once<'a>(&'a self, target: Boot) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
         Box::pin(async move { self.boot_first(target).await })
+    }
+
+    fn set_boot_override<'a>(
+        &'a self,
+        settings: BootOverride,
+    ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
+        Box::pin(async move {
+            let mut boot_data: HashMap<String, serde_json::Value> = HashMap::new();
+            boot_data.insert(
+                "BootSourceOverrideTarget".to_string(),
+                settings.target.to_string().into(),
+            );
+            boot_data.insert(
+                "BootSourceOverrideEnabled".to_string(),
+                settings.enabled.to_string().into(),
+            );
+            // HPE iLO defaults to UEFI mode when the caller doesn't specify one.
+            let mode = settings.mode.unwrap_or(BootSourceOverrideMode::UEFI);
+            boot_data.insert(
+                "BootSourceOverrideMode".to_string(),
+                mode.to_string().into(),
+            );
+            if let Some(uri) = settings.http_boot_uri {
+                boot_data.insert("HttpBootUri".to_string(), uri.into());
+            }
+            let url = format!("Systems/{}", self.s.system_id());
+            self.s
+                .client
+                .patch(&url, HashMap::from([("Boot", boot_data)]))
+                .await?;
+            Ok(None)
+        })
     }
 
     fn clear_tpm<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {

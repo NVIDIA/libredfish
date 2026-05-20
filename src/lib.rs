@@ -23,6 +23,9 @@ use std::{collections::HashMap, fmt, future::Future, path::Path, pin::Pin, time:
 
 pub mod model;
 use model::account_service::ManagerAccount;
+pub use model::boot::{
+    BootOverride, BootSourceOverrideEnabled, BootSourceOverrideMode, BootSourceOverrideTarget,
+};
 pub use model::chassis::{Assembly, Chassis, NetworkAdapter};
 pub use model::ethernet_interface::EthernetInterface;
 pub use model::network_device_function::NetworkDeviceFunction;
@@ -283,6 +286,27 @@ pub trait Redfish: Send + Sync + 'static {
 
     /// Change boot order putting this target first
     fn boot_first<'a>(&'a self, target: Boot) -> RedfishFuture<'a, Result<(), RedfishError>>;
+
+    /// Set a boot source override, optionally including an HTTP boot URI.
+    ///
+    /// This is a lower-level alternative to [`Redfish::boot_once`] /
+    /// [`Redfish::boot_first`] that exposes the full Redfish `Boot` override
+    /// shape: `target`, `enabled` (`Once`/`Continuous`/`Disabled`), `mode`
+    /// (`UEFI`/`Legacy`), and `http_boot_uri`.
+    ///
+    /// When `target` is `UefiHttp` and `http_boot_uri` is `Some`, the BMC pins
+    /// the boot URL — the host will UEFI-HTTP-boot from that URI on the next
+    /// applicable boot without needing DHCP option 67. If `http_boot_uri` is
+    /// `None`, the firmware falls back to DHCP option 67 per the UEFI HTTP
+    /// Boot specification.
+    ///
+    /// Returns an optional job ID. Vendors that route the change through a
+    /// BIOS settings job schedule it to apply on next reboot and return the
+    /// job ID. Vendors that apply the change immediately return `None`.
+    fn set_boot_override<'a>(
+        &'a self,
+        settings: BootOverride,
+    ) -> RedfishFuture<'a, Result<Option<String>, RedfishError>>;
 
     /// Change boot order by setting boot array.
     fn change_boot_order<'a>(
