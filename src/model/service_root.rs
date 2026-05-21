@@ -61,6 +61,7 @@ pub struct ServiceRoot {
 pub enum RedfishVendor {
     Lenovo,
     LenovoAMI,
+    GigaComputingAMI,
     Dell,
     NvidiaDpu,
     Supermicro,
@@ -95,6 +96,7 @@ impl ServiceRoot {
         let v = self.vendor_string().unwrap_or("Unknown".to_string());
         Some(match v.to_lowercase().as_str() {
             "ami" => RedfishVendor::AMI,
+            "giga computing" => RedfishVendor::GigaComputingAMI,
             "dell" => RedfishVendor::Dell,
             "hpe" => RedfishVendor::Hpe,
             "lenovo" => {
