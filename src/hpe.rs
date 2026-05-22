@@ -27,7 +27,7 @@ use serde_json::Value;
 use crate::{
     model::{
         account_service::ManagerAccount,
-        boot::{BootOverride, BootSourceOverrideMode},
+        boot::BootOverride,
         certificate::Certificate,
         chassis::{Assembly, Chassis, NetworkAdapter},
         component_integrity::ComponentIntegrities,
@@ -476,34 +476,64 @@ impl Redfish for Bmc {
         Box::pin(async move { self.boot_first(target).await })
     }
 
+    /// HPE iLO does not implement the standard Redfish `Boot.HttpBootUri`
+    /// PATCH path. The `HttpBootUri` field appears in the Boot block (as
+    /// `null` in GET responses) and `UefiHttp` is advertised in
+    /// `BootSourceOverrideTarget@Redfish.AllowableValues`, but PATCHing
+    /// either rejects with `PropertyNotWritableOrUnknown` and
+    /// `UnsupportedOperation` respectively. In fact, the entire
+    /// `BootSourceOverride` PATCH mechanism is non-functional on iLO 6
+    /// (at least in v1.58); even `BootSourceOverrideTarget: "Pxe"` is
+    /// rejected.
+    ///
+    /// The HPE-specific path for pinning a UEFI HTTP boot URL is the
+    /// `UrlBootFile` BIOS attribute (with optional `UrlBootFile2/3/4`
+    /// secondaries and `PreBootNetwork` for IPv4/IPv6/Auto). Setting it
+    /// creates a UEFI boot entry called "URL File" pointing at the URI;
+    /// applies on next reset. Equivalent to the iLO HPREST/ilorest
+    /// `select Bios; set UrlBootFile=...; commit` workflow, which is
+    /// documented on Gen10/iLO 5 and Gen11/iLO 6.
+    ///
+    /// Verified working on ProLiant DL380a Gen11 machines (running both
+    /// iLO 6 v1.58 and v1.72). Unlike Dell, there doesn't seem to be any
+    /// sort of attribute engine dependency drama going on; UrlBootFile is
+    /// a straightforward string attribute that's writable across the fleet.
+    ///
+    /// Returns `Ok(None)` on success: HPE doesn't return a Location/job ID
+    /// here (unlike Dell). The pending state lives in `/Bios/Settings` and
+    /// applies on next reboot; the response includes `SystemResetRequired`
+    /// as confirmation that the change is staged.
+    /// Callers reverting the change PATCH `UrlBootFile: ""` back.
     fn set_boot_override<'a>(
         &'a self,
         settings: BootOverride,
     ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
         Box::pin(async move {
-            let mut boot_data: HashMap<String, serde_json::Value> = HashMap::new();
-            boot_data.insert(
-                "BootSourceOverrideTarget".to_string(),
-                settings.target.to_string().into(),
-            );
-            boot_data.insert(
-                "BootSourceOverrideEnabled".to_string(),
-                settings.enabled.to_string().into(),
-            );
-            // HPE iLO defaults to UEFI mode when the caller doesn't specify one.
-            let mode = settings.mode.unwrap_or(BootSourceOverrideMode::UEFI);
-            boot_data.insert(
-                "BootSourceOverrideMode".to_string(),
-                mode.to_string().into(),
-            );
-            if let Some(uri) = settings.http_boot_uri {
-                boot_data.insert("HttpBootUri".to_string(), uri.into());
-            }
-            let url = format!("Systems/{}", self.s.system_id());
-            self.s
-                .client
-                .patch(&url, HashMap::from([("Boot", boot_data)]))
-                .await?;
+            let Some(uri) = settings.http_boot_uri else {
+                // HPE iLO 6 does not accept BootSourceOverrideTarget/Enabled
+                // PATCHes. Even non-HTTP targets like Pxe are rejected with
+                // UnsupportedOperation. Without an http_boot_uri to set via
+                // the UrlBootFile BIOS attribute, no Redfish operation here.
+                return Err(RedfishError::NotSupported(
+                    "HPE set_boot_override requires http_boot_uri; \
+                     BootSourceOverrideTarget/Enabled PATCHes are not \
+                     functional via Redfish on iLO 6 (verified on v1.58 / \
+                     v1.72: UnsupportedOperation for all override targets)"
+                        .to_string(),
+                ));
+            };
+
+            // HPE iLO uses lowercase `settings/` in its @Redfish.Settings
+            // pointer (matches the existing helpers in this file, e.g.,
+            // setup_serial_console / clear_tpm).
+            let url = format!("Systems/{}/Bios/settings/", self.s.system_id());
+            let body = serde_json::json!({
+                "Attributes": {
+                    "UrlBootFile": uri,
+                    "PreBootNetwork": "IPv4",
+                }
+            });
+            self.s.client.patch(&url, body).await?;
             Ok(None)
         })
     }

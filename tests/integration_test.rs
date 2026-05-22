@@ -432,17 +432,24 @@ async fn run_integration_test(
         redfish.boot_first(libredfish::Boot::HardDisk).await?;
     }
 
-    // Exercise set_boot_override on vendors that support it. The mockup server
-    // does not validate the PATCH body fwiw -- this just verifies the call path
+    // Exercise set_boot_override on vendors that support the bare (no URI)
+    // override variant via the standard Redfish Boot block PATCH. The mockup
+    // doesn't validate the PATCH body -- this just verifies the call path
     // compiles, dispatches to the right impl, and reaches a writable endpoint.
-    // Mirrors the boot_once/boot_first exclusion above: gbswitch + liteon
-    // mockups don't model the boot-config endpoints, and dell/lenovo return
-    // NotSupported (tested separately below).
+    //
+    // Excluded:
+    //   gbswitch + liteon: mockups don't model the boot-config endpoints
+    //   dell/dell_multi_dpu: tested separately below (BIOS-attribute path)
+    //   lenovo: returns NotSupported (tested separately below)
+    //   hpe: returns NotSupported when http_boot_uri is absent (BIOS-attribute
+    //        path via UrlBootFile is the only HPE-functional mechanism;
+    //        BootSourceOverride PATCHes are rejected by iLO 6 firmware)
     if vendor_dir != "dell"
         && vendor_dir != "dell_multi_dpu"
         && vendor_dir != "lenovo"
         && vendor_dir != "liteon_powershelf"
         && vendor_dir != "nvidia_gbswitch"
+        && vendor_dir != "hpe"
     {
         // Bare override (no mode, no URI). Matches what boot_once/boot_first
         // do internally for backwards-compatible callers.
@@ -458,6 +465,23 @@ async fn run_integration_test(
         // Full override with explicit UEFI mode and a pinned HTTP boot URI.
         // This is the new capability -- pinning the URL via the BMC so the host
         // doesn't have to rely on DHCP option 67.
+        redfish
+            .set_boot_override(libredfish::BootOverride {
+                target: libredfish::BootSourceOverrideTarget::UefiHttp,
+                enabled: libredfish::BootSourceOverrideEnabled::Continuous,
+                mode: Some(libredfish::BootSourceOverrideMode::UEFI),
+                http_boot_uri: Some(
+                    "http://example.invalid/public/blobs/internal/x86_64/ipxe.efi".to_string(),
+                ),
+            })
+            .await?;
+    }
+
+    // HPE uses the UrlBootFile BIOS-attribute path. The mockup accepts the
+    // PATCH (default 204 No Content), and the impl returns Ok(None) since HPE
+    // doesn't surface a job ID for BIOS attribute changes. Bare override (no
+    // URI) returns NotSupported on HPE -- we only test the URI-supplied path.
+    if vendor_dir == "hpe" {
         redfish
             .set_boot_override(libredfish::BootOverride {
                 target: libredfish::BootSourceOverrideTarget::UefiHttp,
