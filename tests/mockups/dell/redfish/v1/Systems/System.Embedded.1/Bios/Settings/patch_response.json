@@ -1,0 +1,9 @@
+{
+    "match_request_body_contains": "HttpDev1Uri",
+    "status": 202,
+    "headers": {
+        "Content-Type": "application/json",
+        "Location": "/redfish/v1/TaskService/Tasks/JID_900000000001"
+    },
+    "body": "{\"@Message.ExtendedInfo\":[{\"Message\":\"Successfully scheduled the job.\",\"MessageArgs\":[],\"MessageId\":\"IDRAC.2.9.JCP001\",\"Severity\":\"OK\"}]}"
+}

@@ -494,9 +494,41 @@ async fn run_integration_test(
             .await?;
     }
 
-    // Dell and Lenovo return NotSupported until follow-up PRs implement the
-    // BIOS-attribute path (HttpDev1Uri etc. on Dell, equivalent on Lenovo XCC).
-    if vendor_dir == "dell" || vendor_dir == "dell_multi_dpu" || vendor_dir == "lenovo" {
+    // Dell mockups use the patch_response.json side-file mechanism in the
+    // Python mockup server to simulate real iDRAC responses to PATCH
+    // /Bios/Settings:
+    //   - `dell` mockup: returns 202 + Location header → impl parses the
+    //     job ID out of Location and returns Ok(Some(job_id)). Exercises
+    //     the success path.
+    //   - `dell_multi_dpu` mockup: returns 400 with the Dell-specific SYS410
+    //     MessageId in the body → impl translates that to NotSupported.
+    //     Exercises the read-only-attribute failure path.
+    if vendor_dir == "dell" {
+        match redfish
+            .set_boot_override(libredfish::BootOverride {
+                target: libredfish::BootSourceOverrideTarget::UefiHttp,
+                enabled: libredfish::BootSourceOverrideEnabled::Continuous,
+                mode: Some(libredfish::BootSourceOverrideMode::UEFI),
+                http_boot_uri: Some("http://example.invalid/ipxe.efi".to_string()),
+            })
+            .await
+        {
+            Ok(Some(job_id)) => {
+                assert_eq!(
+                    job_id, "JID_900000000001",
+                    "Expected job ID parsed from mockup's Location header"
+                );
+            }
+            other => panic!(
+                "Expected Ok(Some(job_id)) for {vendor_dir}, got {:?}",
+                other.map(Some)
+            ),
+        }
+    }
+
+    // dell_multi_dpu (mockup-simulated SYS410 lock) and lenovo (no impl)
+    // both return NotSupported.
+    if vendor_dir == "dell_multi_dpu" || vendor_dir == "lenovo" {
         match redfish
             .set_boot_override(libredfish::BootOverride {
                 target: libredfish::BootSourceOverrideTarget::UefiHttp,

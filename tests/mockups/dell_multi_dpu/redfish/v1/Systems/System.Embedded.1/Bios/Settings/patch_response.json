@@ -1,0 +1,8 @@
+{
+    "match_request_body_contains": "HttpDev1Uri",
+    "status": 400,
+    "headers": {
+        "Content-Type": "application/json"
+    },
+    "body": "{\"error\":{\"@Message.ExtendedInfo\":[{\"Message\":\"Unable to modify the attribute because the attribute is read-only and depends on other attributes.\",\"MessageArgs\":[\"HttpDev1Uri\"],\"MessageId\":\"IDRAC.2.16.SYS410\",\"RelatedProperties\":[\"#/Attributes/HttpDev1Uri\"],\"Severity\":\"Warning\",\"Resolution\":\"Verify if the attribute has dependency on other attributes and retry the operation.\"}],\"code\":\"Base.1.18.GeneralError\",\"message\":\"A general error has occurred. See ExtendedInfo for more information.\"}}"
+}

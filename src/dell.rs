@@ -604,18 +604,85 @@ impl Redfish for Bmc {
         })
     }
 
-    /// Not yet implemented on Dell iDRAC. Dell does not expose the standard
-    /// Redfish `Boot.HttpBootUri` property; setting an HTTP boot URI on Dell
-    /// requires PATCHing the `HttpDev1Uri` and related BIOS attributes via
-    /// `/Systems/{id}/Bios/Settings`. Planned as a follow-up PR.
+    /// Dell iDRAC does not expose the standard Redfish `Boot.HttpBootUri`
+    /// property, and rejects PATCHes to `/Systems/{id}/Settings` that include
+    /// `BootSourceOverrideTarget` or `BootSourceOverrideEnabled` (only
+    /// `Boot.BootOrder` and `Boot.BootSourceOverrideMode` are accepted via
+    /// that endpoint). The Dell-specific path for pinning a UEFI HTTP boot URL
+    /// is via the `HttpDev1Uri` BIOS attribute (plus its `HttpDev1EnDis`,
+    /// `HttpDev1DhcpEnDis`, `HttpDev1Protocol` siblings) PATCH'd to
+    /// `/Systems/{id}/Bios/Settings` with `@Redfish.SettingsApplyTime: OnReset`.
+    ///
+    /// That creates a BIOS config job that applies on next reboot; the job ID
+    /// is returned so callers can `DELETE` it to cancel before reboot.
+    ///
+    /// This has been tested (and verified) on:
+    /// - iDRAC9: R760 (BIOS 2.5.4), R760xd2 (BIOS 1.7.5), XE9680.
+    /// - iDRAC10: R670 (BIOS 1.7.5).
+    ///
+    /// HOWEVER, there seems to be some behavior in OTHER machines that I can't
+    /// quite narrow down, where `HttpDev1Uri.ReadOnly: true` in the BIOS Attribute
+    /// Registry, despite `HttpDev1EnDis: Enabled`. Systems were not in lockdown,
+    /// at least it didn't look like it, so I'm not sure what put those systems
+    /// into that state, and I couldn't actually figure out how to get them
+    /// unlocked (this was as part of running across an entire development fleet).
+    ///
+    /// On these locked hosts, it returns HTTP 400 with a Dell-specific
+    /// MessageId of the form `IDRAC.<ver>.SYS410` ("Unable to modify the
+    /// attribute because the attribute is read-only and depends on other
+    /// attributes"). We translate that specific error into `NotSupported` so
+    /// the caller can fall back to DHCP option 67 for the URL. Any other 400
+    /// or error propagates unchanged.
+    ///
+    /// Once we figure out the weird locked state, callers can opt machines
+    /// into the BMC-pinning path more aggressively.
     fn set_boot_override<'a>(
         &'a self,
-        _settings: BootOverride,
+        settings: BootOverride,
     ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
         Box::pin(async move {
-            Err(RedfishError::NotSupported(
-                "No Dell set_boot_override implementation".to_string(),
-            ))
+            let Some(uri) = settings.http_boot_uri else {
+                // Dell does not accept BootSourceOverrideTarget/Enabled PATCHes
+                // via /Systems/{id}/Settings. Without an http_boot_uri to set
+                // via the BIOS attribute path, there's no Dell-specific
+                // operation for this method to perform.
+                return Err(RedfishError::NotSupported(
+                    "Dell set_boot_override requires http_boot_uri; BootSourceOverrideTarget/Enabled are not settable via Redfish on iDRAC".to_string(),
+                ));
+            };
+
+            let url = format!("Systems/{}/Bios/Settings", self.s.system_id());
+            let body = serde_json::json!({
+                "@Redfish.SettingsApplyTime": {"ApplyTime": "OnReset"},
+                "Attributes": {
+                    "HttpDev1Uri": uri,
+                    "HttpDev1EnDis": "Enabled",
+                    "HttpDev1DhcpEnDis": "Disabled",
+                    "HttpDev1Protocol": "IPv4",
+                }
+            });
+
+            match self.s.client.patch(&url, body).await {
+                Ok((_, Some(headers))) => {
+                    let job_id = self
+                        .parse_job_id_from_response_headers(&url, headers)
+                        .await?;
+                    Ok(Some(job_id))
+                }
+                Ok((_, None)) => Err(RedfishError::NoHeader),
+                Err(RedfishError::HTTPErrorCode {
+                    status_code,
+                    response_body,
+                    ..
+                }) if status_code == StatusCode::BAD_REQUEST
+                    && response_body.contains("SYS410") =>
+                {
+                    Err(RedfishError::NotSupported(format!(
+                        "Dell iDRAC rejected HttpDev1Uri PATCH as ReadOnly (MessageId SYS410). Response: {response_body}"
+                    )))
+                }
+                Err(e) => Err(e),
+            }
         })
     }
 
