@@ -79,6 +79,12 @@ pub type RedfishFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
 /// Interface to a BMC Redfish server. All calls will include one or more HTTP network calls.
 pub trait Redfish: Send + Sync + 'static {
+    /// Populate IDs needed by `Managers/{id}` / `Systems/{id}` URL builders.
+    /// Vendor wrappers are pre-initialised, so default is a no-op.
+    fn initialize<'a>(&'a mut self) -> RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { Ok(()) })
+    }
+
     /// Rename a user
     fn change_username<'a>(
         &'a self,

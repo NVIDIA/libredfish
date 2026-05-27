@@ -69,6 +69,10 @@ pub struct RedfishStandard {
     service_root: ServiceRoot,
 }
 impl Redfish for RedfishStandard {
+    fn initialize<'a>(&'a mut self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(RedfishStandard::initialize(self))
+    }
+
     fn create_user<'a>(
         &'a self,
         username: &'a str,
@@ -1364,6 +1368,32 @@ impl RedfishStandard {
             vendor: None,
             service_root: default::Default::default(),
         }
+    }
+
+    /// Fetch service root + system/manager id; populate
+    /// `manager_id` / `system_id` / `service_root`.
+    pub async fn initialize(&mut self) -> Result<(), RedfishError> {
+        let service_root = self.get_service_root().await?;
+        let systems = self.get_systems().await?;
+        let managers = self.get_managers().await?;
+        // Prefer the canonical host system `System_0`, matching the selection
+        // `RedfishClientPool::create_client` makes: some platforms enumerate an
+        // auxiliary system (e.g. the NVIDIA `HGX_Baseboard_0`) ahead of the real
+        // host, so taking the first member blindly targets the wrong system.
+        let system_id = systems
+            .iter()
+            .find(|id| *id == "System_0")
+            .or_else(|| systems.first())
+            .ok_or_else(|| RedfishError::GenericError {
+                error: "No systems found in service root".to_string(),
+            })?;
+        let manager_id = managers.first().ok_or_else(|| RedfishError::GenericError {
+            error: "No managers found in service root".to_string(),
+        })?;
+        self.set_system_id(system_id)?;
+        self.set_manager_id(manager_id)?;
+        self.set_service_root(service_root)?;
+        Ok(())
     }
 
     pub fn system_id(&self) -> &str {
