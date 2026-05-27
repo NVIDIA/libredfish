@@ -23,6 +23,7 @@
 use std::{collections::HashMap, default, path::Path, time::Duration};
 
 use reqwest::{header::HeaderName, Method, StatusCode};
+use serde::Deserialize;
 use serde_json::json;
 use tracing::debug;
 
@@ -934,7 +935,9 @@ impl Redfish for RedfishStandard {
         })
     }
 
-    // This function appends ?$expand=.($levels=1) to the URL, as defined by Redfish spec, to expand first level URIs.
+    // Request server-side expansion of first-level Members via $expand (OPTIONAL
+    // per DSP0266 §6.3). If the server declines, Members come back as shallow
+    // `@odata.id` refs; dereference each so callers see fully-populated resources.
     fn get_collection<'a>(
         &'a self,
         id: ODataId,
@@ -944,8 +947,11 @@ impl Redfish for RedfishStandard {
                 "{}?$expand=.($levels=1)",
                 id.odata_id.replace(&format!("/{REDFISH_ENDPOINT}/"), "")
             );
-            let (_, body): (_, HashMap<String, serde_json::Value>) =
+            let (_, mut body): (_, HashMap<String, serde_json::Value>) =
                 self.client.get(url.as_str()).await?;
+
+            self.expand_shallow_members(&mut body).await;
+
             Ok(Collection {
                 url: url.clone(),
                 body,
@@ -1174,8 +1180,21 @@ impl Redfish for RedfishStandard {
     ) -> crate::RedfishFuture<'a, Result<ComponentIntegrities, RedfishError>> {
         Box::pin(async move {
             let url = "ComponentIntegrity?$expand=.($levels=1)";
-            let (_status_code, body) = self.client.get(url).await?;
-            Ok(body)
+            let (_status_code, mut body): (_, HashMap<String, serde_json::Value>) =
+                self.client.get(url).await?;
+
+            self.expand_shallow_members(&mut body).await;
+
+            // Deserialize by reference so the raw body is still available for the
+            // error message without cloning it on the success path.
+            let value = serde_json::Value::Object(body.into_iter().collect());
+            ComponentIntegrities::deserialize(&value).map_err(|e| {
+                RedfishError::JsonDeserializeError {
+                    url: url.to_string(),
+                    body: value.to_string(),
+                    source: e,
+                }
+            })
         })
     }
 
@@ -1572,6 +1591,41 @@ impl RedfishStandard {
     //
     // PRIVATE
     //
+
+    /// Dereference shallow `{ "@odata.id": ... }` entries left in `Members` when a
+    /// server ignores `$expand` (OPTIONAL per DSP0266 §6.3), so callers always see
+    /// fully-populated resources. Members the server already expanded are left
+    /// untouched. A member that fails to GET is logged at debug and kept as-is
+    /// rather than failing the whole collection.
+    async fn expand_shallow_members(&self, body: &mut HashMap<String, serde_json::Value>) {
+        let Some(serde_json::Value::Array(members)) = body.get_mut("Members") else {
+            return;
+        };
+        for member in members.iter_mut() {
+            let shallow_odata_id = member.as_object().and_then(|obj| {
+                let only_odata_keys =
+                    !obj.is_empty() && obj.keys().all(|k| k.starts_with("@odata."));
+                if !only_odata_keys {
+                    return None;
+                }
+                obj.get("@odata.id")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::to_owned)
+            });
+            let Some(odata_id) = shallow_odata_id else {
+                continue;
+            };
+            let member_url = odata_id.replace(&format!("/{REDFISH_ENDPOINT}/"), "");
+            match self
+                .client
+                .get::<serde_json::Value>(member_url.as_str())
+                .await
+            {
+                Ok((_, expanded)) => *member = expanded,
+                Err(e) => debug!("Failed to dereference shallow Member {member_url}: {e}"),
+            }
+        }
+    }
 
     /// Query the power status from the server
     #[allow(dead_code)]
