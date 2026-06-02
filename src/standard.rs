@@ -811,11 +811,18 @@ impl Redfish for RedfishStandard {
         Box::pin(async move {
             let (_status_code, mut body): (StatusCode, ServiceRoot) = self.client.get("").await?;
             if body.vendor.is_none() && !self.client.is_anonymous() {
+                // Power shelves don't advertise a vendor in the service root,
+                // so fall back to the Manufacturer of the first chassis that
+                // reports one. Lite-On exposes it under the "powershelf"
+                // chassis, while Delta uses "chassis", so iterate rather than
+                // hard-coding a single chassis id.
                 let chassis_all = self.get_chassis_all().await?;
-                if chassis_all.contains(&"powershelf".to_string()) {
-                    let chassis = self.get_chassis("powershelf").await?;
-                    if let Some(x) = chassis.manufacturer {
-                        body.vendor = Some(x);
+                for chassis_id in &chassis_all {
+                    if let Ok(chassis) = self.get_chassis(chassis_id).await {
+                        if let Some(x) = chassis.manufacturer {
+                            body.vendor = Some(x);
+                            break;
+                        }
                     }
                 }
             }
@@ -825,7 +832,20 @@ impl Redfish for RedfishStandard {
 
     fn get_systems<'a>(&'a self) -> crate::RedfishFuture<'a, Result<Vec<String>, RedfishError>> {
         Box::pin(async move {
-            let (_, systems): (_, Systems) = self.client.get("Systems/").await?;
+            let systems: Systems = match self.client.get("Systems/").await {
+                Ok((_, systems)) => systems,
+                // Power shelves (e.g. Delta) omit the Systems collection
+                // entirely and return 404 rather than an empty collection.
+                // Treat that the same as "no systems" and fall back to the
+                // DMTF-suggested default id; power-shelf vendor clients never
+                // touch /Systems anyway.
+                Err(RedfishError::HTTPErrorCode { status_code, .. })
+                    if status_code == StatusCode::NOT_FOUND =>
+                {
+                    return Ok(vec!["1".to_string()]);
+                }
+                Err(e) => return Err(e),
+            };
             if systems.members.is_empty() {
                 return Ok(vec!["1".to_string()]); // default to DMTF standard suggested
             }
@@ -1298,6 +1318,9 @@ impl RedfishStandard {
             RedfishVendor::Supermicro => Ok(Box::new(crate::supermicro::Bmc::new(self.clone())?)),
             RedfishVendor::LiteOnPowerShelf => {
                 Ok(Box::new(crate::liteon_powershelf::Bmc::new(self.clone())?))
+            }
+            RedfishVendor::DeltaPowerShelf => {
+                Ok(Box::new(crate::delta_powershelf::Bmc::new(self.clone())?))
             }
             _ => Ok(Box::new(self.clone())),
         }

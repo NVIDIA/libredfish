@@ -187,6 +187,30 @@ pub struct PowerSupply {
     pub spare_part_number: Option<String>,
     pub part_number: Option<String>, // Supermicro
     pub status: ResourceStatus,
+    /// OEM extensions. Delta power shelves report the commanded PSU on/off
+    /// state under `Oem.deltaenergysystems.Power`; other vendors omit it.
+    #[serde(default)]
+    pub oem: Option<PowerSupplyOem>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct PowerSupplyOem {
+    pub deltaenergysystems: Option<PowerSupplyOemDelta>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "PascalCase")]
+pub struct PowerSupplyOemDelta {
+    pub power: Option<bool>,
+}
+
+impl PowerSupply {
+    /// Delta power shelves expose the commanded PSU on/off state under
+    /// `Oem.deltaenergysystems.Power`. Returns `None` for vendors that
+    /// don't populate it.
+    pub fn is_delta_psu_on(&self) -> Option<bool> {
+        self.oem.as_ref()?.deltaenergysystems.as_ref()?.power
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

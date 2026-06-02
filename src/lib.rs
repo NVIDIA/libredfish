@@ -49,6 +49,7 @@ mod hpe;
 pub mod jsonmap;
 mod lenovo;
 
+mod delta_powershelf;
 mod liteon_powershelf;
 mod network;
 mod nvidia_dpu;

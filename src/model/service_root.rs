@@ -71,6 +71,7 @@ pub enum RedfishVendor {
     NvidiaGBSwitch, // GB NVLink switch
     P3809, // dummy for P3809, needs to be set to NvidiaGH200 or NvidiaGBSwitch based on chassis
     LiteOnPowerShelf,
+    DeltaPowerShelf,
     Unknown,
 }
 
@@ -112,6 +113,11 @@ impl ServiceRoot {
             "wiwynn" => RedfishVendor::NvidiaGBx00,
             "supermicro" => RedfishVendor::Supermicro,
             "lite-on technology corp." => RedfishVendor::LiteOnPowerShelf,
+            // Real Delta shelves (PMC firmware common-pmc-2.2.7) omit Vendor from
+            // the service root, so detection happens via the chassis Manufacturer
+            // ("DELTA") fallback in the site-explorer. This arm is here for parity
+            // in case a future firmware populates the service-root vendor.
+            "delta" => RedfishVendor::DeltaPowerShelf,
             _ => RedfishVendor::Unknown,
         })
     }
