@@ -25,9 +25,10 @@ use serde_json::Value;
 use tracing::debug;
 
 use super::oem::ChassisExtensions;
-use super::power::{Power, PowerSupplies, PowerSupply, Voltages};
+use super::power::{Power, PowerSubsystem, Voltages};
 use super::resource::OData;
 use super::sensor::{Sensor, Sensors};
+use super::thermal::{Thermal, ThermalSubsystem};
 use super::{ODataId, ODataLinks, PCIeFunction, PowerState, ResourceStatus};
 use crate::network::{RedfishHttpClient, REDFISH_ENDPOINT};
 use crate::NetworkDeviceFunction;
@@ -136,11 +137,11 @@ impl Chassis {
     /// Assemble power metrics (PSUs + voltage sensors) by following this
     /// chassis's own `PowerSubsystem` and `Sensors` links.
     ///
-    /// Power shelves (e.g. Lite-On, Delta) expose PSUs under
-    /// `PowerSubsystem/PowerSupplies` and voltage readings under `Sensors`,
-    /// rather than the legacy `Chassis/<id>/Power` resource. Because the chassis
-    /// id also differs per vendor (`powershelf` vs `chassis`), following the
-    /// links recorded on the chassis itself avoids hard-coding either.
+    /// Power shelves (e.g. Lite-On, Delta) expose PSUs via the
+    /// `PowerSubsystem` resource and voltage readings under `Sensors`, rather
+    /// than the legacy `Chassis/<id>/Power` resource. The PSU collection is
+    /// gathered by `PowerSubsystem`; this method just resolves the subsystem
+    /// link and combines it with the chassis's voltage sensors.
     ///
     /// Returns empty collections (not an error) when the chassis advertises no
     /// `PowerSubsystem`/`Sensors` links.
@@ -150,20 +151,16 @@ impl Chassis {
     ) -> Result<Power, RedfishError> {
         // Resource links are absolute (`/redfish/v1/...`); the HTTP client
         // expects paths relative to the service root, so strip the prefix.
-        let to_relative =
-            |odata_id: &str| odata_id.replace(&format!("/{REDFISH_ENDPOINT}/"), "");
+        let to_relative = |odata_id: &str| odata_id.replace(&format!("/{REDFISH_ENDPOINT}/"), "");
 
-        let mut power_supplies = Vec::new();
-        if let Some(subsystem) = &self.power_subsystem {
-            let base = subsystem.odata_id.trim_end_matches('/');
-            let url = to_relative(&format!("{base}/PowerSupplies"));
-            let (_, ps): (_, PowerSupplies) = client.get(&url).await?;
-            for supply in ps.members {
-                let url = to_relative(&supply.odata_id);
-                let (_, power_supply): (_, PowerSupply) = client.get(&url).await?;
-                power_supplies.push(power_supply);
+        let power_supplies = match &self.power_subsystem {
+            Some(link) => {
+                let url = to_relative(&link.odata_id);
+                let (_, subsystem): (_, PowerSubsystem) = client.get(&url).await?;
+                subsystem.power_supplies(client).await?
             }
-        }
+            None => Vec::new(),
+        };
 
         let mut voltages = Vec::new();
         if let Some(sensors_link) = &self.sensors {
@@ -188,6 +185,34 @@ impl Chassis {
             power_supplies: Some(power_supplies),
             voltages: Some(voltages),
             redundancy: None,
+        })
+    }
+
+    /// Assemble thermal metrics by following this chassis's `ThermalSubsystem`
+    /// link. The `ThermalSubsystem`/`ThermalMetrics` resources are the newer
+    /// Redfish replacement for the legacy `Chassis/<id>/Thermal` resource;
+    /// the per-reading parsing lives on `ThermalSubsystem`.
+    ///
+    /// Returns empty temperatures (not an error) when the chassis advertises no
+    /// `ThermalSubsystem` link.
+    pub(crate) async fn get_thermal_metrics(
+        &self,
+        client: &RedfishHttpClient,
+    ) -> Result<Thermal, RedfishError> {
+        let temperatures = match &self.thermal_subsystem {
+            Some(link) => {
+                let url = link.odata_id.replace(&format!("/{REDFISH_ENDPOINT}/"), "");
+                let (_, subsystem): (_, ThermalSubsystem) = client.get(&url).await?;
+                subsystem.temperatures(client).await?
+            }
+            None => Vec::new(),
+        };
+
+        Ok(Thermal {
+            id: "ThermalMetrics".to_string(),
+            name: "Chassis Thermal Metrics".to_string(),
+            temperatures,
+            ..Default::default()
         })
     }
 }

@@ -1,7 +1,5 @@
 use crate::Assembly;
-use reqwest::StatusCode;
 use std::{collections::HashMap, path::Path, time::Duration};
-use tokio::fs::File;
 
 use crate::model::account_service::ManagerAccount;
 use crate::model::boot::BootOverride;
@@ -119,7 +117,7 @@ impl Redfish for Bmc {
     ) -> crate::RedfishFuture<'a, Result<crate::Power, RedfishError>> {
         // Discover the chassis carrying the PowerSubsystem rather than
         // hard-coding the Delta-specific id.
-        Box::pin(async move { self.s.get_power_metrics_from_chassis().await })
+        Box::pin(async move { self.s.get_power_metrics_from_power_subsystem().await })
     }
 
     fn power<'a>(
@@ -144,43 +142,10 @@ impl Redfish for Bmc {
     fn get_thermal_metrics<'a>(
         &'a self,
     ) -> crate::RedfishFuture<'a, Result<crate::Thermal, RedfishError>> {
-        Box::pin(async move {
-            // Delta exposes temperatures under ThermalSubsystem/ThermalMetrics as
-            // a TemperatureReadingsCelsius array, not the legacy /Thermal resource.
-            #[derive(Debug, serde::Deserialize)]
-            #[serde(rename_all = "PascalCase")]
-            struct TemperatureReading {
-                device_name: Option<String>,
-                reading: Option<f64>,
-            }
-            #[derive(Debug, serde::Deserialize)]
-            #[serde(rename_all = "PascalCase")]
-            struct ThermalMetrics {
-                #[serde(default)]
-                temperature_readings_celsius: Vec<TemperatureReading>,
-            }
-
-            let url = "Chassis/chassis/ThermalSubsystem/ThermalMetrics".to_string();
-            let (_status_code, metrics): (StatusCode, ThermalMetrics) =
-                self.s.client.get(&url).await?;
-
-            let temperatures = metrics
-                .temperature_readings_celsius
-                .into_iter()
-                .map(|t| crate::model::thermal::Temperature {
-                    name: t.device_name.unwrap_or_default(),
-                    reading_celsius: t.reading,
-                    ..Default::default()
-                })
-                .collect();
-
-            Ok(crate::Thermal {
-                id: "ThermalMetrics".to_string(),
-                name: "Chassis Thermal Metrics".to_string(),
-                temperatures,
-                ..Default::default()
-            })
-        })
+        // Delta exposes temperatures under ThermalSubsystem/ThermalMetrics
+        // rather than the legacy /Thermal resource. Discover the chassis
+        // carrying the ThermalSubsystem rather than hard-coding the id.
+        Box::pin(async move { self.s.get_thermal_metrics_from_thermal_subsystem().await })
     }
 
     fn get_gpu_sensors<'a>(
@@ -264,11 +229,7 @@ impl Redfish for Bmc {
         &'a self,
         _target: crate::EnabledDisabled,
     ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
-        Box::pin(async move {
-            // OpenBMC does not provide a lockdown
-            // carbide calls this so don't return an error, otherwise GH200 would need special handling
-            Ok(())
-        })
+        Box::pin(async move { Ok(()) })
     }
 
     fn lockdown_status<'a>(
@@ -368,49 +329,19 @@ impl Redfish for Bmc {
         Box::pin(async move { self.s.get_update_service().await })
     }
 
+    // TODO: power-shelf firmware updates aren't exercised via libredfish today; until there's
+    // a concrete need, defer to the standard multipart push
     fn update_firmware_multipart<'a>(
         &'a self,
         filename: &'a Path,
-        _reboot: bool,
+        reboot: bool,
         timeout: Duration,
-        _component_type: ComponentType,
+        component_type: ComponentType,
     ) -> crate::RedfishFuture<'a, Result<String, RedfishError>> {
         Box::pin(async move {
-            let firmware = File::open(&filename)
+            self.s
+                .update_firmware_multipart(filename, reboot, timeout, component_type)
                 .await
-                .map_err(|e| RedfishError::FileError(format!("Could not open file: {}", e)))?;
-
-            let update_service = self.s.get_update_service().await?;
-
-            if update_service.multipart_http_push_uri.is_empty() {
-                return Err(RedfishError::NotSupported(
-                    "Host BMC does not support HTTP multipart push".to_string(),
-                ));
-            }
-
-            let parameters = "{}".to_string();
-
-            let (_status_code, _loc, body) = self
-                .s
-                .client
-                .req_update_firmware_multipart(
-                    filename,
-                    firmware,
-                    parameters,
-                    &update_service.multipart_http_push_uri,
-                    true,
-                    timeout,
-                )
-                .await?;
-
-            let task: Task =
-                serde_json::from_str(&body).map_err(|e| RedfishError::JsonDeserializeError {
-                    url: update_service.multipart_http_push_uri,
-                    body,
-                    source: e,
-                })?;
-
-            Ok(task.id)
         })
     }
 
@@ -444,7 +375,6 @@ impl Redfish for Bmc {
         Box::pin(async move { self.s.pending().await })
     }
 
-    /// gh200 has no bios attributes
     fn clear_pending<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
         Box::pin(async move { self.s.clear_pending().await })
     }
@@ -453,7 +383,7 @@ impl Redfish for Bmc {
     /// explorer's report path still calls `get_system`. Rather than 404 on
     /// `/Systems/{id}`, synthesize a minimal `ComputerSystem` from the chassis
     /// (manufacturer/model/serial) and derive the power state from the PSU OEM
-    /// flags, mirroring how Lite-On returns a populated system.
+    /// flags
     fn get_system<'a>(&'a self) -> crate::RedfishFuture<'a, Result<ComputerSystem, RedfishError>> {
         Box::pin(async move {
             let chassis_ids = self.s.get_chassis_all().await?;
@@ -519,7 +449,7 @@ impl Redfish for Bmc {
     ) -> crate::RedfishFuture<'a, Result<Vec<String>, RedfishError>> {
         Box::pin(async move {
             Err(RedfishError::NotSupported(
-                "Delta powershelf doesn't have NetworkAdapters tree".to_string(),
+                "Delta powershelf doesn't support NetworkAdapters tree".to_string(),
             ))
         })
     }

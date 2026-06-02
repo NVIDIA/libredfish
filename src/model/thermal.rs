@@ -24,6 +24,8 @@ use serde::{Deserialize, Serialize};
 use super::{ODataLinks, ResourceStatus, StatusVec};
 use crate::model::sensor::Sensor;
 use crate::model::ODataId;
+use crate::network::{RedfishHttpClient, REDFISH_ENDPOINT};
+use crate::RedfishError;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
@@ -160,6 +162,76 @@ impl From<Sensor> for Temperature {
             upper_threshold_critical: None,
             upper_threshold_fatal: None,
         }
+    }
+}
+
+/// A single entry of a `ThermalMetrics.TemperatureReadingsCelsius` array
+/// (Redfish `SensorArrayExcerpt`).
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
+#[serde(rename_all = "PascalCase")]
+pub struct TemperatureReading {
+    pub device_name: Option<String>,
+    pub reading: Option<f64>,
+    pub physical_context: Option<String>,
+}
+
+impl From<TemperatureReading> for Temperature {
+    fn from(reading: TemperatureReading) -> Self {
+        Self {
+            name: reading.device_name.unwrap_or_default(),
+            reading_celsius: reading.reading,
+            physical_context: reading.physical_context,
+            ..Default::default()
+        }
+    }
+}
+
+/// The `ThermalMetrics` resource
+/// (`/redfish/v1/Chassis/<id>/ThermalSubsystem/ThermalMetrics`), which carries
+/// temperature readings as a `TemperatureReadingsCelsius` array.
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
+#[serde(rename_all = "PascalCase")]
+pub struct ThermalMetrics {
+    #[serde(flatten)]
+    pub odata: Option<ODataLinks>,
+    pub id: Option<String>,
+    pub name: Option<String>,
+    #[serde(default)]
+    pub temperature_readings_celsius: Vec<TemperatureReading>,
+}
+
+/// The `ThermalSubsystem` resource
+/// (`/redfish/v1/Chassis/<id>/ThermalSubsystem`), the newer Redfish
+/// replacement for the legacy `Thermal` resource, which links to
+/// `ThermalMetrics`.
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
+#[serde(rename_all = "PascalCase")]
+pub struct ThermalSubsystem {
+    #[serde(flatten)]
+    pub odata: Option<ODataLinks>,
+    pub id: Option<String>,
+    pub name: Option<String>,
+    pub thermal_metrics: Option<ODataId>,
+}
+
+impl ThermalSubsystem {
+    /// Fetch this subsystem's `ThermalMetrics` and map its
+    /// `TemperatureReadingsCelsius` entries to [`Temperature`]s. Returns an
+    /// empty vec when the subsystem advertises no `ThermalMetrics` link.
+    pub(crate) async fn temperatures(
+        &self,
+        client: &RedfishHttpClient,
+    ) -> Result<Vec<Temperature>, RedfishError> {
+        let Some(link) = &self.thermal_metrics else {
+            return Ok(Vec::new());
+        };
+        let url = link.odata_id.replace(&format!("/{REDFISH_ENDPOINT}/"), "");
+        let (_, metrics): (_, ThermalMetrics) = client.get(&url).await?;
+        Ok(metrics
+            .temperature_readings_celsius
+            .into_iter()
+            .map(Temperature::from)
+            .collect())
     }
 }
 

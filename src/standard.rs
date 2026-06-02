@@ -1582,7 +1582,7 @@ impl RedfishStandard {
     /// `PowerSubsystem`/`Sensors` links, rather than hard-coding a chassis id.
     /// This avoids vendor-specific assumptions (e.g. Lite-On names the chassis
     /// `powershelf`, Delta names it `chassis`).
-    pub(crate) async fn get_power_metrics_from_chassis(
+    pub(crate) async fn get_power_metrics_from_power_subsystem(
         &self,
     ) -> Result<power::Power, RedfishError> {
         for chassis_id in self.get_chassis_all().await? {
@@ -1593,6 +1593,24 @@ impl RedfishStandard {
         }
         Err(RedfishError::GenericError {
             error: "No chassis with a PowerSubsystem found".to_string(),
+        })
+    }
+
+    /// Assemble thermal metrics by discovering the chassis that carries a
+    /// `ThermalSubsystem` link and following that chassis's
+    /// `ThermalSubsystem`/`ThermalMetrics` links, rather than hard-coding a
+    /// chassis id.
+    pub(crate) async fn get_thermal_metrics_from_thermal_subsystem(
+        &self,
+    ) -> Result<thermal::Thermal, RedfishError> {
+        for chassis_id in self.get_chassis_all().await? {
+            let chassis = self.get_chassis(&chassis_id).await?;
+            if chassis.thermal_subsystem.is_some() {
+                return chassis.get_thermal_metrics(&self.client).await;
+            }
+        }
+        Err(RedfishError::GenericError {
+            error: "No chassis with a ThermalSubsystem found".to_string(),
         })
     }
 

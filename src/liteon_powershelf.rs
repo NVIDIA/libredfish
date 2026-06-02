@@ -125,7 +125,7 @@ impl Redfish for Bmc {
     ) -> crate::RedfishFuture<'a, Result<crate::Power, RedfishError>> {
         // Discover the chassis carrying the PowerSubsystem rather than
         // hard-coding the Lite-On-specific id.
-        Box::pin(async move { self.s.get_power_metrics_from_chassis().await })
+        Box::pin(async move { self.s.get_power_metrics_from_power_subsystem().await })
     }
 
     fn power<'a>(

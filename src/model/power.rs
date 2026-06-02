@@ -22,6 +22,8 @@
 use super::{LinkType, ODataId, ODataLinks, ResourceStatus, StatusVec};
 use crate::model::sensor::Sensor;
 use crate::model::system::PowerState;
+use crate::network::{RedfishHttpClient, REDFISH_ENDPOINT};
+use crate::RedfishError;
 use serde::{Deserialize, Serialize};
 
 /// Deserializes `PowerState` from either a bool (Lite-On: `true`/`false`)
@@ -272,6 +274,46 @@ pub struct PowerSupplies {
     pub description: Option<String>,
     pub members: Vec<ODataId>,
     pub name: String,
+}
+
+/// The `PowerSubsystem` resource
+/// (`/redfish/v1/Chassis/<id>/PowerSubsystem`) that links to a chassis's
+/// power-supply collection (newer Redfish replacement for the legacy `Power`
+/// resource).
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
+#[serde(rename_all = "PascalCase")]
+pub struct PowerSubsystem {
+    #[serde(flatten)]
+    pub odata: Option<ODataLinks>,
+    pub id: Option<String>,
+    pub name: Option<String>,
+    pub power_supplies: Option<ODataId>,
+}
+
+impl PowerSubsystem {
+    /// Fetch and expand every member of this subsystem's `PowerSupplies`
+    /// collection. Returns an empty vec when the subsystem advertises no
+    /// `PowerSupplies` link.
+    pub(crate) async fn power_supplies(
+        &self,
+        client: &RedfishHttpClient,
+    ) -> Result<Vec<PowerSupply>, RedfishError> {
+        let Some(link) = &self.power_supplies else {
+            return Ok(Vec::new());
+        };
+        let url = link.odata_id.replace(&format!("/{REDFISH_ENDPOINT}/"), "");
+        let (_, collection): (_, PowerSupplies) = client.get(&url).await?;
+
+        let mut supplies = Vec::with_capacity(collection.members.len());
+        for member in collection.members {
+            let url = member
+                .odata_id
+                .replace(&format!("/{REDFISH_ENDPOINT}/"), "");
+            let (_, supply): (_, PowerSupply) = client.get(&url).await?;
+            supplies.push(supply);
+        }
+        Ok(supplies)
+    }
 }
 
 impl StatusVec for Power {
