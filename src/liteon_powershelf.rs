@@ -1,5 +1,4 @@
-use crate::{Assembly, REDFISH_ENDPOINT};
-use reqwest::StatusCode;
+use crate::Assembly;
 use std::{collections::HashMap, path::Path, time::Duration};
 use tokio::fs::File;
 
@@ -8,8 +7,8 @@ use crate::model::boot::BootOverride;
 use crate::model::certificate::Certificate;
 use crate::model::component_integrity::ComponentIntegrities;
 use crate::model::oem::nvidia_dpu::{HostPrivilegeLevel, NicMode};
-use crate::model::power::{Power, PowerSupplies, PowerSupply, Voltages};
-use crate::model::sensor::{GPUSensors, Sensor, Sensors};
+use crate::model::power::Power;
+use crate::model::sensor::GPUSensors;
 use crate::model::service_root::RedfishVendor;
 use crate::model::task::Task;
 use crate::model::update_service::{ComponentType, TransferProtocolType, UpdateService};
@@ -124,47 +123,9 @@ impl Redfish for Bmc {
     fn get_power_metrics<'a>(
         &'a self,
     ) -> crate::RedfishFuture<'a, Result<crate::Power, RedfishError>> {
-        Box::pin(async move {
-            let mut voltages = Vec::new();
-            let mut power_supplies = Vec::new();
-            // liteon powershelf has a strange redfish tree. assemble this
-            let mut url = "Chassis/powershelf/PowerSubsystem/PowerSupplies".to_string();
-            let (_status_code, ps): (StatusCode, PowerSupplies) = self.s.client.get(&url).await?;
-            for supply in ps.members {
-                url = supply
-                    .odata_id
-                    .replace(&format!("/{REDFISH_ENDPOINT}/"), "");
-                let (_status_code, power_supply): (StatusCode, PowerSupply) =
-                    self.s.client.get(&url).await?;
-                power_supplies.push(power_supply);
-            }
-
-            url = "Chassis/powershelf/Sensors".to_string();
-            let (_status_code, sensors): (StatusCode, Sensors) = self.s.client.get(&url).await?;
-            for sensor in sensors.members {
-                // now all voltage sensors in all chassis
-                if !sensor.odata_id.contains("voltage") {
-                    continue;
-                }
-                url = sensor
-                    .odata_id
-                    .replace(&format!("/{REDFISH_ENDPOINT}/"), "");
-                let (_status_code, t): (StatusCode, Sensor) = self.s.client.get(&url).await?;
-                let sensor: Voltages = Voltages::from(t);
-                voltages.push(sensor);
-            }
-
-            let power = Power {
-                odata: None,
-                id: "Power".to_string(),
-                name: "Power".to_string(),
-                power_control: vec![],
-                power_supplies: Some(power_supplies),
-                voltages: Some(voltages),
-                redundancy: None,
-            };
-            Ok(power)
-        })
+        // Discover the chassis carrying the PowerSubsystem rather than
+        // hard-coding the Lite-On-specific id.
+        Box::pin(async move { self.s.get_power_metrics_from_chassis().await })
     }
 
     fn power<'a>(

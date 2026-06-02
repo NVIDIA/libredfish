@@ -25,9 +25,13 @@ use serde_json::Value;
 use tracing::debug;
 
 use super::oem::ChassisExtensions;
+use super::power::{Power, PowerSupplies, PowerSupply, Voltages};
 use super::resource::OData;
+use super::sensor::{Sensor, Sensors};
 use super::{ODataId, ODataLinks, PCIeFunction, PowerState, ResourceStatus};
+use crate::network::{RedfishHttpClient, REDFISH_ENDPOINT};
 use crate::NetworkDeviceFunction;
+use crate::RedfishError;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ChassisActions {
@@ -126,6 +130,66 @@ pub struct Chassis {
     pub thermal_subsystem: Option<ODataId>,
     pub trusted_components: Option<ODataId>,
     pub oem: Option<ChassisExtensions>,
+}
+
+impl Chassis {
+    /// Assemble power metrics (PSUs + voltage sensors) by following this
+    /// chassis's own `PowerSubsystem` and `Sensors` links.
+    ///
+    /// Power shelves (e.g. Lite-On, Delta) expose PSUs under
+    /// `PowerSubsystem/PowerSupplies` and voltage readings under `Sensors`,
+    /// rather than the legacy `Chassis/<id>/Power` resource. Because the chassis
+    /// id also differs per vendor (`powershelf` vs `chassis`), following the
+    /// links recorded on the chassis itself avoids hard-coding either.
+    ///
+    /// Returns empty collections (not an error) when the chassis advertises no
+    /// `PowerSubsystem`/`Sensors` links.
+    pub(crate) async fn get_power_metrics(
+        &self,
+        client: &RedfishHttpClient,
+    ) -> Result<Power, RedfishError> {
+        // Resource links are absolute (`/redfish/v1/...`); the HTTP client
+        // expects paths relative to the service root, so strip the prefix.
+        let to_relative =
+            |odata_id: &str| odata_id.replace(&format!("/{REDFISH_ENDPOINT}/"), "");
+
+        let mut power_supplies = Vec::new();
+        if let Some(subsystem) = &self.power_subsystem {
+            let base = subsystem.odata_id.trim_end_matches('/');
+            let url = to_relative(&format!("{base}/PowerSupplies"));
+            let (_, ps): (_, PowerSupplies) = client.get(&url).await?;
+            for supply in ps.members {
+                let url = to_relative(&supply.odata_id);
+                let (_, power_supply): (_, PowerSupply) = client.get(&url).await?;
+                power_supplies.push(power_supply);
+            }
+        }
+
+        let mut voltages = Vec::new();
+        if let Some(sensors_link) = &self.sensors {
+            let url = to_relative(&sensors_link.odata_id);
+            let (_, sensors): (_, Sensors) = client.get(&url).await?;
+            for sensor in sensors.members {
+                // only voltage sensors
+                if !sensor.odata_id.contains("voltage") {
+                    continue;
+                }
+                let url = to_relative(&sensor.odata_id);
+                let (_, reading): (_, Sensor) = client.get(&url).await?;
+                voltages.push(Voltages::from(reading));
+            }
+        }
+
+        Ok(Power {
+            odata: None,
+            id: "Power".to_string(),
+            name: "Power".to_string(),
+            power_control: vec![],
+            power_supplies: Some(power_supplies),
+            voltages: Some(voltages),
+            redundancy: None,
+        })
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

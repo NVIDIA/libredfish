@@ -1,4 +1,4 @@
-use crate::{Assembly, REDFISH_ENDPOINT};
+use crate::Assembly;
 use reqwest::StatusCode;
 use std::{collections::HashMap, path::Path, time::Duration};
 use tokio::fs::File;
@@ -8,8 +8,7 @@ use crate::model::boot::BootOverride;
 use crate::model::certificate::Certificate;
 use crate::model::component_integrity::ComponentIntegrities;
 use crate::model::oem::nvidia_dpu::{HostPrivilegeLevel, NicMode};
-use crate::model::power::{Power, PowerSupplies, PowerSupply, Voltages};
-use crate::model::sensor::{GPUSensors, Sensor, Sensors};
+use crate::model::sensor::GPUSensors;
 use crate::model::service_root::RedfishVendor;
 use crate::model::task::Task;
 use crate::model::update_service::{ComponentType, TransferProtocolType, UpdateService};
@@ -25,8 +24,6 @@ use crate::{
     BiosProfileType, Collection, NetworkDeviceFunction, ODataId, Redfish, RedfishError, Resource,
 };
 use crate::{EnabledDisabled, JobState, MachineSetupStatus, RoleId};
-
-const UEFI_PASSWORD_NAME: &str = "AdminPassword";
 
 pub struct Bmc {
     s: RedfishStandard,
@@ -120,47 +117,9 @@ impl Redfish for Bmc {
     fn get_power_metrics<'a>(
         &'a self,
     ) -> crate::RedfishFuture<'a, Result<crate::Power, RedfishError>> {
-        Box::pin(async move {
-            let mut voltages = Vec::new();
-            let mut power_supplies = Vec::new();
-            // delta powershelf has a strange redfish tree. assemble this
-            let mut url = "Chassis/chassis/PowerSubsystem/PowerSupplies".to_string();
-            let (_status_code, ps): (StatusCode, PowerSupplies) = self.s.client.get(&url).await?;
-            for supply in ps.members {
-                url = supply
-                    .odata_id
-                    .replace(&format!("/{REDFISH_ENDPOINT}/"), "");
-                let (_status_code, power_supply): (StatusCode, PowerSupply) =
-                    self.s.client.get(&url).await?;
-                power_supplies.push(power_supply);
-            }
-
-            url = "Chassis/chassis/Sensors".to_string();
-            let (_status_code, sensors): (StatusCode, Sensors) = self.s.client.get(&url).await?;
-            for sensor in sensors.members {
-                // now all voltage sensors in all chassis
-                if !sensor.odata_id.contains("voltage") {
-                    continue;
-                }
-                url = sensor
-                    .odata_id
-                    .replace(&format!("/{REDFISH_ENDPOINT}/"), "");
-                let (_status_code, t): (StatusCode, Sensor) = self.s.client.get(&url).await?;
-                let sensor: Voltages = Voltages::from(t);
-                voltages.push(sensor);
-            }
-
-            let power = Power {
-                odata: None,
-                id: "Power".to_string(),
-                name: "Power".to_string(),
-                power_control: vec![],
-                power_supplies: Some(power_supplies),
-                voltages: Some(voltages),
-                redundancy: None,
-            };
-            Ok(power)
-        })
+        // Discover the chassis carrying the PowerSubsystem rather than
+        // hard-coding the Delta-specific id.
+        Box::pin(async move { self.s.get_power_metrics_from_chassis().await })
     }
 
     fn power<'a>(
@@ -672,17 +631,17 @@ impl Redfish for Bmc {
         })
     }
 
-    // Set current_uefi_password to "" if there isn't one yet. By default there isn't a password.
-    /// Set new_uefi_password to "" to disable it.
+    /// Delta power shelves have no UEFI/BIOS, so there is no UEFI password to
+    /// manage.
     fn change_uefi_password<'a>(
         &'a self,
-        current_uefi_password: &'a str,
-        new_uefi_password: &'a str,
+        _current_uefi_password: &'a str,
+        _new_uefi_password: &'a str,
     ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
         Box::pin(async move {
-            self.s
-                .change_bios_password(UEFI_PASSWORD_NAME, current_uefi_password, new_uefi_password)
-                .await
+            Err(RedfishError::NotSupported(
+                "Delta powershelf UEFI password unsupported".to_string(),
+            ))
         })
     }
 
@@ -942,11 +901,12 @@ impl Redfish for Bmc {
         false
     }
 
+    /// Delta power shelves have no boot order, so there is nothing to set up.
     fn is_boot_order_setup<'a>(
         &'a self,
         _mac_address: &'a str,
     ) -> crate::RedfishFuture<'a, Result<bool, RedfishError>> {
-        Box::pin(async move { Err(RedfishError::NotSupported("not supported".to_string())) })
+        Box::pin(async move { Ok(true) })
     }
 
     fn get_component_integrities<'a>(
