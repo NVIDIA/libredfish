@@ -321,7 +321,7 @@ impl Redfish for RedfishStandard {
 
     fn machine_setup<'a>(
         &'a self,
-        _boot_interface_mac: Option<&'a str>,
+        _boot_interface: Option<crate::BootInterfaceRef<'a>>,
         _bios_profiles: &'a HashMap<
             RedfishVendor,
             HashMap<String, HashMap<BiosProfileType, HashMap<String, serde_json::Value>>>,
@@ -337,7 +337,7 @@ impl Redfish for RedfishStandard {
 
     fn machine_setup_status<'a>(
         &'a self,
-        _boot_interface_mac: Option<&'a str>,
+        _boot_interface: Option<crate::BootInterfaceRef<'a>>,
     ) -> crate::RedfishFuture<'a, Result<MachineSetupStatus, RedfishError>> {
         Box::pin(async move {
             Err(RedfishError::NotSupported(
@@ -1144,7 +1144,7 @@ impl Redfish for RedfishStandard {
 
     fn is_bios_setup<'a>(
         &'a self,
-        _boot_interface_mac: Option<&'a str>,
+        _boot_interface: Option<crate::BootInterfaceRef<'a>>,
     ) -> crate::RedfishFuture<'a, Result<bool, RedfishError>> {
         Box::pin(async move { Err(RedfishError::NotSupported("is_bios_setup".to_string())) })
     }

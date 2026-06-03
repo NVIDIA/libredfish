@@ -270,7 +270,7 @@ impl Redfish for Bmc {
 
     fn machine_setup<'a>(
         &'a self,
-        boot_interface_mac: Option<&'a str>,
+        boot_interface: Option<crate::BootInterfaceRef<'a>>,
         bios_profiles: &'a HashMap<
             RedfishVendor,
             HashMap<String, HashMap<BiosProfileType, HashMap<String, serde_json::Value>>>,
@@ -288,11 +288,14 @@ impl Redfish for Bmc {
                 apply_time: dell::RedfishSettingsApplyTime::OnReset, // requires reboot to apply
             };
 
-            let (nic_slot, has_dpu) = match boot_interface_mac {
-                Some(mac) => {
+            let (nic_slot, has_dpu) = match boot_interface {
+                Some(crate::BootInterfaceRef::Mac(mac)) => {
                     let slot: String = self.dpu_nic_slot(mac).await?;
                     (slot, true)
                 }
+                // Caller already knows the interface id/interface partition id,
+                // so skip the MAC lookup and use the interface provided.
+                Some(crate::BootInterfaceRef::InterfaceId(id)) => (id.to_string(), true),
                 // Zero-DPU case
                 None => ("".to_string(), false),
             };
@@ -367,9 +370,17 @@ impl Redfish for Bmc {
 
     fn machine_setup_status<'a>(
         &'a self,
-        boot_interface_mac: Option<&'a str>,
+        boot_interface: Option<crate::BootInterfaceRef<'a>>,
     ) -> crate::RedfishFuture<'a, Result<MachineSetupStatus, RedfishError>> {
         Box::pin(async move {
+            // Resolve `InterfaceId` to a MAC via the Redfish-standard
+            // EthernetInterface resource.
+            let resolved_mac = match boot_interface {
+                Some(b) => Some(crate::resolve_boot_interface_mac(self, b).await?),
+                None => None,
+            };
+            let boot_interface_mac = resolved_mac.as_deref();
+
             // Check BIOS and BMC attributes
             let mut diffs = self.diff_bios_bmc_attr(boot_interface_mac).await?;
 
@@ -1313,9 +1324,15 @@ impl Redfish for Bmc {
 
     fn is_bios_setup<'a>(
         &'a self,
-        boot_interface_mac: Option<&'a str>,
+        boot_interface: Option<crate::BootInterfaceRef<'a>>,
     ) -> crate::RedfishFuture<'a, Result<bool, RedfishError>> {
         Box::pin(async move {
+            // See `machine_setup_status` above for the resolver pattern.
+            let resolved_mac = match boot_interface {
+                Some(b) => Some(crate::resolve_boot_interface_mac(self, b).await?),
+                None => None,
+            };
+            let boot_interface_mac = resolved_mac.as_deref();
             let diffs = self.diff_bios_bmc_attr(boot_interface_mac).await?;
             Ok(diffs.is_empty())
         })

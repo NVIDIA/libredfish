@@ -276,7 +276,7 @@ impl Redfish for Bmc {
 
     fn machine_setup<'a>(
         &'a self,
-        _boot_interface_mac: Option<&'a str>,
+        _boot_interface: Option<crate::BootInterfaceRef<'a>>,
         _bios_profiles: &'a HashMap<
             RedfishVendor,
             HashMap<String, HashMap<BiosProfileType, HashMap<String, serde_json::Value>>>,
@@ -299,9 +299,17 @@ impl Redfish for Bmc {
 
     fn machine_setup_status<'a>(
         &'a self,
-        boot_interface_mac: Option<&'a str>,
+        boot_interface: Option<crate::BootInterfaceRef<'a>>,
     ) -> crate::RedfishFuture<'a, Result<MachineSetupStatus, RedfishError>> {
         Box::pin(async move {
+            // Resolve `InterfaceId` to a MAC via the Redfish-standard
+            // EthernetInterface resource.
+            let resolved_mac = match boot_interface {
+                Some(b) => Some(crate::resolve_boot_interface_mac(self, b).await?),
+                None => None,
+            };
+            let boot_interface_mac = resolved_mac.as_deref();
+
             // Check BIOS and BMC attributes
             let mut diffs = self.diff_bios_bmc_attr().await?;
 
@@ -1133,7 +1141,7 @@ impl Redfish for Bmc {
 
     fn is_bios_setup<'a>(
         &'a self,
-        _boot_interface_mac: Option<&'a str>,
+        _boot_interface: Option<crate::BootInterfaceRef<'a>>,
     ) -> crate::RedfishFuture<'a, Result<bool, RedfishError>> {
         Box::pin(async move {
             let diffs = self.diff_bios_bmc_attr().await?;

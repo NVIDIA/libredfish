@@ -222,7 +222,13 @@ pub trait Redfish: Send + Sync + 'static {
 
     /// Sets up a reasonable UEFI configuration.
     /// remember to call lockdown() afterwards to secure the server
-    /// - boot_interface_mac: MAC Address of the NIC you wish to boot from
+    /// - boot_interface: identifies the NIC you wish to boot from. Either a
+    ///   `BootInterfaceRef::Mac` (existing behavior: vendor impl looks up
+    ///   the partition by MAC via its BMC enumeration) or a
+    ///   `BootInterfaceRef::InterfaceId` (vendor-native Redfish
+    ///   `EthernetInterface.Id` — used when we already know the interface
+    ///   partition ID (and don't need to look it up by MAC). One case
+    ///   being if we flip a DPU to NIC mode.
     ///   If not given we look for a Mellanox Bluefield DPU and use that.
     ///   Not applicable to Supermicro and the DPU itself.
     ///   bios_profiles: Map of vendor/model (with spaces replaced by underscores)/profile/type
@@ -234,7 +240,7 @@ pub trait Redfish: Send + Sync + 'static {
     /// Ok(None) when no job is created. Caller should wait for job completion before configuring boot order.
     fn machine_setup<'a>(
         &'a self,
-        boot_interface_mac: Option<&'a str>,
+        boot_interface: Option<BootInterfaceRef<'a>>,
         bios_profiles: &'a BiosProfileVendor,
         selected_profile: BiosProfileType,
         oem_manager_profiles: &'a BiosProfileVendor,
@@ -243,13 +249,13 @@ pub trait Redfish: Send + Sync + 'static {
     /// Is everything that machine_setup does already done?
     fn machine_setup_status<'a>(
         &'a self,
-        boot_interface_mac: Option<&'a str>,
+        boot_interface: Option<BootInterfaceRef<'a>>,
     ) -> RedfishFuture<'a, Result<MachineSetupStatus, RedfishError>>;
 
     /// Check if only the BIOS/BMC setup is done
     fn is_bios_setup<'a>(
         &'a self,
-        boot_interface_mac: Option<&'a str>,
+        boot_interface: Option<BootInterfaceRef<'a>>,
     ) -> RedfishFuture<'a, Result<bool, RedfishError>>;
 
     /// Apply a standard BMC password policy. This varies a lot by vendor,
@@ -754,6 +760,68 @@ impl Status {
     }
 }
 
+/// How a caller identifies a boot interface to [`Redfish::machine_setup`]
+/// and supporting query methods. Callers can pass either form; vendor
+/// impls handle both.
+#[derive(Debug, Clone, Copy)]
+pub enum BootInterfaceRef<'a> {
+    /// MAC address of the boot interface. Vendor impl translates it
+    /// into the vendor-native interface id its BIOS attributes consume.
+    Mac(&'a str),
+    /// Vendor-native Redfish `EthernetInterface.Id` for the boot
+    /// interface (e.g. `"NIC.Slot.7-1-1"`). Vendor impl uses it
+    /// directly.
+    InterfaceId(&'a str),
+}
+
+impl<'a> BootInterfaceRef<'a> {
+    /// Returns the MAC if this is the [`BootInterfaceRef::Mac`] variant.
+    /// Returns `None` if this is the [`BootInterfaceRef::InterfaceId`]
+    /// variant.
+    pub fn mac(&self) -> Option<&'a str> {
+        match self {
+            BootInterfaceRef::Mac(mac) => Some(mac),
+            BootInterfaceRef::InterfaceId(_) => None,
+        }
+    }
+}
+
+/// Returns the MAC address for a [`BootInterfaceRef`].
+/// [`BootInterfaceRef::Mac`] is a pass-through; [`BootInterfaceRef::InterfaceId`]
+/// is resolved by fetching `Systems/{}/EthernetInterfaces/{id}` via the
+/// Redfish-standard `EthernetInterface` resource (every vendor
+/// implements it).
+///
+/// Used by methods that compare against a MAC (verification paths that
+/// walk boot options by MAC substring, etc.) so the caller can pass
+/// either [`BootInterfaceRef`] variant uniformly.
+pub async fn resolve_boot_interface_mac<R: Redfish + ?Sized>(
+    redfish: &R,
+    boot_interface: BootInterfaceRef<'_>,
+) -> Result<String, RedfishError> {
+    match boot_interface {
+        BootInterfaceRef::Mac(mac) => Ok(mac.to_string()),
+        BootInterfaceRef::InterfaceId(id) => {
+            let eif = redfish.get_system_ethernet_interface(id).await?;
+            extract_resolved_mac(eif.mac_address.as_deref(), id)
+        }
+    }
+}
+
+/// Pure half of [`resolve_boot_interface_mac`], split out for unit
+/// tests. Returns the MAC if non-empty; errors otherwise rather than
+/// passing an empty string through to downstream `.contains(&mac)`
+/// matchers (which would match every option for an empty needle).
+fn extract_resolved_mac(mac: Option<&str>, id: &str) -> Result<String, RedfishError> {
+    let mac = mac.unwrap_or("");
+    if mac.is_empty() {
+        return Err(RedfishError::GenericError {
+            error: format!("Systems/.../EthernetInterfaces/{id} has no populated MACAddress"),
+        });
+    }
+    Ok(mac.to_string())
+}
+
 #[derive(Debug)]
 pub struct MachineSetupStatus {
     pub is_done: bool,
@@ -836,4 +904,50 @@ pub type BiosProfileVendor = HashMap<RedfishVendor, BiosProfileModel>;
 // Simplify model names so that we can put them in toml files as categories
 pub fn model_coerce(original: &str) -> String {
     str::replace(original, " ", "_")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn boot_interface_ref_mac_returns_inner() {
+        let mac = "aa:bb:cc:dd:ee:01";
+        let r = BootInterfaceRef::Mac(mac);
+        assert_eq!(r.mac(), Some(mac));
+    }
+
+    #[test]
+    fn boot_interface_ref_interface_id_mac_is_none() {
+        let r = BootInterfaceRef::InterfaceId("NIC.Slot.7-1-1");
+        assert!(r.mac().is_none());
+    }
+
+    #[test]
+    fn extract_resolved_mac_passes_through_populated_mac() {
+        let got = super::extract_resolved_mac(Some("AA:BB:CC:DD:EE:01"), "NIC.Slot.7-1-1")
+            .expect("populated MAC should be returned as-is");
+        assert_eq!(got, "AA:BB:CC:DD:EE:01");
+    }
+
+    #[test]
+    fn extract_resolved_mac_errors_on_empty_string_mac() {
+        // An empty MAC must error rather than pass through —
+        // downstream `display_name.contains(&mac)` matchers would
+        // otherwise match every boot option for an empty needle.
+        let err = super::extract_resolved_mac(Some(""), "NIC.Slot.7-1-1")
+            .expect_err("empty MAC should be an explicit error");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("NIC.Slot.7-1-1"),
+            "error should name the interface id; got: {msg}",
+        );
+    }
+
+    #[test]
+    fn extract_resolved_mac_errors_on_missing_mac_field() {
+        let err = super::extract_resolved_mac(None, "NIC.Slot.7-1-1")
+            .expect_err("None MAC should be an explicit error");
+        assert!(err.to_string().contains("NIC.Slot.7-1-1"));
+    }
 }

@@ -235,7 +235,7 @@ impl Redfish for Bmc {
 
     fn machine_setup<'a>(
         &'a self,
-        _boot_interface_mac: Option<&'a str>,
+        _boot_interface: Option<crate::BootInterfaceRef<'a>>,
         _bios_profiles: &'a HashMap<
             RedfishVendor,
             HashMap<String, HashMap<BiosProfileType, HashMap<String, serde_json::Value>>>,
@@ -261,7 +261,7 @@ impl Redfish for Bmc {
 
     fn machine_setup_status<'a>(
         &'a self,
-        _boot_interface_mac: Option<&'a str>,
+        _boot_interface: Option<crate::BootInterfaceRef<'a>>,
     ) -> crate::RedfishFuture<'a, Result<MachineSetupStatus, RedfishError>> {
         Box::pin(async move {
             let mut diffs = vec![];
@@ -1015,10 +1015,10 @@ impl Redfish for Bmc {
 
     fn is_bios_setup<'a>(
         &'a self,
-        boot_interface_mac: Option<&'a str>,
+        boot_interface: Option<crate::BootInterfaceRef<'a>>,
     ) -> crate::RedfishFuture<'a, Result<bool, RedfishError>> {
         Box::pin(async move {
-            let status = self.machine_setup_status(boot_interface_mac).await?;
+            let status = self.machine_setup_status(boot_interface).await?;
             Ok(status.is_done)
         })
     }
