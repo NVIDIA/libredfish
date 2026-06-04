@@ -290,7 +290,7 @@ impl Redfish for Bmc {
 
             let (nic_slot, has_dpu) = match boot_interface {
                 Some(crate::BootInterfaceRef::Mac(mac)) => {
-                    let slot: String = self.dpu_nic_slot(mac).await?;
+                    let slot: String = self.dpu_nic_slot(&mac.to_string()).await?;
                     (slot, true)
                 }
                 // Caller already knows the interface id/interface partition id,

@@ -30,6 +30,7 @@ tokio = { version = "1", features = ["full"] }
 tracing = { version = "0.1" }
 version-compare = { version = "0.1" }
 regex = "1.10"
+mac_address = "1.1"
 chrono = { version = "0.4.34", features = ["serde"] }
 urlencoding = "2.1.3"
 

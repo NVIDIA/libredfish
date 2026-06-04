@@ -765,22 +765,22 @@ impl Status {
 /// impls handle both.
 #[derive(Debug, Clone, Copy)]
 pub enum BootInterfaceRef<'a> {
-    /// MAC address of the boot interface. Vendor impl translates it
-    /// into the vendor-native interface id its BIOS attributes consume.
-    Mac(&'a str),
+    /// MAC address of the boot interface. Vendor impl translates it into
+    /// the vendor-native interface id its BIOS attributes consume.
+    Mac(mac_address::MacAddress),
     /// Vendor-native Redfish `EthernetInterface.Id` for the boot
     /// interface (e.g. `"NIC.Slot.7-1-1"`). Vendor impl uses it
     /// directly.
     InterfaceId(&'a str),
 }
 
-impl<'a> BootInterfaceRef<'a> {
+impl BootInterfaceRef<'_> {
     /// Returns the MAC if this is the [`BootInterfaceRef::Mac`] variant.
     /// Returns `None` if this is the [`BootInterfaceRef::InterfaceId`]
     /// variant.
-    pub fn mac(&self) -> Option<&'a str> {
+    pub fn mac(&self) -> Option<mac_address::MacAddress> {
         match self {
-            BootInterfaceRef::Mac(mac) => Some(mac),
+            BootInterfaceRef::Mac(mac) => Some(*mac),
             BootInterfaceRef::InterfaceId(_) => None,
         }
     }
@@ -912,7 +912,7 @@ mod tests {
 
     #[test]
     fn boot_interface_ref_mac_returns_inner() {
-        let mac = "aa:bb:cc:dd:ee:01";
+        let mac: mac_address::MacAddress = "AA:BB:CC:DD:EE:01".parse().unwrap();
         let r = BootInterfaceRef::Mac(mac);
         assert_eq!(r.mac(), Some(mac));
     }
