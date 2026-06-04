@@ -988,9 +988,11 @@ impl Redfish for Bmc {
 
     fn set_boot_order_dpu_first<'a>(
         &'a self,
-        mac_address: &'a str,
+        boot_interface: crate::BootInterfaceRef<'a>,
     ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
         Box::pin(async move {
+            let mac_address = crate::resolve_boot_interface_mac(self, boot_interface).await?;
+            let mac_address = mac_address.as_str();
             // Try the OEM NetworkBootOrder path first (older firmware)
             match self.set_boot_order_dpu_first_oem(mac_address).await {
                 Ok(result) => return Ok(result),
@@ -1151,7 +1153,7 @@ impl Redfish for Bmc {
 
     fn is_boot_order_setup<'a>(
         &'a self,
-        boot_interface_mac: &'a str,
+        boot_interface: crate::BootInterfaceRef<'a>,
     ) -> crate::RedfishFuture<'a, Result<bool, RedfishError>> {
         Box::pin(async move {
             // Check if Network is first in the boot order
@@ -1165,9 +1167,8 @@ impl Redfish for Bmc {
             }
 
             // Check if the specific MAC address is first in the network boot order
-            let (expected, actual) = self
-                .get_expected_and_actual_first_boot_option(boot_interface_mac)
-                .await?;
+            let mac = crate::resolve_boot_interface_mac(self, boot_interface).await?;
+            let (expected, actual) = self.get_expected_and_actual_first_boot_option(&mac).await?;
             Ok(expected.is_some() && expected == actual)
         })
     }

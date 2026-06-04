@@ -63,6 +63,32 @@ const UEFI_PASSWORD_NAME: &str = "SetupPassword";
 
 const MAX_ACCOUNT_ID: u8 = 16;
 
+/// Match a Dell `NetworkDeviceFunction` against a [`BootInterfaceRef`].
+///
+/// - [`BootInterfaceRef::Mac`] matches when the NDF's `Ethernet.MACAddress`
+///   equals the target (case-insensitive).
+/// - [`BootInterfaceRef::InterfaceId`] matches when the NDF's `Id` is a
+///   prefix of the target (with a `-` boundary) -- e.g. NDF `NIC.Slot.7-1`
+///   matches partition `NIC.Slot.7-1-1`. Equality also matches. This lets us
+///   locate the NDF for partitions whose MAC has been stripped (the
+///   NicMode-Disabled case).
+fn nw_dev_func_matches(
+    nw_dev_func: &NetworkDeviceFunction,
+    boot_interface: crate::BootInterfaceRef<'_>,
+) -> bool {
+    match boot_interface {
+        crate::BootInterfaceRef::Mac(target) => nw_dev_func
+            .ethernet
+            .as_ref()
+            .and_then(|e| e.mac_address.as_ref())
+            .is_some_and(|m| m.eq_ignore_ascii_case(&target.to_string())),
+        crate::BootInterfaceRef::InterfaceId(target) => nw_dev_func
+            .id
+            .as_deref()
+            .is_some_and(|ndf_id| target == ndf_id || target.starts_with(&format!("{ndf_id}-"))),
+    }
+}
+
 pub struct Bmc {
     s: RedfishStandard,
 }
@@ -395,9 +421,14 @@ impl Redfish for Bmc {
             }
 
             // Check the first boot option
-            if let Some(mac) = boot_interface_mac {
-                let (expected, actual) =
-                    self.get_expected_and_actual_first_boot_option(mac).await?;
+            if let Some(mac_str) = boot_interface_mac {
+                let mac: mac_address::MacAddress =
+                    mac_str.parse().map_err(|e| RedfishError::GenericError {
+                        error: format!("could not parse boot interface MAC `{mac_str}`: {e}"),
+                    })?;
+                let (expected, actual) = self
+                    .get_expected_and_actual_first_boot_option(crate::BootInterfaceRef::Mac(mac))
+                    .await?;
                 if expected.is_none() || expected != actual {
                     diffs.push(MachineSetupDiff {
                         key: "boot_first".to_string(),
@@ -1098,11 +1129,11 @@ impl Redfish for Bmc {
     // option that corresponds to the primary DPU as the first boot option in the list.
     fn set_boot_order_dpu_first<'a>(
         &'a self,
-        boot_interface_mac: &'a str,
+        boot_interface: crate::BootInterfaceRef<'a>,
     ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
         Box::pin(async move {
             let expected_boot_option_name: String = self
-                .get_expected_dpu_boot_option_name(boot_interface_mac)
+                .get_expected_dpu_boot_option_name(boot_interface)
                 .await?;
             let boot_order = self.get_boot_order().await?;
             for (idx, boot_option) in boot_order.iter().enumerate() {
@@ -1110,7 +1141,7 @@ impl Redfish for Bmc {
                     if idx == 0 {
                         // Dells will not generate a bios config job below if the boot orders already configured correctly
                         tracing::info!(
-                        "NO-OP: DPU ({boot_interface_mac}) will already be the first netboot option ({expected_boot_option_name}) after reboot"
+                        "NO-OP: DPU ({boot_interface:?}) will already be the first netboot option ({expected_boot_option_name}) after reboot"
                     );
                         return Ok(None);
                     }
@@ -1312,11 +1343,11 @@ impl Redfish for Bmc {
 
     fn is_boot_order_setup<'a>(
         &'a self,
-        boot_interface_mac: &'a str,
+        boot_interface: crate::BootInterfaceRef<'a>,
     ) -> crate::RedfishFuture<'a, Result<bool, RedfishError>> {
         Box::pin(async move {
             let (expected, actual) = self
-                .get_expected_and_actual_first_boot_option(boot_interface_mac)
+                .get_expected_and_actual_first_boot_option(boot_interface)
                 .await?;
             Ok(expected.is_some() && expected == actual)
         })
@@ -2288,7 +2319,7 @@ impl Bmc {
 
     async fn get_dpu_nw_device_function(
         &self,
-        boot_interface_mac_address: &str,
+        boot_interface: crate::BootInterfaceRef<'_>,
     ) -> Result<NetworkDeviceFunction, RedfishError> {
         let chassis = self.get_chassis(self.s.system_id()).await?;
         let na_id = match chassis.network_adapters {
@@ -2327,29 +2358,22 @@ impl Bmc {
                 .and_then(|r| r.try_get())?;
 
             for nw_dev_func in rc_nw_func.members {
-                if let Some(ref ethernet_info) = nw_dev_func.ethernet {
-                    if let Some(ref mac) = ethernet_info.mac_address {
-                        let standardized_mac = mac.to_lowercase();
-                        if standardized_mac == boot_interface_mac_address.to_lowercase() {
-                            return Ok(nw_dev_func);
-                        }
-                    }
+                if nw_dev_func_matches(&nw_dev_func, boot_interface) {
+                    return Ok(nw_dev_func);
                 }
             }
         }
 
         Err(RedfishError::GenericError {
-            error: format!(
-                "could not find network device function for {boot_interface_mac_address}"
-            ),
+            error: format!("could not find network device function for {boot_interface:?}"),
         })
     }
 
     async fn get_dell_nic_info(
         &self,
-        mac_address: &str,
+        boot_interface: crate::BootInterfaceRef<'_>,
     ) -> Result<serde_json::Map<String, Value>, RedfishError> {
-        let nw_device_function = self.get_dpu_nw_device_function(mac_address).await?;
+        let nw_device_function = self.get_dpu_nw_device_function(boot_interface).await?;
 
         let oem = nw_device_function
             .oem
@@ -2379,7 +2403,15 @@ impl Bmc {
 
     // Returns a string like "NIC.Slot.5-1"
     async fn dpu_nic_slot(&self, mac_address: &str) -> Result<String, RedfishError> {
-        let dell_nic_info = self.get_dell_nic_info(mac_address).await?;
+        let mac: mac_address::MacAddress =
+            mac_address
+                .parse()
+                .map_err(|e| RedfishError::GenericError {
+                    error: format!("could not parse boot interface MAC `{mac_address}`: {e}"),
+                })?;
+        let dell_nic_info = self
+            .get_dell_nic_info(crate::BootInterfaceRef::Mac(mac))
+            .await?;
 
         let nic_slot = dell_nic_info
             .get("Id")
@@ -2502,20 +2534,20 @@ impl Bmc {
         Err(RedfishError::GenericError { error: format!("the lifecycle controller is not ready to accept provisioning requests; lc_status: {lc_status}") })
     }
 
-    // get_expected_dpu_boot_option_name assumes that assumes that the HTTP Device One boot option has been enabled
-    // and points to the NIC for the boot interface MAC address. In the future, we can relax the string matching if
+    // get_expected_dpu_boot_option_name assumes that the HTTP Device One boot option has been enabled
+    // and points to the NIC for the boot interface. In the future, we can relax the string matching if
     // we configure other HTTP devices and just match on the NIC's device description.
     async fn get_expected_dpu_boot_option_name(
         &self,
-        boot_interface_mac: &str,
+        boot_interface: crate::BootInterfaceRef<'_>,
     ) -> Result<String, RedfishError> {
-        let dell_nic_info = self.get_dell_nic_info(boot_interface_mac).await?;
+        let dell_nic_info = self.get_dell_nic_info(boot_interface).await?;
 
         let device_description = dell_nic_info
             .get("DeviceDescription")
             .and_then(|device_description| device_description.as_str())
             .ok_or_else(|| RedfishError::GenericError {
-                error: format!("the NIC Device Description for {boot_interface_mac} is missing or not a valid string").to_string(),
+                error: format!("the NIC Device Description for {boot_interface:?} is missing or not a valid string"),
             })?
             .to_string();
 
@@ -2535,14 +2567,14 @@ impl Bmc {
     }
 
     // get_expected_and_actual_first_boot_option assumes that the HTTP Device One boot option has been enabled
-    // and points to the NIC for the boot interface MAC address. In the future, we can relax the string matching if
+    // and points to the NIC for the boot interface. In the future, we can relax the string matching if
     // we configure other HTTP devices and just match on the NIC's device description.
     async fn get_expected_and_actual_first_boot_option(
         &self,
-        boot_interface_mac: &str,
+        boot_interface: crate::BootInterfaceRef<'_>,
     ) -> Result<(Option<String>, Option<String>), RedfishError> {
         let expected_first_boot_option = Some(
-            self.get_expected_dpu_boot_option_name(boot_interface_mac)
+            self.get_expected_dpu_boot_option_name(boot_interface)
                 .await?,
         );
         let boot_order = self.get_boot_order().await?;

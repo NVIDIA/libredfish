@@ -935,7 +935,7 @@ impl Redfish for RedfishStandard {
 
     fn set_boot_order_dpu_first<'a>(
         &'a self,
-        _address: &'a str,
+        _boot_interface: crate::BootInterfaceRef<'a>,
     ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
         Box::pin(async move {
             Err(RedfishError::NotSupported(
@@ -1133,7 +1133,7 @@ impl Redfish for RedfishStandard {
 
     fn is_boot_order_setup<'a>(
         &'a self,
-        _boot_interface_mac: &'a str,
+        _boot_interface: crate::BootInterfaceRef<'a>,
     ) -> crate::RedfishFuture<'a, Result<bool, RedfishError>> {
         Box::pin(async move {
             Err(RedfishError::NotSupported(

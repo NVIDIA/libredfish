@@ -533,14 +533,16 @@ pub trait Redfish: Send + Sync + 'static {
         id: ODataId,
     ) -> RedfishFuture<'a, Result<Collection, RedfishError>>;
 
-    /// This method will change the boot order so that system will attempt to boot from the dpu first.
-    /// Method will make a platforn specifc best errert to identify the dpu specific boot option.
-    /// It will choose Uefi Http IPv4 option if any.
-    /// If dpu's mac can be passed in as  mac_address to identify the dpu, otherwise method will attempt to find the dpu
-    /// by enumeration NetworkAdapters and associated resources.
+    /// Change the boot order so the system will boot from the chosen NIC first.
+    ///
+    /// `boot_interface` selects the target NIC. A `BootInterfaceRef::Mac` is the
+    /// classic path: the vendor impl looks the NIC up via its BMC enumeration
+    /// by MAC. A `BootInterfaceRef::InterfaceId` is the vendor-native Redfish
+    /// `EthernetInterface.Id` -- used when the caller already knows the
+    /// partition ID.
     fn set_boot_order_dpu_first<'a>(
         &'a self,
-        mac_address: &'a str,
+        boot_interface: BootInterfaceRef<'a>,
     ) -> RedfishFuture<'a, Result<Option<String>, RedfishError>>;
 
     fn clear_uefi_password<'a>(
@@ -621,10 +623,11 @@ pub trait Redfish: Send + Sync + 'static {
 
     fn ac_powercycle_supported_by_power(&self) -> bool;
 
-    /// Check if the boot order is configured as we expect (Network boot)
+    /// Is the boot order already configured for `boot_interface`? See
+    /// `set_boot_order_dpu_first` for the variant semantics.
     fn is_boot_order_setup<'a>(
         &'a self,
-        mac_address: &'a str,
+        boot_interface: BootInterfaceRef<'a>,
     ) -> RedfishFuture<'a, Result<bool, RedfishError>>;
 
     /// Returns info about component integrity

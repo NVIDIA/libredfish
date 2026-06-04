@@ -833,7 +833,7 @@ impl Redfish for Bmc {
 
     fn set_boot_order_dpu_first<'a>(
         &'a self,
-        _mac_address: &'a str,
+        _boot_interface: crate::BootInterfaceRef<'a>,
     ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
         Box::pin(async move {
             Err(RedfishError::NotSupported(
@@ -1008,9 +1008,9 @@ impl Redfish for Bmc {
 
     fn is_boot_order_setup<'a>(
         &'a self,
-        boot_interface_mac: &'a str,
+        boot_interface: crate::BootInterfaceRef<'a>,
     ) -> crate::RedfishFuture<'a, Result<bool, RedfishError>> {
-        Box::pin(async move { self.s.is_boot_order_setup(boot_interface_mac).await })
+        Box::pin(async move { self.s.is_boot_order_setup(boot_interface).await })
     }
 
     fn is_bios_setup<'a>(

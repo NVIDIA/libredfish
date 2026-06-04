@@ -959,10 +959,12 @@ impl Redfish for Bmc {
 
     fn set_boot_order_dpu_first<'a>(
         &'a self,
-        mac_address: &'a str,
+        boot_interface: crate::BootInterfaceRef<'a>,
     ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
         Box::pin(async move {
-            let mac = mac_address.to_string().to_uppercase();
+            let mac = crate::resolve_boot_interface_mac(self, boot_interface)
+                .await?
+                .to_uppercase();
 
             let all = self.get_boot_options().await?;
             let mut boot_ref = None;
@@ -1129,12 +1131,11 @@ impl Redfish for Bmc {
 
     fn is_boot_order_setup<'a>(
         &'a self,
-        boot_interface_mac: &'a str,
+        boot_interface: crate::BootInterfaceRef<'a>,
     ) -> crate::RedfishFuture<'a, Result<bool, RedfishError>> {
         Box::pin(async move {
-            let (expected, actual) = self
-                .get_expected_and_actual_first_boot_option(boot_interface_mac)
-                .await?;
+            let mac = crate::resolve_boot_interface_mac(self, boot_interface).await?;
+            let (expected, actual) = self.get_expected_and_actual_first_boot_option(&mac).await?;
             Ok(expected.is_some() && expected == actual)
         })
     }

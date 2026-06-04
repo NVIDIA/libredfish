@@ -892,9 +892,11 @@ impl Redfish for Bmc {
     /// The HTTP adapter will only appear after IPv4HTTPSupport bios setting is enabled and the host rebooted.
     fn set_boot_order_dpu_first<'a>(
         &'a self,
-        mac_address: &'a str,
+        boot_interface: crate::BootInterfaceRef<'a>,
     ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
         Box::pin(async move {
+            let mac_address = crate::resolve_boot_interface_mac(self, boot_interface).await?;
+            let mac_address = mac_address.as_str();
             match self.set_mellanox_first(mac_address).await {
                 Ok(_) => return Ok(None),
                 Err(RedfishError::HTTPErrorCode {
@@ -1098,12 +1100,11 @@ impl Redfish for Bmc {
 
     fn is_boot_order_setup<'a>(
         &'a self,
-        boot_interface_mac: &'a str,
+        boot_interface: crate::BootInterfaceRef<'a>,
     ) -> crate::RedfishFuture<'a, Result<bool, RedfishError>> {
         Box::pin(async move {
-            let (expected, actual) = self
-                .get_expected_and_actual_first_boot_option(boot_interface_mac)
-                .await?;
+            let mac = crate::resolve_boot_interface_mac(self, boot_interface).await?;
+            let (expected, actual) = self.get_expected_and_actual_first_boot_option(&mac).await?;
             Ok(expected.is_some() && expected == actual)
         })
     }
