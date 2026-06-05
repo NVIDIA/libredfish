@@ -1,0 +1,888 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/Oem/deltaenergysystems/AllSensors/",
+    "Name": "Sensor Collection",
+    "Sensors": [
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps1_input_current",
+            "DeviceName": "ps1_input_current",
+            "Reading": 2.37,
+            "ReadingType": "Current",
+            "ReadingUnits": "A"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps1_output_current",
+            "DeviceName": "ps1_output_current",
+            "Reading": 11.23,
+            "ReadingType": "Current",
+            "ReadingUnits": "A"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/hotswap_input_current",
+            "DeviceName": "hotswap_input_current",
+            "Reading": 0.03,
+            "ReadingType": "Current",
+            "ReadingUnits": "A"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps5_input_current",
+            "DeviceName": "ps5_input_current",
+            "Reading": 2.8,
+            "ReadingType": "Current",
+            "ReadingUnits": "A"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps5_output_current",
+            "DeviceName": "ps5_output_current",
+            "Reading": 12.2,
+            "ReadingType": "Current",
+            "ReadingUnits": "A"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_input_current",
+            "DeviceName": "ps4_input_current",
+            "Reading": 2.56,
+            "ReadingType": "Current",
+            "ReadingUnits": "A"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_output_current",
+            "DeviceName": "ps4_output_current",
+            "Reading": 11.45,
+            "ReadingType": "Current",
+            "ReadingUnits": "A"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_input_current",
+            "DeviceName": "ps3_input_current",
+            "Reading": 2.64,
+            "ReadingType": "Current",
+            "ReadingUnits": "A"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_output_current",
+            "DeviceName": "ps3_output_current",
+            "Reading": 11.31,
+            "ReadingType": "Current",
+            "ReadingUnits": "A"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_input_current",
+            "DeviceName": "ps2_input_current",
+            "Reading": 2.83,
+            "ReadingType": "Current",
+            "ReadingUnits": "A"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_output_current",
+            "DeviceName": "ps2_output_current",
+            "Reading": 11.85,
+            "ReadingType": "Current",
+            "ReadingUnits": "A"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps6_input_current",
+            "DeviceName": "ps6_input_current",
+            "Reading": 2.64,
+            "ReadingType": "Current",
+            "ReadingUnits": "A"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps6_output_current",
+            "DeviceName": "ps6_output_current",
+            "Reading": 11.29,
+            "ReadingType": "Current",
+            "ReadingUnits": "A"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps1_energy_in",
+            "DeviceName": "ps1_energy_in",
+            "Reading": 178787.0,
+            "ReadingType": "EnergyJoules",
+            "ReadingUnits": "J"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps1_energy_out",
+            "DeviceName": "ps1_energy_out",
+            "Reading": 231544.0,
+            "ReadingType": "EnergyJoules",
+            "ReadingUnits": "J"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_energy_in",
+            "DeviceName": "ps2_energy_in",
+            "Reading": 235512.0,
+            "ReadingType": "EnergyJoules",
+            "ReadingUnits": "J"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_energy_in",
+            "DeviceName": "ps4_energy_in",
+            "Reading": 69790.0,
+            "ReadingType": "EnergyJoules",
+            "ReadingUnits": "J"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_energy_in",
+            "DeviceName": "ps3_energy_in",
+            "Reading": 338957.0,
+            "ReadingType": "EnergyJoules",
+            "ReadingUnits": "J"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_energy_out",
+            "DeviceName": "ps3_energy_out",
+            "Reading": 129854.0,
+            "ReadingType": "EnergyJoules",
+            "ReadingUnits": "J"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_energy_out",
+            "DeviceName": "ps2_energy_out",
+            "Reading": 149410.0,
+            "ReadingType": "EnergyJoules",
+            "ReadingUnits": "J"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps6_energy_in",
+            "DeviceName": "ps6_energy_in",
+            "Reading": 149337.0,
+            "ReadingType": "EnergyJoules",
+            "ReadingUnits": "J"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps5_energy_in",
+            "DeviceName": "ps5_energy_in",
+            "Reading": 22500.0,
+            "ReadingType": "EnergyJoules",
+            "ReadingUnits": "J"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps5_energy_out",
+            "DeviceName": "ps5_energy_out",
+            "Reading": 162235.0,
+            "ReadingType": "EnergyJoules",
+            "ReadingUnits": "J"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_energy_out",
+            "DeviceName": "ps4_energy_out",
+            "Reading": 368781.0,
+            "ReadingType": "EnergyJoules",
+            "ReadingUnits": "J"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps6_energy_out",
+            "DeviceName": "ps6_energy_out",
+            "Reading": 119514.0,
+            "ReadingType": "EnergyJoules",
+            "ReadingUnits": "J"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_total_energy_in",
+            "DeviceName": "ps3_total_energy_in",
+            "Reading": 27.09,
+            "ReadingType": "EnergykWh",
+            "ReadingUnits": "kWh"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_total_energy_in",
+            "DeviceName": "ps2_total_energy_in",
+            "Reading": 18.41,
+            "ReadingType": "EnergykWh",
+            "ReadingUnits": "kWh"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps1_total_energy_in",
+            "DeviceName": "ps1_total_energy_in",
+            "Reading": 15.46,
+            "ReadingType": "EnergykWh",
+            "ReadingUnits": "kWh"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps6_total_energy_in",
+            "DeviceName": "ps6_total_energy_in",
+            "Reading": 7.23,
+            "ReadingType": "EnergykWh",
+            "ReadingUnits": "kWh"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps5_total_energy_in",
+            "DeviceName": "ps5_total_energy_in",
+            "Reading": 39.44,
+            "ReadingType": "EnergykWh",
+            "ReadingUnits": "kWh"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_total_energy_in",
+            "DeviceName": "ps4_total_energy_in",
+            "Reading": 8.15,
+            "ReadingType": "EnergykWh",
+            "ReadingUnits": "kWh"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_powerfactor",
+            "DeviceName": "ps2_powerfactor",
+            "Reading": 93.44,
+            "ReadingType": "Percent",
+            "ReadingUnits": "%"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps1_powerfactor",
+            "DeviceName": "ps1_powerfactor",
+            "Reading": 93.76,
+            "ReadingType": "Percent",
+            "ReadingUnits": "%"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_powerfactor",
+            "DeviceName": "ps3_powerfactor",
+            "Reading": 93.44,
+            "ReadingType": "Percent",
+            "ReadingUnits": "%"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_fan1",
+            "DeviceName": "ps2_fan1",
+            "Reading": 6904.0,
+            "ReadingType": "Rotational",
+            "ReadingUnits": "RPM"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps1_fan1",
+            "DeviceName": "ps1_fan1",
+            "Reading": 6840.0,
+            "ReadingType": "Rotational",
+            "ReadingUnits": "RPM"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps1_fan2",
+            "DeviceName": "ps1_fan2",
+            "Reading": 6448.0,
+            "ReadingType": "Rotational",
+            "ReadingUnits": "RPM"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps5_powerfactor",
+            "DeviceName": "ps5_powerfactor",
+            "Reading": 93.76,
+            "ReadingType": "Percent",
+            "ReadingUnits": "%"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_powerfactor",
+            "DeviceName": "ps4_powerfactor",
+            "Reading": 93.44,
+            "ReadingType": "Percent",
+            "ReadingUnits": "%"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps6_powerfactor",
+            "DeviceName": "ps6_powerfactor",
+            "Reading": 93.12,
+            "ReadingType": "Percent",
+            "ReadingUnits": "%"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_fan1",
+            "DeviceName": "ps3_fan1",
+            "Reading": 6808.0,
+            "ReadingType": "Rotational",
+            "ReadingUnits": "RPM"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_fan2",
+            "DeviceName": "ps3_fan2",
+            "Reading": 6480.0,
+            "ReadingType": "Rotational",
+            "ReadingUnits": "RPM"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_fan2",
+            "DeviceName": "ps2_fan2",
+            "Reading": 6480.0,
+            "ReadingType": "Rotational",
+            "ReadingUnits": "RPM"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_fan1",
+            "DeviceName": "ps4_fan1",
+            "Reading": 6904.0,
+            "ReadingType": "Rotational",
+            "ReadingUnits": "RPM"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_fan2",
+            "DeviceName": "ps4_fan2",
+            "Reading": 6480.0,
+            "ReadingType": "Rotational",
+            "ReadingUnits": "RPM"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps1_input_power",
+            "DeviceName": "ps1_input_power",
+            "Reading": 584.0,
+            "ReadingType": "Power",
+            "ReadingUnits": "W"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps1_output_power",
+            "DeviceName": "ps1_output_power",
+            "Reading": 561.0,
+            "ReadingType": "Power",
+            "ReadingUnits": "W"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/hotswap_input_power",
+            "DeviceName": "hotswap_input_power",
+            "Reading": 1.0,
+            "ReadingType": "Power",
+            "ReadingUnits": "W"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps6_fan1",
+            "DeviceName": "ps6_fan1",
+            "Reading": 6784.0,
+            "ReadingType": "Rotational",
+            "ReadingUnits": "RPM"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps6_fan2",
+            "DeviceName": "ps6_fan2",
+            "Reading": 6424.0,
+            "ReadingType": "Rotational",
+            "ReadingUnits": "RPM"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps5_fan1",
+            "DeviceName": "ps5_fan1",
+            "Reading": 6840.0,
+            "ReadingType": "Rotational",
+            "ReadingUnits": "RPM"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps5_fan2",
+            "DeviceName": "ps5_fan2",
+            "Reading": 6544.0,
+            "ReadingType": "Rotational",
+            "ReadingUnits": "RPM"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_input_power",
+            "DeviceName": "ps3_input_power",
+            "Reading": 591.0,
+            "ReadingType": "Power",
+            "ReadingUnits": "W"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_output_power",
+            "DeviceName": "ps3_output_power",
+            "Reading": 564.0,
+            "ReadingType": "Power",
+            "ReadingUnits": "W"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_input_power",
+            "DeviceName": "ps2_input_power",
+            "Reading": 634.0,
+            "ReadingType": "Power",
+            "ReadingUnits": "W"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_output_power",
+            "DeviceName": "ps2_output_power",
+            "Reading": 591.0,
+            "ReadingType": "Power",
+            "ReadingUnits": "W"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_input_power",
+            "DeviceName": "ps4_input_power",
+            "Reading": 596.0,
+            "ReadingType": "Power",
+            "ReadingUnits": "W"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_output_power",
+            "DeviceName": "ps4_output_power",
+            "Reading": 572.0,
+            "ReadingType": "Power",
+            "ReadingUnits": "W"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/hotswap_temp",
+            "DeviceName": "hotswap_temp",
+            "Reading": 41.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/bmc_temp",
+            "DeviceName": "bmc_temp",
+            "Reading": 48.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps6_input_power",
+            "DeviceName": "ps6_input_power",
+            "Reading": 590.0,
+            "ReadingType": "Power",
+            "ReadingUnits": "W"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps6_output_power",
+            "DeviceName": "ps6_output_power",
+            "Reading": 564.0,
+            "ReadingType": "Power",
+            "ReadingUnits": "W"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps5_input_power",
+            "DeviceName": "ps5_input_power",
+            "Reading": 630.0,
+            "ReadingType": "Power",
+            "ReadingUnits": "W"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps5_output_power",
+            "DeviceName": "ps5_output_power",
+            "Reading": 604.0,
+            "ReadingType": "Power",
+            "ReadingUnits": "W"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_temp_clip_minus",
+            "DeviceName": "ps2_temp_clip_minus",
+            "Reading": 41.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps1_temp_clip_minus",
+            "DeviceName": "ps1_temp_clip_minus",
+            "Reading": 41.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps1_temp_clip_plus",
+            "DeviceName": "ps1_temp_clip_plus",
+            "Reading": 41.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps1_temp_hotspot",
+            "DeviceName": "ps1_temp_hotspot",
+            "Reading": 44.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps1_temp_input",
+            "DeviceName": "ps1_temp_input",
+            "Reading": 26.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps1_temp_output",
+            "DeviceName": "ps1_temp_output",
+            "Reading": 38.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_temp_clip_plus",
+            "DeviceName": "ps2_temp_clip_plus",
+            "Reading": 41.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_temp_clip_minus",
+            "DeviceName": "ps3_temp_clip_minus",
+            "Reading": 41.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_temp_clip_plus",
+            "DeviceName": "ps3_temp_clip_plus",
+            "Reading": 41.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_temp_hotspot",
+            "DeviceName": "ps3_temp_hotspot",
+            "Reading": 46.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_temp_input",
+            "DeviceName": "ps3_temp_input",
+            "Reading": 24.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_temp_hotspot",
+            "DeviceName": "ps2_temp_hotspot",
+            "Reading": 42.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_temp_input",
+            "DeviceName": "ps2_temp_input",
+            "Reading": 23.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_temp_output",
+            "DeviceName": "ps2_temp_output",
+            "Reading": 35.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps5_temp_clip_minus",
+            "DeviceName": "ps5_temp_clip_minus",
+            "Reading": 41.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps5_temp_clip_plus",
+            "DeviceName": "ps5_temp_clip_plus",
+            "Reading": 41.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_temp_clip_minus",
+            "DeviceName": "ps4_temp_clip_minus",
+            "Reading": 41.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_temp_clip_plus",
+            "DeviceName": "ps4_temp_clip_plus",
+            "Reading": 41.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_temp_hotspot",
+            "DeviceName": "ps4_temp_hotspot",
+            "Reading": 42.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_temp_input",
+            "DeviceName": "ps4_temp_input",
+            "Reading": 23.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_temp_output",
+            "DeviceName": "ps4_temp_output",
+            "Reading": 35.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_temp_output",
+            "DeviceName": "ps3_temp_output",
+            "Reading": 37.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps5_temp_hotspot",
+            "DeviceName": "ps5_temp_hotspot",
+            "Reading": 42.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps6_temp_clip_minus",
+            "DeviceName": "ps6_temp_clip_minus",
+            "Reading": 41.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps6_temp_clip_plus",
+            "DeviceName": "ps6_temp_clip_plus",
+            "Reading": 41.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps6_temp_hotspot",
+            "DeviceName": "ps6_temp_hotspot",
+            "Reading": 42.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps5_temp_input",
+            "DeviceName": "ps5_temp_input",
+            "Reading": 24.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps5_temp_output",
+            "DeviceName": "ps5_temp_output",
+            "Reading": 34.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps6_temp_input",
+            "DeviceName": "ps6_temp_input",
+            "Reading": 24.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps6_temp_output",
+            "DeviceName": "ps6_temp_output",
+            "Reading": 35.0,
+            "ReadingType": "Temperature",
+            "ReadingUnits": "Cel"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/CPU",
+            "DeviceName": "CPU",
+            "Reading": 40.6,
+            "ReadingType": "Percent",
+            "ReadingUnits": "%"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/Memory",
+            "DeviceName": "Memory",
+            "Reading": 31.46,
+            "ReadingType": "Percent",
+            "ReadingUnits": "%"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/Storage_RW",
+            "DeviceName": "Storage_RW",
+            "Reading": 3.91,
+            "ReadingType": "Percent",
+            "ReadingUnits": "%"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_input_voltage",
+            "DeviceName": "ps2_input_voltage",
+            "Reading": 239.25,
+            "ReadingType": "Voltage",
+            "ReadingUnits": "V"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps1_input_voltage",
+            "DeviceName": "ps1_input_voltage",
+            "Reading": 240.0,
+            "ReadingType": "Voltage",
+            "ReadingUnits": "V"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps1_output_voltage",
+            "DeviceName": "ps1_output_voltage",
+            "Reading": 49.87,
+            "ReadingType": "Voltage",
+            "ReadingUnits": "V"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/hotswap_input_voltage",
+            "DeviceName": "hotswap_input_voltage",
+            "Reading": 50.07,
+            "ReadingType": "Voltage",
+            "ReadingUnits": "V"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/hotswap_output_voltage",
+            "DeviceName": "hotswap_output_voltage",
+            "Reading": 49.88,
+            "ReadingType": "Voltage",
+            "ReadingUnits": "V"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/bmc_12v",
+            "DeviceName": "bmc_12v",
+            "Reading": 11.69,
+            "ReadingType": "Voltage",
+            "ReadingUnits": "V"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/bmc_3v3",
+            "DeviceName": "bmc_3v3",
+            "Reading": 3.28,
+            "ReadingType": "Voltage",
+            "ReadingUnits": "V"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/bmc_5v",
+            "DeviceName": "bmc_5v",
+            "Reading": 0.0,
+            "ReadingType": "Voltage",
+            "ReadingUnits": "V"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_output_voltage",
+            "DeviceName": "ps2_output_voltage",
+            "Reading": 49.84,
+            "ReadingType": "Voltage",
+            "ReadingUnits": "V"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_input_voltage",
+            "DeviceName": "ps3_input_voltage",
+            "Reading": 239.25,
+            "ReadingType": "Voltage",
+            "ReadingUnits": "V"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_output_voltage",
+            "DeviceName": "ps3_output_voltage",
+            "Reading": 49.87,
+            "ReadingType": "Voltage",
+            "ReadingUnits": "V"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_input_voltage",
+            "DeviceName": "ps4_input_voltage",
+            "Reading": 239.5,
+            "ReadingType": "Voltage",
+            "ReadingUnits": "V"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_output_voltage",
+            "DeviceName": "ps4_output_voltage",
+            "Reading": 49.85,
+            "ReadingType": "Voltage",
+            "ReadingUnits": "V"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps5_input_voltage",
+            "DeviceName": "ps5_input_voltage",
+            "Reading": 239.75,
+            "ReadingType": "Voltage",
+            "ReadingUnits": "V"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps5_output_voltage",
+            "DeviceName": "ps5_output_voltage",
+            "Reading": 49.87,
+            "ReadingType": "Voltage",
+            "ReadingUnits": "V"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps6_input_voltage",
+            "DeviceName": "ps6_input_voltage",
+            "Reading": 240.0,
+            "ReadingType": "Voltage",
+            "ReadingUnits": "V"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps6_output_voltage",
+            "DeviceName": "ps6_output_voltage",
+            "Reading": 49.87,
+            "ReadingType": "Voltage",
+            "ReadingUnits": "V"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/total_power_out",
+            "DeviceName": "total_power_out",
+            "Reading": 3457.0,
+            "ReadingType": "Power",
+            "ReadingUnits": "W"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/total_power_in_A",
+            "DeviceName": "total_power_in_A",
+            "Reading": 3625.0,
+            "ReadingType": "Power",
+            "ReadingUnits": "W"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/total_power_in",
+            "DeviceName": "total_power_in",
+            "Reading": 3625.0,
+            "ReadingType": "Power",
+            "ReadingUnits": "W"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/voltage_in_A_C",
+            "DeviceName": "voltage_in_A_C",
+            "Reading": 240.0,
+            "ReadingType": "Voltage",
+            "ReadingUnits": "V"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/max_voltage_out",
+            "DeviceName": "max_voltage_out",
+            "Reading": 49.87,
+            "ReadingType": "Voltage",
+            "ReadingUnits": "V"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/voltage_in_A_B",
+            "DeviceName": "voltage_in_A_B",
+            "Reading": 239.75,
+            "ReadingType": "Voltage",
+            "ReadingUnits": "V"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/voltage_in_A_A",
+            "DeviceName": "voltage_in_A_A",
+            "Reading": 239.5,
+            "ReadingType": "Voltage",
+            "ReadingUnits": "V"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/current_in_A_A",
+            "DeviceName": "current_in_A_A",
+            "Reading": 5.2,
+            "ReadingType": "Current",
+            "ReadingUnits": "A"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/current_in_A_C",
+            "DeviceName": "current_in_A_C",
+            "Reading": 5.01,
+            "ReadingType": "Current",
+            "ReadingUnits": "A"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/current_in_A_B",
+            "DeviceName": "current_in_A_B",
+            "Reading": 5.63,
+            "ReadingType": "Current",
+            "ReadingUnits": "A"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/total_current_out",
+            "DeviceName": "total_current_out",
+            "Reading": 69.23,
+            "ReadingType": "Current",
+            "ReadingUnits": "A"
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/total_efficiency",
+            "DeviceName": "total_efficiency",
+            "Reading": 95.37,
+            "ReadingType": "Percent",
+            "ReadingUnits": "%"
+        }
+    ]
+}

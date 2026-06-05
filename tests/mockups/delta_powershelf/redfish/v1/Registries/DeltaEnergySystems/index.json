@@ -1,0 +1,19 @@
+{
+    "@odata.id": "/redfish/v1/Registries/DeltaEnergySystems",
+    "@odata.type": "#MessageRegistryFile.v1_1_3.MessageRegistryFile",
+    "Description": "DMTF DeltaEnergySystems Message Registry File Location",
+    "Id": "DeltaEnergySystems",
+    "Languages": [
+        "en"
+    ],
+    "Languages@odata.count": 1,
+    "Location": [
+        {
+            "Language": "en",
+            "Uri": "/redfish/v1/Registries/DeltaEnergySystems/DeltaEnergySystems"
+        }
+    ],
+    "Location@odata.count": 1,
+    "Name": "DeltaEnergySystems Message Registry File",
+    "Registry": "DeltaEnergySystems.0.1.0"
+}

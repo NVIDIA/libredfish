@@ -1,0 +1,25 @@
+{
+    "@odata.id": "/redfish/v1/Managers/SMC/LogServices/EventLog",
+    "@odata.type": "#LogService.v1_3_0.LogService",
+    "Actions": {
+        "#LogService.ClearLog": {
+            "target": "/redfish/v1/Managers/SMC/LogServices/EventLog/Actions/LogService.ClearLog"
+        }
+    },
+    "DateTime": "2026-06-04T18:02:03+00:00",
+    "DateTimeLocalOffset": "+00:00",
+    "Description": "System Event Log Service",
+    "Entries": {
+        "@odata.id": "/redfish/v1/Managers/SMC/LogServices/EventLog/Entries"
+    },
+    "Id": "EventLog",
+    "MaxNumberOfRecords": 1000,
+    "Name": "Event Log Service",
+    "OverWritePolicy": "WrapsWhenFull",
+    "ServiceEnabled": true,
+    "Status": {
+        "Health": "OK",
+        "HealthRollup": "OK",
+        "State": "Enabled"
+    }
+}

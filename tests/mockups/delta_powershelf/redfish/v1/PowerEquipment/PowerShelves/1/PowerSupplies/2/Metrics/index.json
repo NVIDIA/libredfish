@@ -1,0 +1,54 @@
+{
+    "@odata.id": "/redfish/v1/PowerEquipment/PowerShelves/1/PowerSupplies/2/Metrics",
+    "@odata.type": "#PowerSupplyMetrics.v1_0_0.PowerSupplyMetrics",
+    "EnergykWh": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_energy_in",
+        "LifetimeReading": 11225.07870861111,
+        "Reading": 0.0766286111111111
+    },
+    "FanSpeedPercent": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_fan1",
+        "SpeedRPM": 6904.0
+    },
+    "Id": "Metrics",
+    "InputCurrentAmps": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_input_current",
+        "Reading": 2.84
+    },
+    "InputPowerWatts": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_input_power",
+        "PowerFactor": 0.9344,
+        "Reading": 636.0
+    },
+    "InputVoltage": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_input_voltage",
+        "Reading": 239.5
+    },
+    "Name": "Metrics for Power Supply 2",
+    "OutputPowerWatts": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_output_power",
+        "Reading": 593.0
+    },
+    "RailCurrentAmps": [
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_output_current",
+            "Reading": 11.87
+        }
+    ],
+    "RailPowerWatts": [
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_output_power",
+            "Reading": 593.0
+        }
+    ],
+    "RailVoltage": [
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_output_voltage",
+            "Reading": 49.85
+        }
+    ],
+    "TemperatureCelsius": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_temp_hotspot",
+        "Reading": 42.0
+    }
+}

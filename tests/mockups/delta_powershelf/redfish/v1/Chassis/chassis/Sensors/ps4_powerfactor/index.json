@@ -1,0 +1,15 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps4_powerfactor",
+    "@odata.type": "#Sensor.v1_4_0.Sensor",
+    "Id": "ps4_powerfactor",
+    "Name": "ps4 powerfactor",
+    "Reading": 93.28,
+    "ReadingRangeMax": 0.0,
+    "ReadingRangeMin": 0.0,
+    "ReadingType": "Percent",
+    "ReadingUnits": "%",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    }
+}

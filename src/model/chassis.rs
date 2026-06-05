@@ -168,7 +168,7 @@ impl Chassis {
             let (_, sensors): (_, Sensors) = client.get(&url).await?;
             for sensor in sensors.members {
                 // only voltage sensors
-                if !sensor.odata_id.contains("voltage") {
+                if !sensor.odata_id.to_lowercase().contains("voltage") {
                     continue;
                 }
                 let url = to_relative(&sensor.odata_id);

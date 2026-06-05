@@ -1,0 +1,16 @@
+{
+    "@odata.id": "/redfish/v1/Managers/SMC/LogServices/Dump/CollectDiagnosticDataActionInfo",
+    "@odata.type": "#ActionInfo.v1_2_0.ActionInfo",
+    "Id": "CollectDiagnosticDataActionInfo",
+    "Name": "Collect Diagnostic Data Action Info",
+    "Parameters": [
+        {
+            "AllowableValues": [
+                "Manager"
+            ],
+            "DataType": "String",
+            "Name": "DiagnosticDataType",
+            "Required": true
+        }
+    ]
+}

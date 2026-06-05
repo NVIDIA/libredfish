@@ -1,0 +1,21 @@
+{
+    "@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/1204505d",
+    "@odata.type": "#SoftwareInventory.v1_5_0.SoftwareInventory",
+    "Description": "BMC image",
+    "Id": "Software Inventory",
+    "Members@odata.count": 1,
+    "Name": "Software Inventory",
+    "RelatedItem": [
+        {
+            "@odata.id": "/redfish/v1/Managers/SMC"
+        }
+    ],
+    "SoftwareId": "1204505d",
+    "Status": {
+        "Health": "OK",
+        "HealthRollup": "OK",
+        "State": "Enabled"
+    },
+    "Updateable": true,
+    "Version": "common-pmc-2.2.7-hpr16"
+}

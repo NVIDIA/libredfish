@@ -1,0 +1,15 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps1_temp_input",
+    "@odata.type": "#Sensor.v1_4_0.Sensor",
+    "Id": "ps1_temp_input",
+    "Name": "ps1 temp input",
+    "Reading": 26.0,
+    "ReadingRangeMax": 0.0,
+    "ReadingRangeMin": 0.0,
+    "ReadingType": "Temperature",
+    "ReadingUnits": "Cel",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    }
+}

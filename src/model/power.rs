@@ -215,6 +215,49 @@ impl PowerSupply {
     }
 }
 
+/// The `PowerEquipment/PowerShelves` collection. Delta power shelves have no
+/// `/Systems` resource, so they expose PSU on/off control as OEM actions on
+/// the individual shelf rather than via `ComputerSystem.Reset`.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
+pub struct PowerShelves {
+    pub members: Vec<ODataId>,
+}
+
+/// A single `PowerEquipment/PowerShelves/<id>`. Only the Delta OEM PSU
+/// on/off action targets are modeled here; voltages/metrics are read via the
+/// chassis `PowerSubsystem` path instead.
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "PascalCase")]
+pub struct PowerShelf {
+    #[serde(default)]
+    pub oem: Option<PowerShelfOem>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct PowerShelfOem {
+    pub deltaenergysystems: Option<PowerShelfOemDelta>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "PascalCase")]
+pub struct PowerShelfOemDelta {
+    pub actions: Option<PowerShelfDeltaActions>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct PowerShelfDeltaActions {
+    #[serde(rename = "#PowerShelf.TurnOnPSUs")]
+    pub turn_on_psus: Option<PowerShelfAction>,
+    #[serde(rename = "#PowerShelf.TurnOffPSUs")]
+    pub turn_off_psus: Option<PowerShelfAction>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct PowerShelfAction {
+    pub target: Option<String>, // URL path of the action
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct Redundancy {

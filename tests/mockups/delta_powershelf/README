@@ -1,0 +1,9 @@
+Redfish service captured by the Redfish Mockup Creator, Version 1.2.0
+Created: 2026-06-04 18:01:51
+Service: https://10.84.204.226
+User: root
+Description: 
+Total response time: 51.92040514945984
+Average response time: 0.10976829841323434
+Minimum response time: 0.019148826599121094, /redfish/v1/JsonSchemas/redfish-schema
+Maximum response time: 1.3998093605041504, /redfish/v1/Chassis/chassis/PowerSubsystem/PowerSupplies/6

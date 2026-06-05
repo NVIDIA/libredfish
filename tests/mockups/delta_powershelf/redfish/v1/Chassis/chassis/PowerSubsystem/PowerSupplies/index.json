@@ -1,0 +1,26 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/PowerSubsystem/PowerSupplies",
+    "@odata.type": "#PowerSupplyCollection.PowerSupplyCollection",
+    "Members": [
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/PowerSubsystem/PowerSupplies/1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/PowerSubsystem/PowerSupplies/2"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/PowerSubsystem/PowerSupplies/3"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/PowerSubsystem/PowerSupplies/4"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/PowerSubsystem/PowerSupplies/5"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/PowerSubsystem/PowerSupplies/6"
+        }
+    ],
+    "Members@odata.count": 6,
+    "Name": "PowerSupply Collection"
+}

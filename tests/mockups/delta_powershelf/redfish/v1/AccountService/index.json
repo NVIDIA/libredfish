@@ -1,0 +1,31 @@
+{
+    "@odata.id": "/redfish/v1/AccountService",
+    "@odata.type": "#AccountService.v1_10_0.AccountService",
+    "AccountLockoutDuration": 0,
+    "AccountLockoutThreshold": 0,
+    "Accounts": {
+        "@odata.id": "/redfish/v1/AccountService/Accounts"
+    },
+    "Description": "Account Service",
+    "Id": "AccountService",
+    "MaxPasswordLength": 20,
+    "MinPasswordLength": 8,
+    "Name": "Account Service",
+    "Oem": {
+        "OpenBMC": {
+            "@odata.id": "/redfish/v1/AccountService#/Oem/OpenBMC",
+            "@odata.type": "#OemAccountService.v1_0_0.AccountService",
+            "AuthMethods": {
+                "BasicAuth": true,
+                "Cookie": true,
+                "SessionToken": true,
+                "TLS": false,
+                "XToken": true
+            }
+        }
+    },
+    "Roles": {
+        "@odata.id": "/redfish/v1/AccountService/Roles"
+    },
+    "ServiceEnabled": true
+}

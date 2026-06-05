@@ -1,0 +1,10 @@
+{
+    "@odata.id": "/redfish/v1/PowerEquipment",
+    "@odata.type": "#PowerEquipment.v1_1_0.PowerEquipment",
+    "Description": "Power Equipment Configuration Service",
+    "Id": "PowerEquipment",
+    "Name": "Power Equipment Configuration",
+    "PowerShelves": {
+        "@odata.id": "/redfish/v1/PowerEquipment/PowerShelves"
+    }
+}

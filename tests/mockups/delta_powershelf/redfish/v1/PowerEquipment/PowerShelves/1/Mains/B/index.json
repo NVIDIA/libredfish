@@ -1,0 +1,76 @@
+{
+    "@odata.id": "/redfish/v1/PowerEquipment/PowerShelves/1/Mains/B",
+    "@odata.type": "#Circuit.v1_3_0.Circuit",
+    "Id": "B",
+    "Name": "Mains Circuit B",
+    "error": {
+        "@Message.ExtendedInfo": [
+            {
+                "@odata.type": "#Message.v1_1_1.Message",
+                "Message": "The request failed due to an internal service error.  The service is still operational.",
+                "MessageArgs": [],
+                "MessageId": "Base.1.8.1.InternalError",
+                "MessageSeverity": "Critical",
+                "Resolution": "Resubmit the request.  If the problem persists, consider resetting the service."
+            },
+            {
+                "@odata.type": "#Message.v1_1_1.Message",
+                "Message": "The request failed due to an internal service error.  The service is still operational.",
+                "MessageArgs": [],
+                "MessageId": "Base.1.8.1.InternalError",
+                "MessageSeverity": "Critical",
+                "Resolution": "Resubmit the request.  If the problem persists, consider resetting the service."
+            },
+            {
+                "@odata.type": "#Message.v1_1_1.Message",
+                "Message": "The request failed due to an internal service error.  The service is still operational.",
+                "MessageArgs": [],
+                "MessageId": "Base.1.8.1.InternalError",
+                "MessageSeverity": "Critical",
+                "Resolution": "Resubmit the request.  If the problem persists, consider resetting the service."
+            },
+            {
+                "@odata.type": "#Message.v1_1_1.Message",
+                "Message": "The request failed due to an internal service error.  The service is still operational.",
+                "MessageArgs": [],
+                "MessageId": "Base.1.8.1.InternalError",
+                "MessageSeverity": "Critical",
+                "Resolution": "Resubmit the request.  If the problem persists, consider resetting the service."
+            },
+            {
+                "@odata.type": "#Message.v1_1_1.Message",
+                "Message": "The request failed due to an internal service error.  The service is still operational.",
+                "MessageArgs": [],
+                "MessageId": "Base.1.8.1.InternalError",
+                "MessageSeverity": "Critical",
+                "Resolution": "Resubmit the request.  If the problem persists, consider resetting the service."
+            },
+            {
+                "@odata.type": "#Message.v1_1_1.Message",
+                "Message": "The request failed due to an internal service error.  The service is still operational.",
+                "MessageArgs": [],
+                "MessageId": "Base.1.8.1.InternalError",
+                "MessageSeverity": "Critical",
+                "Resolution": "Resubmit the request.  If the problem persists, consider resetting the service."
+            },
+            {
+                "@odata.type": "#Message.v1_1_1.Message",
+                "Message": "The request failed due to an internal service error.  The service is still operational.",
+                "MessageArgs": [],
+                "MessageId": "Base.1.8.1.InternalError",
+                "MessageSeverity": "Critical",
+                "Resolution": "Resubmit the request.  If the problem persists, consider resetting the service."
+            },
+            {
+                "@odata.type": "#Message.v1_1_1.Message",
+                "Message": "The request failed due to an internal service error.  The service is still operational.",
+                "MessageArgs": [],
+                "MessageId": "Base.1.8.1.InternalError",
+                "MessageSeverity": "Critical",
+                "Resolution": "Resubmit the request.  If the problem persists, consider resetting the service."
+            }
+        ],
+        "code": "Base.1.8.1.GeneralError",
+        "message": "A general error has occurred. See Resolution for information on how to resolve the error."
+    }
+}

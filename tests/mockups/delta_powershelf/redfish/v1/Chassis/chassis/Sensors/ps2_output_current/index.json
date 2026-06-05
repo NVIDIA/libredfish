@@ -1,0 +1,15 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps2_output_current",
+    "@odata.type": "#Sensor.v1_4_0.Sensor",
+    "Id": "ps2_output_current",
+    "Name": "ps2 output current",
+    "Reading": 11.93,
+    "ReadingRangeMax": 77.0,
+    "ReadingRangeMin": 0.0,
+    "ReadingType": "Current",
+    "ReadingUnits": "A",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    }
+}

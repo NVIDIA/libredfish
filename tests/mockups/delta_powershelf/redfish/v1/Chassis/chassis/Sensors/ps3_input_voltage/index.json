@@ -1,0 +1,15 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps3_input_voltage",
+    "@odata.type": "#Sensor.v1_4_0.Sensor",
+    "Id": "ps3_input_voltage",
+    "Name": "ps3 input voltage",
+    "Reading": 239.25,
+    "ReadingRangeMax": 300.0,
+    "ReadingRangeMin": 0.0,
+    "ReadingType": "Voltage",
+    "ReadingUnits": "V",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    }
+}

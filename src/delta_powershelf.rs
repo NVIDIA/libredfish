@@ -6,10 +6,12 @@ use crate::model::boot::BootOverride;
 use crate::model::certificate::Certificate;
 use crate::model::component_integrity::ComponentIntegrities;
 use crate::model::oem::nvidia_dpu::{HostPrivilegeLevel, NicMode};
+use crate::model::power::{PowerShelf, PowerShelves};
 use crate::model::sensor::GPUSensors;
 use crate::model::service_root::RedfishVendor;
 use crate::model::task::Task;
 use crate::model::update_service::{ComponentType, TransferProtocolType, UpdateService};
+use crate::network::REDFISH_ENDPOINT;
 use crate::{
     model::{
         chassis::NetworkAdapter,
@@ -124,7 +126,7 @@ impl Redfish for Bmc {
         &'a self,
         action: crate::SystemPowerControl,
     ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
-        Box::pin(async move { self.s.power(action).await })
+        Box::pin(async move { self.set_psu_power(action).await })
     }
 
     fn bmc_reset<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
@@ -175,7 +177,7 @@ impl Redfish for Bmc {
 
     fn machine_setup<'a>(
         &'a self,
-        _boot_interface_mac: Option<&'a str>,
+        _boot_interface: Option<crate::BootInterfaceRef<'a>>,
         _bios_profiles: &'a HashMap<
             RedfishVendor,
             HashMap<String, HashMap<BiosProfileType, HashMap<String, serde_json::Value>>>,
@@ -194,7 +196,7 @@ impl Redfish for Bmc {
 
     fn machine_setup_status<'a>(
         &'a self,
-        _boot_interface_mac: Option<&'a str>,
+        _boot_interface: Option<crate::BootInterfaceRef<'a>>,
     ) -> crate::RedfishFuture<'a, Result<MachineSetupStatus, RedfishError>> {
         Box::pin(async move {
             let diffs = vec![];
@@ -631,7 +633,7 @@ impl Redfish for Bmc {
 
     fn set_boot_order_dpu_first<'a>(
         &'a self,
-        _mac_address: &'a str,
+        _boot_interface: crate::BootInterfaceRef<'a>,
     ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
         Box::pin(async move {
             Err(RedfishError::NotSupported(
@@ -775,7 +777,7 @@ impl Redfish for Bmc {
 
     fn is_bios_setup<'a>(
         &'a self,
-        _boot_interface_mac: Option<&'a str>,
+        _boot_interface: Option<crate::BootInterfaceRef<'a>>,
     ) -> crate::RedfishFuture<'a, Result<bool, RedfishError>> {
         Box::pin(async move { Err(RedfishError::NotSupported("not supported".to_string())) })
     }
@@ -834,7 +836,7 @@ impl Redfish for Bmc {
     /// Delta power shelves have no boot order, so there is nothing to set up.
     fn is_boot_order_setup<'a>(
         &'a self,
-        _mac_address: &'a str,
+        _boot_interface: crate::BootInterfaceRef<'a>,
     ) -> crate::RedfishFuture<'a, Result<bool, RedfishError>> {
         Box::pin(async move { Ok(true) })
     }
@@ -867,6 +869,77 @@ impl Bmc {
             self.s.client.get(&url).await?;
         let log_entries = log_entry_collection.members;
         Ok(log_entries)
+    }
+
+    /// Delta power shelves have no `/Systems` resource and therefore no
+    /// `ComputerSystem.Reset`. Power control is exposed as OEM actions on the
+    /// shelf (`PowerEquipment/PowerShelves/<id>`): `#PowerShelf.TurnOnPSUs` /
+    /// `#PowerShelf.TurnOffPSUs`, which switch the shelf's PSU outputs on/off.
+    ///
+    /// There is no native restart action, so the restart/power-cycle variants
+    /// are reported as unsupported rather than synthesizing an off/on sequence
+    /// that would hard power-cycle everything downstream.
+    async fn set_psu_power(&self, action: crate::SystemPowerControl) -> Result<(), RedfishError> {
+        use crate::SystemPowerControl::*;
+        let turn_on = match action {
+            On => true,
+            ForceOff | GracefulShutdown => false,
+            GracefulRestart | ForceRestart | ACPowercycle | PowerCycle => {
+                return Err(RedfishError::NotSupported(
+                    "Delta powershelf supports only PSU on/off, not restart/power-cycle"
+                        .to_string(),
+                ));
+            }
+        };
+
+        let actions = self
+            .get_power_shelf()
+            .await?
+            .oem
+            .and_then(|oem| oem.deltaenergysystems)
+            .and_then(|delta| delta.actions)
+            .ok_or_else(|| {
+                RedfishError::NotSupported(
+                    "Delta powershelf does not advertise PSU on/off actions".to_string(),
+                )
+            })?;
+
+        let action = if turn_on {
+            actions.turn_on_psus
+        } else {
+            actions.turn_off_psus
+        };
+        let target = action.and_then(|a| a.target).ok_or_else(|| {
+            RedfishError::NotSupported(
+                "Delta powershelf does not advertise the requested PSU action".to_string(),
+            )
+        })?;
+
+        // The TurnOn/TurnOffPSUs OEM actions take no parameters.
+        let url = target.replace(&format!("/{REDFISH_ENDPOINT}/"), "");
+        self.s
+            .client
+            .post(&url, HashMap::<String, String>::new())
+            .await
+            .map(|_| ())
+    }
+
+    /// Fetch the first `PowerEquipment/PowerShelves` member. Delta exposes a
+    /// single shelf, but discover its id rather than hard-coding it.
+    async fn get_power_shelf(&self) -> Result<PowerShelf, RedfishError> {
+        let (_, shelves): (_, PowerShelves) =
+            self.s.client.get("PowerEquipment/PowerShelves/").await?;
+        let member = shelves
+            .members
+            .first()
+            .ok_or_else(|| RedfishError::GenericError {
+                error: "No power shelves found under PowerEquipment".to_string(),
+            })?;
+        let url = member
+            .odata_id
+            .replace(&format!("/{REDFISH_ENDPOINT}/"), "");
+        let (_, shelf): (_, PowerShelf) = self.s.client.get(&url).await?;
+        Ok(shelf)
     }
 
     /// Derives the overall powershelf `PowerState` from the per-PSU

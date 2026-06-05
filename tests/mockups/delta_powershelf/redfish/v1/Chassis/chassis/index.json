@@ -1,0 +1,39 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis",
+    "@odata.type": "#Chassis.v1_17_0.Chassis",
+    "ChassisType": "RackMount",
+    "DepthMm": 44,
+    "HeightMm": 448,
+    "Id": "chassis",
+    "Links": {
+        "ManagedBy": [
+            {
+                "@odata.id": "/redfish/v1/Managers/SMC"
+            }
+        ]
+    },
+    "Manufacturer": "DELTA",
+    "MaxPowerWatts": 45000,
+    "Model": "810",
+    "Name": "chassis",
+    "Oem": {
+        "deltaenergysystems": {
+            "AllSensors": {
+                "@odata.id": "/redfish/v1/Chassis/chassis/Oem/deltaenergysystems/AllSensors"
+            }
+        }
+    },
+    "PartNumber": "ECD68000048",
+    "PowerSubsystem": {
+        "@odata.id": "/redfish/v1/Chassis/chassis/PowerSubsystem"
+    },
+    "SKU": "810",
+    "Sensors": {
+        "@odata.id": "/redfish/v1/Chassis/chassis/Sensors"
+    },
+    "SerialNumber": "THAMA251300FY",
+    "ThermalSubsystem": {
+        "@odata.id": "/redfish/v1/Chassis/chassis/ThermalSubsystem"
+    },
+    "WidthMm": 1
+}

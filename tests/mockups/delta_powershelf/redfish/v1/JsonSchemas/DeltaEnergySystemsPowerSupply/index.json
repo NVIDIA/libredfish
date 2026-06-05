@@ -1,0 +1,20 @@
+{
+    "@odata.context": "/redfish/v1/$metadata#JsonSchemaFile.JsonSchemaFile",
+    "@odata.id": "/redfish/v1/JsonSchemas/DeltaEnergySystemsPowerSupply",
+    "@odata.type": "#JsonSchemaFile.v1_0_2.JsonSchemaFile",
+    "Name": "DeltaEnergySystemsPowerSupply Schema File",
+    "Schema": "#DeltaEnergySystemsPowerSupply.PowerSupply",
+    "Description": "DeltaEnergySystemsPowerSupply Schema File Location",
+    "Id": "DeltaEnergySystemsPowerSupply",
+    "Languages": [
+        "en"
+    ],
+    "Languages@odata.count": 1,
+    "Location": [
+        {
+            "Language": "en",
+            "Uri": "/redfish/v1/JsonSchemas/DeltaEnergySystemsPowerSupply/DeltaEnergySystemsPowerSupply.json"
+        }
+    ],
+    "Location@odata.count": 1
+}

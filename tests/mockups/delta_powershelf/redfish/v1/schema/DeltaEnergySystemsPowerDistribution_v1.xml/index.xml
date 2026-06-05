@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
+
+	<edmx:Reference Uri="http://redfish.dmtf.org/schemas/v1/Resource_v1.xml">
+		<edmx:Include Namespace="Resource.v1_0_0"/>
+	</edmx:Reference>
+	<edmx:Reference Uri="http://docs.oasis-open.org/odata/odata/v4.0/errata03/csd01/complete/vocabularies/Org.OData.Capabilities.V1.xml">
+		<edmx:Include Namespace="Org.OData.Capabilities.V1" Alias="Capabilities"/>
+	</edmx:Reference>
+	<edmx:Reference Uri="http://docs.oasis-open.org/odata/odata/v4.0/errata03/csd01/complete/vocabularies/Org.OData.Core.V1.xml">
+		<edmx:Include Namespace="Org.OData.Core.V1" Alias="OData"/>
+	</edmx:Reference>
+	<edmx:Reference Uri="http://redfish.dmtf.org/schemas/v1/RedfishExtensions_v1.xml">
+		<edmx:Include Namespace="RedfishExtensions.v1_0_0" Alias="Redfish"/>
+	</edmx:Reference>
+
+	<edmx:DataServices>
+
+		<Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="DeltaEnergySystemsPowerDistribution">
+			<Annotation Term="Redfish.OwningEntity" String="deltaenergysystems"/>
+		</Schema>
+
+		<Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="DeltaEnergySystemsPowerDistribution.v1_0_0">
+			<Annotation Term="Redfish.OwningEntity" String="deltaenergysystems"/>
+			<Annotation Term="Redfish.Release" String="1.0"/>
+
+			<EntityType Name="PowerDistribution" BaseType="Resource.OemObject" Abstract="true">
+				<Annotation Term="OData.Description" String="Delta OEM Extension for PowerDistribution"/>
+        		<Annotation Term="OData.LongDescription" String="Delta OEM Extension for PowerDistribution"/>
+
+				<Property Name="VoltageOutputSelectLow" Type="Edm.Boolean" Nullable="false">
+					<Annotation Term="OData.Permissions" EnumMember="OData.Permission/Read/Write"/>
+					<Annotation Term="OData.Description" String="Reflects if the shelf outputs low voltage (48V)"/>
+					<Annotation Term="OData.LongDescription" String="Reflects if the shelf outputs low voltage (48V)"/>
+				</Property>
+				<Property Name="ShelfType" Type="Edm.String" Nullable="false">
+					<Annotation Term="OData.Permissions" EnumMember="OData.Permission/Read"/>
+					<Annotation Term="OData.Description" String="The type of Powershelf"/>
+					<Annotation Term="OData.LongDescription" String="The type of Powershelf. Can be '1U power shelf', '2U power shelf', or 'battery shelf'"/>
+				</Property>
+			</EntityType>
+		</Schema>
+	</edmx:DataServices>
+</edmx:Edmx>

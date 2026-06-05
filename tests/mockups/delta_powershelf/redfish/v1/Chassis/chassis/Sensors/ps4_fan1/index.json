@@ -1,0 +1,15 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps4_fan1",
+    "@odata.type": "#Sensor.v1_4_0.Sensor",
+    "Id": "ps4_fan1",
+    "Name": "ps4 fan1",
+    "Reading": 6904.0,
+    "ReadingRangeMax": 0.0,
+    "ReadingRangeMin": 0.0,
+    "ReadingType": "Rotational",
+    "ReadingUnits": "RPM",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    }
+}

@@ -1,0 +1,45 @@
+{
+    "@odata.id": "/redfish/v1/PowerEquipment/PowerShelves/1",
+    "@odata.type": "#PowerDistribution.v1_1_0.PowerDistribution",
+    "Branches": {
+        "@odata.id": "/redfish/v1/PowerEquipment/PowerShelves/1/Branches"
+    },
+    "Description": "Power Shelf Configuration Service",
+    "EquipmentType": "PowerShelf",
+    "Id": "PowerShelf",
+    "Mains": {
+        "@odata.id": "/redfish/v1/PowerEquipment/PowerShelves/1/Mains"
+    },
+    "Manufacturer": "DELTA",
+    "Metrics": {
+        "@odata.id": "/redfish/v1/PowerEquipment/PowerShelves/1/Metrics"
+    },
+    "Name": "Power Shelf Configuration",
+    "Oem": {
+        "deltaenergysystems": {
+            "@odata.id": "/redfish/v1/PowerEquipment/PowerShelves/1#/Oem/deltaenergysystems",
+            "@odata.type": "#DeltaEnergySystemsPowerDistribution.v1_0_0.PowerDistribution",
+            "Actions": {
+                "#PowerShelf.TurnOffPSUs": {
+                    "target": "/redfish/v1/PowerEquipment/PowerShelves/1/Oem/deltaenergysystems/Actions/PowerShelf.TurnOffPSUs"
+                },
+                "#PowerShelf.TurnOnPSUs": {
+                    "target": "/redfish/v1/PowerEquipment/PowerShelves/1/Oem/deltaenergysystems/Actions/PowerShelf.TurnOnPSUs"
+                }
+            },
+            "ShelfType": "1RU_HPR_Power_Shelf",
+            "VoltageOutputSelectLow": false
+        }
+    },
+    "PartNumber": "ECD68000048",
+    "PowerSupplies": {
+        "@odata.id": "/redfish/v1/PowerEquipment/PowerShelves/1/PowerSupplies"
+    },
+    "SerialNumber": "THAMA251300FY",
+    "Status": {
+        "Health": "OK",
+        "HealthRollup": "OK",
+        "State": "Enabled"
+    },
+    "Version": "E3 "
+}

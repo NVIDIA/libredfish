@@ -1,0 +1,15 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/hotswap_input_power",
+    "@odata.type": "#Sensor.v1_4_0.Sensor",
+    "Id": "hotswap_input_power",
+    "Name": "hotswap input power",
+    "Reading": 1.0,
+    "ReadingRangeMax": 0.0,
+    "ReadingRangeMin": 0.0,
+    "ReadingType": "Power",
+    "ReadingUnits": "W",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    }
+}

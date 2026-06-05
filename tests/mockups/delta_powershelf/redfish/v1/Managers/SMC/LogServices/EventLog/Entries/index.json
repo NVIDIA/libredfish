@@ -1,0 +1,91 @@
+{
+    "@odata.id": "/redfish/v1/Managers/SMC/LogServices/EventLog/Entries",
+    "@odata.type": "#LogEntryCollection.LogEntryCollection",
+    "Description": "Collection of System Event Log Entries",
+    "Members": [
+        {
+            "@odata.id": "/redfish/v1/Managers/SMC/LogServices/EventLog/Entries/225",
+            "@odata.type": "#LogEntry.v1_9_0.LogEntry",
+            "Created": "1970-01-02T15:03:10+00:00",
+            "EntryType": "Event",
+            "EventTimestamp": "1970-01-02T15:03:10+00:00",
+            "Id": "225",
+            "Message": "The SMC event log was cleared.",
+            "MessageId": "DeltaEnergySystems.0.1.xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.ClearedSmcLogEvents",
+            "Modified": "1970-01-02T15:03:10+00:00",
+            "Name": "System Event Log Entry",
+            "Resolved": true,
+            "Severity": "OK"
+        },
+        {
+            "@odata.id": "/redfish/v1/Managers/SMC/LogServices/EventLog/Entries/226",
+            "@odata.type": "#LogEntry.v1_9_0.LogEntry",
+            "Created": "2026-04-07T12:06:17+00:00",
+            "EntryType": "Event",
+            "EventTimestamp": "2026-04-07T12:06:17+00:00",
+            "Id": "226",
+            "Message": "The power supply ALL was turned off by a user.",
+            "MessageArgs": [
+                "ALL"
+            ],
+            "MessageId": "DeltaEnergySystems.0.1.xyz.openbmc_project.DeltaEnergySystems.PSU.Error.PsuForceOff",
+            "Modified": "2026-04-07T12:06:17+00:00",
+            "Name": "System Event Log Entry",
+            "Resolved": true,
+            "Severity": "OK"
+        },
+        {
+            "@odata.id": "/redfish/v1/Managers/SMC/LogServices/EventLog/Entries/227",
+            "@odata.type": "#LogEntry.v1_9_0.LogEntry",
+            "Created": "2026-04-07T12:52:35+00:00",
+            "EntryType": "Event",
+            "EventTimestamp": "2026-04-07T12:52:35+00:00",
+            "Id": "227",
+            "Message": "The power supply ALL was turned on by a user.",
+            "MessageArgs": [
+                "ALL"
+            ],
+            "MessageId": "DeltaEnergySystems.0.1.xyz.openbmc_project.DeltaEnergySystems.PSU.Error.PsuForceOn",
+            "Modified": "2026-04-07T12:52:35+00:00",
+            "Name": "System Event Log Entry",
+            "Resolved": true,
+            "Severity": "OK"
+        },
+        {
+            "@odata.id": "/redfish/v1/Managers/SMC/LogServices/EventLog/Entries/228",
+            "@odata.type": "#LogEntry.v1_9_0.LogEntry",
+            "Created": "2026-05-14T12:39:38+00:00",
+            "EntryType": "Event",
+            "EventTimestamp": "2026-05-14T12:39:38+00:00",
+            "Id": "228",
+            "Message": "The power supply ALL was turned off by a user.",
+            "MessageArgs": [
+                "ALL"
+            ],
+            "MessageId": "DeltaEnergySystems.0.1.xyz.openbmc_project.DeltaEnergySystems.PSU.Error.PsuForceOff",
+            "Modified": "2026-05-14T12:39:38+00:00",
+            "Name": "System Event Log Entry",
+            "Resolved": true,
+            "Severity": "OK"
+        },
+        {
+            "@odata.id": "/redfish/v1/Managers/SMC/LogServices/EventLog/Entries/229",
+            "@odata.type": "#LogEntry.v1_9_0.LogEntry",
+            "Created": "2026-05-14T13:52:07+00:00",
+            "EntryType": "Event",
+            "EventTimestamp": "2026-05-14T13:52:07+00:00",
+            "Id": "229",
+            "Message": "The power supply ALL was turned on by a user.",
+            "MessageArgs": [
+                "ALL"
+            ],
+            "MessageId": "DeltaEnergySystems.0.1.xyz.openbmc_project.DeltaEnergySystems.PSU.Error.PsuForceOn",
+            "Modified": "2026-05-14T13:52:07+00:00",
+            "Name": "System Event Log Entry",
+            "Resolved": true,
+            "Severity": "OK"
+        }
+    ],
+    "Members@odata.count": 5,
+    "Name": "System Event Log Entries"
+}

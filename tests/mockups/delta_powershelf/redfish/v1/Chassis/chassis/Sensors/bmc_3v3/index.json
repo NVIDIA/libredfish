@@ -1,0 +1,29 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/bmc_3v3",
+    "@odata.type": "#Sensor.v1_4_0.Sensor",
+    "Id": "bmc_3v3",
+    "Name": "bmc 3v3",
+    "Reading": 3.28,
+    "ReadingRangeMax": 0.0,
+    "ReadingRangeMin": 0.0,
+    "ReadingType": "Voltage",
+    "ReadingUnits": "V",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    },
+    "Thresholds": {
+        "LowerCaution": {
+            "Reading": 2.36
+        },
+        "LowerCritical": {
+            "Reading": 2.32
+        },
+        "UpperCaution": {
+            "Reading": 3.92
+        },
+        "UpperCritical": {
+            "Reading": 3.96
+        }
+    }
+}

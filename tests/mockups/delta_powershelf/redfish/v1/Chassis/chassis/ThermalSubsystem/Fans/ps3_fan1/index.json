@@ -1,0 +1,14 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/ThermalSubsystem/Fans/ps3_fan1",
+    "@odata.type": "#Fan.v1_1_0.Fan",
+    "Id": "ps3_fan1",
+    "Name": "ps3 fan1",
+    "SpeedPercent": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_fan1",
+        "SpeedRpm": 6808.0
+    },
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    }
+}

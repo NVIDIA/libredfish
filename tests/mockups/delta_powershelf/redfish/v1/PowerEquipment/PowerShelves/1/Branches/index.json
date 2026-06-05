@@ -1,0 +1,11 @@
+{
+    "@odata.id": "/redfish/v1/PowerEquipment/PowerShelves/1/Branches",
+    "@odata.type": "#CircuitCollection.CircuitCollection",
+    "Members": [
+        {
+            "@odata.id": "/redfish/v1/PowerEquipment/PowerShelves/1/Branches/1"
+        }
+    ],
+    "Members@odata.count": 1,
+    "Name": "PowerShelf Branch Collection"
+}

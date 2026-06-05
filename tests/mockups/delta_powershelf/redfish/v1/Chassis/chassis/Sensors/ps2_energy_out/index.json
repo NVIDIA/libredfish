@@ -1,0 +1,15 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps2_energy_out",
+    "@odata.type": "#Sensor.v1_4_0.Sensor",
+    "Id": "ps2_energy_out",
+    "Name": "ps2 energy out",
+    "Reading": 156338.0,
+    "ReadingRangeMax": 0.0,
+    "ReadingRangeMin": 0.0,
+    "ReadingType": "EnergyJoules",
+    "ReadingUnits": "J",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    }
+}

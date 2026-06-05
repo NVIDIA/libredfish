@@ -1,0 +1,15 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps2_output_voltage",
+    "@odata.type": "#Sensor.v1_4_0.Sensor",
+    "Id": "ps2_output_voltage",
+    "Name": "ps2 output voltage",
+    "Reading": 49.85,
+    "ReadingRangeMax": 60.0,
+    "ReadingRangeMin": 0.0,
+    "ReadingType": "Voltage",
+    "ReadingUnits": "V",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    }
+}

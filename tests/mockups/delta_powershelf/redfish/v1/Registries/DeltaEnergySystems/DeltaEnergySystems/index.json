@@ -1,0 +1,800 @@
+{
+    "@Redfish.Copyright": "Copyright 2021 Delta Energy System. All rights reserved.",
+    "@odata.type": "#MessageRegistry.v1_4_2.MessageRegistry",
+    "Description": "This registry defines the messages for delta energy systems power shelves.",
+    "Id": "DeltaEnergySystems.0.1.0",
+    "Language": "en",
+    "Messages": {
+        "xyz.openbmc_project.DeltaEnergySystems.BBU.Error.BbuInserted": {
+            "Description": "A battery backup unit was inserted.",
+            "Message": "Battery backup unit %1 was inserted.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 1,
+            "ParamTypes": [
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.BBU.Error.BbuRemoved": {
+            "Description": "A battery backup unit was removed.",
+            "Message": "Battery backup unit %1 was removed.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 1,
+            "ParamTypes": [
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.AtsForceInputFail": {
+            "Description": "Setting ATS input failed.",
+            "Message": "Power supply %1 setting ATS to input %2 failed.",
+            "MessageSeverity": "Critical",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Critical"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.AtsForceInputFailResolved": {
+            "Description": "Resolved: Setting ATS input failed.",
+            "Message": "Resolved: Power supply %1 setting ATS to input %2 failed.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.AtsForceInputWorking": {
+            "Description": "Setting ATS input worked.",
+            "Message": "Power supply %1 ATS changed to input %2.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.FanFault": {
+            "Description": "The power supply detected a faulty fan operation.",
+            "Message": "Power supply %1 has detected a faulty operation of fan %2.",
+            "MessageSeverity": "Critical",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Critical"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.FanFaultResolved": {
+            "Description": "Resolved: The power supply detected a faulty fan operation.",
+            "Message": "Resolved: Power supply %1 has detected a faulty operation of fan %2.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.FanSpeedOverride": {
+            "Description": "The power supply fan is overridden.",
+            "Message": "Power supply %1 fan %2 speed is overridden.",
+            "MessageSeverity": "Warning",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Warning"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.FanSpeedOverrideResolved": {
+            "Description": "Resolved: The power supply fan is overridden.",
+            "Message": "Resolved: Power supply %1 fan %2 speed is overridden.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.FanWarning": {
+            "Description": "The power supply detected bad fan operation.",
+            "Message": "Power supply %1 has detected an abnormal behavior of fan %2.",
+            "MessageSeverity": "Warning",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Warning"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.FanWarningResolved": {
+            "Description": "Resolved: The power supply detected bad fan operation.",
+            "Message": "Resolved: Power supply %1 has detected an abnormal behavior of fan %2.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.InputFault": {
+            "Description": "The power supply has indicated an input or under voltage condition. Check the power supply cabling and/or input power source.",
+            "Message": "Power supply %1 has indicated an input or under voltage condition.",
+            "MessageSeverity": "Critical",
+            "NumberOfArgs": 1,
+            "ParamTypes": [
+                "string"
+            ],
+            "Resolution": "Check the power supply cabling and/or input power source.",
+            "Severity": "Critical"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.InputFaultResolved": {
+            "Description": "Resolved: The power supply has indicated an input or under voltage condition. Check the power supply cabling and/or input power source.",
+            "Message": "Resolved: Power supply %1 has indicated an input or under voltage condition.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 1,
+            "ParamTypes": [
+                "string"
+            ],
+            "Resolution": "Check the power supply cabling and/or input power source.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.InputOvercurrentWarning": {
+            "Description": "The power supply detected an input overcurrent warning condition.",
+            "Message": "Power supply %1 detected an input overcurrent warning condition. %2",
+            "MessageSeverity": "Warning",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Warning"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.InputOvercurrentWarningResolved": {
+            "Description": "Resolved: The power supply detected an input overcurrent warning condition.",
+            "Message": "Resolved: Power supply %1 detected an input overcurrent warning condition. %2",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.InputOverpowerWarning": {
+            "Description": "The power supply detected an input overpower warning condition.",
+            "Message": "Power supply %1 detected an input overpower warning condition. %2",
+            "MessageSeverity": "Warning",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Warning"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.InputOverpowerWarningResolved": {
+            "Description": "Resolved: The power supply detected an input overpower warning condition.",
+            "Message": "Resolved: Power supply %1 detected an input overpower warning condition. %2",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.InputOvervoltageFault": {
+            "Description": "The power supply detected an input overvoltage fault condition.",
+            "Message": "Power supply %1 detected an input overvoltage fault condition. %2",
+            "MessageSeverity": "Critical",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Critical"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.InputOvervoltageFaultResolved": {
+            "Description": "Resolved: The power supply detected an input overvoltage fault condition.",
+            "Message": "Resolved: Power supply %1 detected an input overvoltage fault condition. %2",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.InputUndervoltageFault": {
+            "Description": "The power supply detected an input or undervoltage fault condition.",
+            "Message": "Power supply %1 detected an input or undervoltage fault condition. %2",
+            "MessageSeverity": "Critical",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Critical"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.InputUndervoltageFaultResolved": {
+            "Description": "Resolved: The power supply detected an input or undervoltage fault condition.",
+            "Message": "Resolved: Power supply %1 detected an input or undervoltage fault condition. %2",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.InputUndervoltageWarning": {
+            "Description": "The power supply detected an input undervoltage warning condition.",
+            "Message": "Power supply %1 detected an input undervoltage warning condition. %2",
+            "MessageSeverity": "Warning",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Warning"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.InputUndervoltageWarningResolved": {
+            "Description": "Resolved: The power supply detected an input undervoltage warning condition.",
+            "Message": "Resolved: Power supply %1 detected an input undervoltage warning condition. %2",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.OutputOvercurrentFault": {
+            "Description": "The power supply detected an output overcurrent fault condition.",
+            "Message": "Power supply %1 detected an output overcurrent fault condition. %2",
+            "MessageSeverity": "Critical",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Critical"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.OutputOvercurrentFaultResolved": {
+            "Description": "Resolved: The power supply detected an output overcurrent fault condition.",
+            "Message": "Resolved: Power supply %1 detected an output overcurrent fault condition. %2",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.OutputOvercurrentWarning": {
+            "Description": "The power supply detected an output overcurrent warning condition.",
+            "Message": "Power supply %1 detected an output overcurrent warning condition. %2",
+            "MessageSeverity": "Warning",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Warning"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.OutputOvercurrentWarningResolved": {
+            "Description": "Resolved: The power supply detected an output overcurrent warning condition.",
+            "Message": "Resolved: Power supply %1 detected an output overcurrent warning condition. %2",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.OutputOvervoltageFault": {
+            "Description": "The power supply detected an output overvoltage fault condition.",
+            "Message": "Power supply %1 detected an output overvoltage fault condition. %2",
+            "MessageSeverity": "Critical",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Critical"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.OutputOvervoltageFaultResolved": {
+            "Description": "Resolved: The power supply detected an output overvoltage fault condition.",
+            "Message": "Resolved: Power supply %1 detected an output overvoltage fault condition. %2",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.OutputUndervoltageFault": {
+            "Description": "The power supply detected an output undervoltage fault condition.",
+            "Message": "Power supply %1 detected an output undervoltage fault condition. %2",
+            "MessageSeverity": "Critical",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Critical"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.OutputUndervoltageFaultResolved": {
+            "Description": "Resolved: The power supply detected an output undervoltage fault condition.",
+            "Message": "Resolved: Power supply %1 detected an output undervoltage fault condition. %2",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.PsuForceOff": {
+            "Description": "The power supply was turned off by a user.",
+            "Message": "The power supply %1 was turned off by a user.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 1,
+            "ParamTypes": [
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.PsuForceOn": {
+            "Description": "The power supply was turned on by a user.",
+            "Message": "The power supply %1 was turned on by a user.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 1,
+            "ParamTypes": [
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.PsuInserted": {
+            "Description": "A power supply was inserted.",
+            "Message": "Power supply %1 was inserted.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 1,
+            "ParamTypes": [
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.PsuModelNotCompatible": {
+            "Description": "The power supply is incompatible (or model could not be retrieved).",
+            "Message": "The power supply %1 model type is incompatible or model could not be retrieved. (Expected: %2, Got: %3)",
+            "MessageSeverity": "Critical",
+            "NumberOfArgs": 3,
+            "ParamTypes": [
+                "string",
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Critical"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.PsuModelNotCompatibleResolved": {
+            "Description": "Resolved: The power supply is incompatible (or model could not be retrieved).",
+            "Message": "Resolved: The power supply %1 model type is incompatible or model could not be retrieved. (Expected: %2, Got: %3)",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 3,
+            "ParamTypes": [
+                "string",
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.PsuRemoved": {
+            "Description": "A power supply was removed.",
+            "Message": "Power supply %1 was removed.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 1,
+            "ParamTypes": [
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.ShouldBeOn": {
+            "Description": "The power supply indicated that it is not on when it should be.",
+            "Message": "Power supply %1 indicated that it is not on when it should be.",
+            "MessageSeverity": "Critical",
+            "NumberOfArgs": 1,
+            "ParamTypes": [
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Critical"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.ShouldBeOnResolved": {
+            "Description": "Resolved: The power supply indicated that it is not on when it should be.",
+            "Message": "Resolved: Power supply %1 indicated that it is not on when it should be.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 1,
+            "ParamTypes": [
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.TemperatureFault": {
+            "Description": "The power supply detected an over temperature fault condition.",
+            "Message": "Power supply %1 detected an over temperature fault condition.",
+            "MessageSeverity": "Critical",
+            "NumberOfArgs": 1,
+            "ParamTypes": [
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Critical"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.TemperatureFaultResolved": {
+            "Description": "Resolved: The power supply detected an over temperature fault condition.",
+            "Message": "Resolved: Power supply %1 detected an over temperature fault condition.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 1,
+            "ParamTypes": [
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.TemperatureWarning": {
+            "Description": "The power supply detected an over temperature warning condition.",
+            "Message": "Power supply %1 detected an over temperature warning condition.",
+            "MessageSeverity": "Warning",
+            "NumberOfArgs": 1,
+            "ParamTypes": [
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Warning"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.TemperatureWarningResolved": {
+            "Description": "Resolved: The power supply detected an over temperature warning condition.",
+            "Message": "Resolved: Power supply %1 detected an over temperature warning condition.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 1,
+            "ParamTypes": [
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.UnitOffForLowInputVoltage": {
+            "Description": "Unit/power supply Off For Low Input Voltage.",
+            "Message": "Power supply %1 Off For Low Input Voltage. %2",
+            "MessageSeverity": "Critical",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Critical"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.PSU.Error.UnitOffForLowInputVoltageResolved": {
+            "Description": "Resolved: Unit/power supply Off For Low Input Voltage.",
+            "Message": "Resolved: Power supply %1 Off For Low Input Voltage. %2",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.ClearedSmcLogEvents": {
+            "Description": "The SMC event log was cleared.",
+            "Message": "The SMC event log was cleared.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 0,
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.FwUpdateFailed": {
+            "Description": "The FW update failed.",
+            "Message": "The %1 FW update failed. (%2)",
+            "MessageSeverity": "Critical",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Critical"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.FwUpdateFailedResolved": {
+            "Description": "Resolved: The FW update failed.",
+            "Message": "Resolved: The %1 FW update failed. (%2)",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.InputOvercurrentWarning": {
+            "Description": "The power shelf detected an input overcurrent warning condition.",
+            "Message": "The power shelf detected an input overcurrent warning condition for sensor %1, current %3A is above the threshold of %2A.",
+            "MessageSeverity": "Warning",
+            "NumberOfArgs": 3,
+            "ParamTypes": [
+                "string",
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Warning"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.InputOvercurrentWarningResolved": {
+            "Description": "Resolved: The power shelf detected an input overcurrent warning condition.",
+            "Message": "Resolved: The power shelf detected an input overcurrent warning condition for sensor %1, current %3A is above the threshold of %2A.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 3,
+            "ParamTypes": [
+                "string",
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.OutputOvercurrentWarning": {
+            "Description": "The power shelf detected an output overcurrent warning condition.",
+            "Message": "The power shelf detected an output overcurrent warning condition for sensor %1, current %3A is above the threshold of %2A.",
+            "MessageSeverity": "Warning",
+            "NumberOfArgs": 3,
+            "ParamTypes": [
+                "string",
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Warning"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.OutputOvercurrentWarningResolved": {
+            "Description": "Resolved: The power shelf detected an output overcurrent warning condition.",
+            "Message": "Resolved: The power shelf detected an output overcurrent warning condition for sensor %1, current %3A is above the threshold of %2A.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 3,
+            "ParamTypes": [
+                "string",
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.OutputOverpowerWarning": {
+            "Description": "The power shelf detected an output overpower warning condition.",
+            "Message": "The power shelf detected an output overpower warning condition for sensor %1, power %3W is above the threshold of %2W.",
+            "MessageSeverity": "Warning",
+            "NumberOfArgs": 3,
+            "ParamTypes": [
+                "string",
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Warning"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.OutputOverpowerWarningResolved": {
+            "Description": "Resolved: The power shelf detected an output overpower warning condition.",
+            "Message": "Resolved: The power shelf detected an output overpower warning condition for sensor %1, power %3W is above the threshold of %2W.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 3,
+            "ParamTypes": [
+                "string",
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.PowerOff": {
+            "Description": "The powershelf has no power.",
+            "Message": "The powershelf has no power.",
+            "MessageSeverity": "Critical",
+            "NumberOfArgs": 0,
+            "Resolution": "None.",
+            "Severity": "Critical"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.PowerOffResolved": {
+            "Description": "Resolved: The powershelf has no power.",
+            "Message": "Resolved: The powershelf has no power.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 0,
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.PsuFwUpdate": {
+            "Description": "PSU FW update started successfuly.",
+            "Message": "Started PSU FW update to version %1. All applicable PSUs will be updated, one at a time. Each PSU will turn off for a short time, so do not increase the power over the maximum output power of the shelf!",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 1,
+            "ParamTypes": [
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Ok"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.PsuWarning": {
+            "Description": "The power shelf has at least one PSU in a warning state.",
+            "Message": "The power shelf has at least power supply %1 in a warning state.",
+            "MessageSeverity": "Warning",
+            "NumberOfArgs": 1,
+            "ParamTypes": [
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Warning"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.PsuWarningResolved": {
+            "Description": "Resolved: The power shelf has at least one PSU in a warning state.",
+            "Message": "Resolved: The power shelf has at least power supply %1 in a warning state.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 1,
+            "ParamTypes": [
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.RedundancyWarning": {
+            "Description": "The power shelf detected less PSUs than what is needed for redundancy.",
+            "Message": "Not enough power-delivering PSUs available for redundancy mode. Expected number of working PSUs is %1, available are %2 or less.",
+            "MessageSeverity": "Warning",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Warning"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.RedundancyWarningResolved": {
+            "Description": "Resolved: The power shelf detected less PSUs than what is needed for redundancy.",
+            "Message": "Resolved: Not enough power-delivering PSUs available for redundancy mode. Expected number of working PSUs is %1, available are %2 or less.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.SmcBootOk": {
+            "Description": "The SMC booted up successfully.",
+            "Message": "The SMC booted up successfully.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 0,
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.SmcFwCorrupted": {
+            "Description": "Deteced a corrupt SMC FW.",
+            "Message": "SMC booted from backup Flash, indicating a problem with the main flash FW (corrupted?)",
+            "MessageSeverity": "Critical",
+            "NumberOfArgs": 0,
+            "Resolution": "None.",
+            "Severity": "Critical"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.SmcFwCorruptedResolved": {
+            "Description": "Resolved: Deteced a corrupt SMC FW.",
+            "Message": "Resolved: SMC booted from backup Flash, indicating a problem with the main flash FW (corrupted?)",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 0,
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.SmcFwUpdate": {
+            "Description": "SMC FW update staged successfuly.",
+            "Message": "SMC FW update %1 staged successfully for %2. Will be activated on next reboot or immediately (depending on ApplyTime setting).",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 2,
+            "ParamTypes": [
+                "string",
+                "string"
+            ],
+            "Resolution": "None.",
+            "Severity": "Ok"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.SmcReboot": {
+            "Description": "The SMC was rebooted.",
+            "Message": "The SMC was rebooted after a Manager.Reset redfish action.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 0,
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.TemperatureFault": {
+            "Description": "Detected a temperature fault condition on the power shelf BMC board.",
+            "Message": "Detected a temperature fault condition on the power shelf BMC board. Temperature is too low/high.",
+            "MessageSeverity": "Critical",
+            "NumberOfArgs": 0,
+            "Resolution": "None.",
+            "Severity": "Critical"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.TemperatureFaultResolved": {
+            "Description": "Resolved: Detected a temperature fault condition on the power shelf BMC board.",
+            "Message": "Resolved: Detected a temperature fault condition on the power shelf BMC board. Temperature is too low/high.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 0,
+            "Resolution": "None.",
+            "Severity": "OK"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.TemperatureWarning": {
+            "Description": "Detected a temperature warn condition on the power shelf BMC board.",
+            "Message": "Detected a temperature warn condition on the power shelf BMC board. Temperature is too low/high.",
+            "MessageSeverity": "Warning",
+            "NumberOfArgs": 0,
+            "Resolution": "None.",
+            "Severity": "Warning"
+        },
+        "xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.TemperatureWarningResolved": {
+            "Description": "Resolved: Detected a temperature warn condition on the power shelf BMC board.",
+            "Message": "Resolved: Detected a temperature warn condition on the power shelf BMC board. Temperature is too low/high.",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 0,
+            "Resolution": "None.",
+            "Severity": "OK"
+        }
+    },
+    "Name": "Delta Energy Eystems Message Registry",
+    "OwningEntity": "dbus",
+    "RegistryPrefix": "DeltaEnergySystems",
+    "RegistryVersion": "0.1.0"
+}

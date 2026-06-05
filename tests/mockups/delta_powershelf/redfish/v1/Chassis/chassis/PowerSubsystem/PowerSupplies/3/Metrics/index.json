@@ -1,0 +1,54 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/PowerSubsystem/PowerSupplies/3/Metrics",
+    "@odata.type": "#PowerSupplyMetrics.v1_0_0.PowerSupplyMetrics",
+    "EnergykWh": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_energy_in",
+        "LifetimeReading": 10447.312784166665,
+        "Reading": 0.09470416666666667
+    },
+    "FanSpeedPercent": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_fan1",
+        "SpeedRPM": 6808.0
+    },
+    "Id": "Metrics",
+    "InputCurrentAmps": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_input_current",
+        "Reading": 2.64
+    },
+    "InputPowerWatts": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_input_power",
+        "PowerFactor": 0.9344,
+        "Reading": 591.0
+    },
+    "InputVoltage": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_input_voltage",
+        "Reading": 239.25
+    },
+    "Name": "Metrics for Power Supply 3",
+    "OutputPowerWatts": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_output_power",
+        "Reading": 564.0
+    },
+    "RailCurrentAmps": [
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_output_current",
+            "Reading": 11.29
+        }
+    ],
+    "RailPowerWatts": [
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_output_power",
+            "Reading": 564.0
+        }
+    ],
+    "RailVoltage": [
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_output_voltage",
+            "Reading": 49.87
+        }
+    ],
+    "TemperatureCelsius": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_temp_hotspot",
+        "Reading": 46.0
+    }
+}

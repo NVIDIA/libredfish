@@ -1,0 +1,15 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps5_temp_hotspot",
+    "@odata.type": "#Sensor.v1_4_0.Sensor",
+    "Id": "ps5_temp_hotspot",
+    "Name": "ps5 temp hotspot",
+    "Reading": 42.0,
+    "ReadingRangeMax": 0.0,
+    "ReadingRangeMin": 0.0,
+    "ReadingType": "Temperature",
+    "ReadingUnits": "Cel",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    }
+}

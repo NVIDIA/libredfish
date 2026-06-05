@@ -1,0 +1,29 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/bmc_12v",
+    "@odata.type": "#Sensor.v1_4_0.Sensor",
+    "Id": "bmc_12v",
+    "Name": "bmc 12v",
+    "Reading": 11.67,
+    "ReadingRangeMax": 0.0,
+    "ReadingRangeMin": 0.0,
+    "ReadingType": "Voltage",
+    "ReadingUnits": "V",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    },
+    "Thresholds": {
+        "LowerCaution": {
+            "Reading": 11.36
+        },
+        "LowerCritical": {
+            "Reading": 11.12
+        },
+        "UpperCaution": {
+            "Reading": 12.92
+        },
+        "UpperCritical": {
+            "Reading": 12.96
+        }
+    }
+}

@@ -1,0 +1,11 @@
+{
+    "@odata.id": "/redfish/v1/SessionService/Sessions/yCN5sHtVs3",
+    "@odata.type": "#Session.v1_3_0.Session",
+    "ClientOriginIPAddress": "10.111.73.120",
+    "CreatedTime": "2026-06-04T18:01:51+00:00",
+    "Description": "Manager User Session",
+    "Id": "yCN5sHtVs3",
+    "Name": "User Session",
+    "SessionType": "Redfish",
+    "UserName": "root"
+}

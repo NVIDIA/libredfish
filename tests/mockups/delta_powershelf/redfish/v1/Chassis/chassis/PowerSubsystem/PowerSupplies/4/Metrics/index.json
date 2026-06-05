@@ -1,0 +1,54 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/PowerSubsystem/PowerSupplies/4/Metrics",
+    "@odata.type": "#PowerSupplyMetrics.v1_0_0.PowerSupplyMetrics",
+    "EnergykWh": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_energy_in",
+        "LifetimeReading": 10690.515090833334,
+        "Reading": 0.020210833333333334
+    },
+    "FanSpeedPercent": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_fan1",
+        "SpeedRPM": 6904.0
+    },
+    "Id": "Metrics",
+    "InputCurrentAmps": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_input_current",
+        "Reading": 2.56
+    },
+    "InputPowerWatts": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_input_power",
+        "PowerFactor": 0.9328,
+        "Reading": 594.0
+    },
+    "InputVoltage": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_input_voltage",
+        "Reading": 239.5
+    },
+    "Name": "Metrics for Power Supply 4",
+    "OutputPowerWatts": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_output_power",
+        "Reading": 570.0
+    },
+    "RailCurrentAmps": [
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_output_current",
+            "Reading": 11.42
+        }
+    ],
+    "RailPowerWatts": [
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_output_power",
+            "Reading": 570.0
+        }
+    ],
+    "RailVoltage": [
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_output_voltage",
+            "Reading": 49.85
+        }
+    ],
+    "TemperatureCelsius": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_temp_hotspot",
+        "Reading": 42.0
+    }
+}

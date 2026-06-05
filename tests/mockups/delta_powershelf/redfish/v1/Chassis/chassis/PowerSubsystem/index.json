@@ -1,0 +1,14 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/PowerSubsystem",
+    "@odata.type": "#PowerSubsystem.v1_1_0.PowerSubsystem",
+    "CapacityWatts": 45000,
+    "Id": "PowerSubsystem",
+    "Name": "Power Subsystem for Chassis",
+    "PowerSupplies": {
+        "@odata.id": "/redfish/v1/Chassis/chassis/PowerSubsystem/PowerSupplies"
+    },
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    }
+}

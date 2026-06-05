@@ -1,0 +1,8 @@
+{
+    "@odata.id": "/redfish/v1/Managers/SMC/LogServices/Dump/Entries",
+    "@odata.type": "#LogEntryCollection.LogEntryCollection",
+    "Description": "Collection of BMC Dump Entries",
+    "Members": [],
+    "Members@odata.count": 0,
+    "Name": "BMC Dump Entries"
+}

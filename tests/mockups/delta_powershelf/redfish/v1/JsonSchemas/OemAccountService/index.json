@@ -1,0 +1,21 @@
+{
+    "@odata.context": "/redfish/v1/$metadata#JsonSchemaFile.JsonSchemaFile",
+    "@odata.id": "/redfish/v1/JsonSchemas/OemAccountService",
+    "@odata.type": "#JsonSchemaFile.v1_0_2.JsonSchemaFile",
+    "Name": "OemAccountService Schema File",
+    "Schema": "#OemAccountService.AccountService",
+    "Description": "OemAccountService Schema File Location",
+    "Id": "OemAccountService",
+    "Languages": [
+        "en"
+    ],
+    "Languages@odata.count": 1,
+    "Location": [
+        {
+            "Language": "en",
+            "PublicationUri": "http://redfish.dmtf.org/schemas/v1/OemAccountService.json",
+            "Uri": "/redfish/v1/JsonSchemas/OemAccountService/OemAccountService.json"
+        }
+    ],
+    "Location@odata.count": 1
+}

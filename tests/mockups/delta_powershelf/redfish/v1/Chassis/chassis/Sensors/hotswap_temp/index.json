@@ -1,0 +1,15 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/hotswap_temp",
+    "@odata.type": "#Sensor.v1_4_0.Sensor",
+    "Id": "hotswap_temp",
+    "Name": "hotswap temp",
+    "Reading": 41.0,
+    "ReadingRangeMax": 0.0,
+    "ReadingRangeMin": 0.0,
+    "ReadingType": "Temperature",
+    "ReadingUnits": "Cel",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    }
+}

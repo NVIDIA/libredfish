@@ -1,0 +1,29 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/Storage_RW",
+    "@odata.type": "#Sensor.v1_4_0.Sensor",
+    "Id": "Storage_RW",
+    "Name": "Storage RW",
+    "Reading": 3.91,
+    "ReadingRangeMax": 0.0,
+    "ReadingRangeMin": 0.0,
+    "ReadingType": "Percent",
+    "ReadingUnits": "%",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    },
+    "Thresholds": {
+        "LowerCaution": {
+            "Reading": null
+        },
+        "LowerCritical": {
+            "Reading": null
+        },
+        "UpperCaution": {
+            "Reading": 0.0
+        },
+        "UpperCritical": {
+            "Reading": 85.0
+        }
+    }
+}

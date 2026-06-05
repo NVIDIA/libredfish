@@ -1,0 +1,169 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/ThermalSubsystem/ThermalMetrics",
+    "@odata.type": "#ThermalMetrics.v1_0_0.ThermalMetrics",
+    "Id": "ThermalMetrics",
+    "Name": "Chassis Thermal Metrics",
+    "TemperatureReadingsCelsius": [
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/hotswap_temp",
+            "DeviceName": "hotswap_temp",
+            "Reading": 41.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/bmc_temp",
+            "DeviceName": "bmc_temp",
+            "Reading": 49.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps1_temp_clip_minus",
+            "DeviceName": "ps1_temp_clip_minus",
+            "Reading": 41.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps1_temp_clip_plus",
+            "DeviceName": "ps1_temp_clip_plus",
+            "Reading": 41.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps1_temp_hotspot",
+            "DeviceName": "ps1_temp_hotspot",
+            "Reading": 44.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps1_temp_input",
+            "DeviceName": "ps1_temp_input",
+            "Reading": 26.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps1_temp_output",
+            "DeviceName": "ps1_temp_output",
+            "Reading": 38.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_temp_clip_minus",
+            "DeviceName": "ps2_temp_clip_minus",
+            "Reading": 41.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_temp_clip_plus",
+            "DeviceName": "ps2_temp_clip_plus",
+            "Reading": 41.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_temp_hotspot",
+            "DeviceName": "ps2_temp_hotspot",
+            "Reading": 42.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_temp_input",
+            "DeviceName": "ps2_temp_input",
+            "Reading": 23.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps2_temp_output",
+            "DeviceName": "ps2_temp_output",
+            "Reading": 35.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_temp_clip_minus",
+            "DeviceName": "ps3_temp_clip_minus",
+            "Reading": 41.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_temp_clip_plus",
+            "DeviceName": "ps3_temp_clip_plus",
+            "Reading": 41.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_temp_hotspot",
+            "DeviceName": "ps3_temp_hotspot",
+            "Reading": 46.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_temp_input",
+            "DeviceName": "ps3_temp_input",
+            "Reading": 24.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps3_temp_output",
+            "DeviceName": "ps3_temp_output",
+            "Reading": 37.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_temp_clip_minus",
+            "DeviceName": "ps4_temp_clip_minus",
+            "Reading": 41.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_temp_clip_plus",
+            "DeviceName": "ps4_temp_clip_plus",
+            "Reading": 41.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_temp_hotspot",
+            "DeviceName": "ps4_temp_hotspot",
+            "Reading": 42.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_temp_input",
+            "DeviceName": "ps4_temp_input",
+            "Reading": 23.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps4_temp_output",
+            "DeviceName": "ps4_temp_output",
+            "Reading": 35.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps5_temp_clip_minus",
+            "DeviceName": "ps5_temp_clip_minus",
+            "Reading": 41.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps5_temp_clip_plus",
+            "DeviceName": "ps5_temp_clip_plus",
+            "Reading": 41.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps5_temp_hotspot",
+            "DeviceName": "ps5_temp_hotspot",
+            "Reading": 42.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps5_temp_input",
+            "DeviceName": "ps5_temp_input",
+            "Reading": 24.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps5_temp_output",
+            "DeviceName": "ps5_temp_output",
+            "Reading": 34.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps6_temp_clip_minus",
+            "DeviceName": "ps6_temp_clip_minus",
+            "Reading": 41.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps6_temp_clip_plus",
+            "DeviceName": "ps6_temp_clip_plus",
+            "Reading": 41.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps6_temp_hotspot",
+            "DeviceName": "ps6_temp_hotspot",
+            "Reading": 42.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps6_temp_input",
+            "DeviceName": "ps6_temp_input",
+            "Reading": 24.0
+        },
+        {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/ps6_temp_output",
+            "DeviceName": "ps6_temp_output",
+            "Reading": 35.0
+        }
+    ],
+    "TemperatureReadingsCelsius@odata.count": 32
+}

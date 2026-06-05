@@ -1,0 +1,69 @@
+{
+    "@odata.id": "/redfish/v1/Managers/SMC",
+    "@odata.type": "#Manager.v1_13_0.Manager",
+    "Actions": {
+        "#Manager.Reset": {
+            "@Redfish.ActionInfo": "/redfish/v1/Managers/SMC/ResetActionInfo",
+            "target": "/redfish/v1/Managers/SMC/Actions/Manager.Reset"
+        },
+        "#Manager.ResetToDefaults": {
+            "@Redfish.ActionInfo": "/redfish/v1/Managers/SMC/ResetToDefaultsActionInfo",
+            "target": "/redfish/v1/Managers/SMC/Actions/Manager.ResetToDefaults"
+        }
+    },
+    "AutoDSTEnabled": false,
+    "DateTime": "2026-06-04T18:02:02+00:00",
+    "DateTimeLocalOffset": "+00:00",
+    "Description": "Baseboard Management Controller",
+    "EthernetInterfaces": {
+        "@odata.id": "/redfish/v1/Managers/SMC/EthernetInterfaces"
+    },
+    "FirmwareVersion": "common-pmc-2.2.7-hpr16",
+    "Id": "SMC",
+    "LastResetTime": "2026-01-30T23:01:07+00:00",
+    "Links": {
+        "ManagerForChassis": [
+            {
+                "@odata.id": "/redfish/v1/Chassis/chassis"
+            }
+        ],
+        "ManagerForChassis@odata.count": 1,
+        "ManagerInChassis": {
+            "@odata.id": "/redfish/v1/Chassis/chassis"
+        }
+    },
+    "LogServices": {
+        "@odata.id": "/redfish/v1/Managers/SMC/LogServices"
+    },
+    "ManagerType": "BMC",
+    "Manufacturer": "Delta",
+    "Model": "Common_SMC",
+    "Name": "OpenBmc Manager",
+    "NetworkProtocol": {
+        "@odata.id": "/redfish/v1/Managers/SMC/NetworkProtocol"
+    },
+    "Oem": {
+        "deltaenergysystems": {
+            "@odata.id": "/redfish/v1/Managers/SMC#/Oem/deltaenergysystems",
+            "@odata.type": "#DeltaEnergySystemsManager.v1_0_0.Manager",
+            "BackupFirmwareVersion": "common-pmc-2.2.7-hpr16",
+            "BootedFromBackupFlash": false,
+            "FlashSelector": "Primary",
+            "IsPOE": true,
+            "IsPOEActive": false,
+            "PcbRevision": "P0",
+            "PrimaryFirmwareVersion": "common-pmc-2.2.7-hpr16",
+            "Version": "E3"
+        }
+    },
+    "PartNumber": "ECD70000011",
+    "PowerState": "On",
+    "SerialNumber": "MB25160010",
+    "ServiceEntryPointUUID": "00848361-b951-4c22-a803-ef9da59ec8c8",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    },
+    "TimeZoneName": "UTC",
+    "UUID": "5612bfec-58b2-4c67-a1f9-841160bf6c3e"
+}

@@ -1,0 +1,38 @@
+{
+    "@odata.id": "/redfish/v1/PowerEquipment/PowerShelves/1/Mains/A",
+    "@odata.type": "#Circuit.v1_3_0.Circuit",
+    "Id": "A",
+    "Name": "Mains Circuit A",
+    "PolyPhaseCurrentAmps": {
+        "Line1": {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/current_in_A_A",
+            "Reading": 5.2
+        },
+        "Line2": {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/current_in_A_B",
+            "Reading": 5.64
+        },
+        "Line3": {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/current_in_A_C",
+            "Reading": 5.02
+        }
+    },
+    "PolyPhaseVoltage": {
+        "Line1ToNeutral": {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/voltage_in_A_A",
+            "Reading": 239.5
+        },
+        "Line2ToNeutral": {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/voltage_in_A_B",
+            "Reading": 239.75
+        },
+        "Line3ToNeutral": {
+            "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/voltage_in_A_C",
+            "Reading": 240.0
+        }
+    },
+    "PowerWatts": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/total_power_in_A",
+        "Reading": 3634.0
+    }
+}

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<edmx:Edmx xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx" Version="4.0">
+
+	<edmx:Reference Uri="http://redfish.dmtf.org/schemas/v1/Resource_v1.xml">
+		<edmx:Include Namespace="Resource.v1_0_0"/>
+	</edmx:Reference>
+	<edmx:Reference Uri="http://docs.oasis-open.org/odata/odata/v4.0/errata03/csd01/complete/vocabularies/Org.OData.Capabilities.V1.xml">
+		<edmx:Include Namespace="Org.OData.Capabilities.V1" Alias="Capabilities"/>
+	</edmx:Reference>
+	<edmx:Reference Uri="http://docs.oasis-open.org/odata/odata/v4.0/errata03/csd01/complete/vocabularies/Org.OData.Core.V1.xml">
+		<edmx:Include Namespace="Org.OData.Core.V1" Alias="OData"/>
+	</edmx:Reference>
+	<edmx:Reference Uri="http://redfish.dmtf.org/schemas/v1/RedfishExtensions_v1.xml">
+		<edmx:Include Namespace="RedfishExtensions.v1_0_0" Alias="Redfish"/>
+	</edmx:Reference>
+
+	<edmx:DataServices>
+
+		<Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="DeltaEnergySystemsManager">
+			<Annotation Term="Redfish.OwningEntity" String="deltaenergysystems"/>
+		</Schema>
+
+		<Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="DeltaEnergySystemsManager.v1_0_0">
+			<Annotation Term="Redfish.OwningEntity" String="deltaenergysystems"/>
+			<Annotation Term="Redfish.Release" String="1.0"/>
+
+			<EntityType Name="Manager" BaseType="Resource.OemObject" Abstract="true">
+				<Annotation Term="OData.Description" String="Delta OEM Extension for Manager"/>
+        		<Annotation Term="OData.LongDescription" String="Delta OEM Extension for Manager"/>
+
+				<Property Name="BackupFirmwareVersion" Type="Edm.String" Nullable="false">
+					<Annotation Term="OData.Permissions" EnumMember="OData.Permission/Read"/>
+					<Annotation Term="OData.Description" String="Backup firmware version"/>
+					<Annotation Term="OData.LongDescription" String="Firmware version that is installed in the other (backup) flash memory"/>
+				</Property>
+				<Property Name="BootedFromBackupFlash" Type="Edm.Boolean" Nullable="false">
+					<Annotation Term="OData.Permissions" EnumMember="OData.Permission/Read"/>
+					<Annotation Term="OData.Description" String="True if we booted from the backup flash memory, otherwise false."/>
+					<Annotation Term="OData.LongDescription" String="True if we booted from the backup flash memory, otherwise false"/>
+				</Property>
+				<Property Name="FlashSelector" Type="Edm.String" Nullable="false">
+					<Annotation Term="OData.Permissions" EnumMember="OData.Permission/Read/Write"/>
+					<Annotation Term="OData.Description" String="Which SPI flash is used when updating the BMC"/>
+					<Annotation Term="OData.LongDescription" String="Which SPI flash is used when updating the BMC with a firmware. Only 'Primary' and 'Backup' are allowed values"/>
+				</Property>
+				<Property Name="IsPOE" Type="Edm.Boolean" Nullable="false">
+					<Annotation Term="OData.Permissions" EnumMember="OData.Permission/Read"/>
+					<Annotation Term="OData.Description" String="Whether or not this BMC is PoE capable"/>
+					<Annotation Term="OData.LongDescription" String="Whether or not this BMC is PoE capable"/>
+				</Property>
+				<Property Name="PcbRevision" Type="Edm.String" Nullable="false">
+					<Annotation Term="OData.Permissions" EnumMember="OData.Permission/Read"/>
+					<Annotation Term="OData.Description" String="The hardware version of this equipment (from hardware signals)"/>
+					<Annotation Term="OData.LongDescription" String="The hardware version of this equipment (from hardware signals)"/>
+				</Property>
+				<Property Name="PrimaryFirmwareVersion" Type="Edm.String" Nullable="false">
+					<Annotation Term="OData.Permissions" EnumMember="OData.Permission/Read"/>
+					<Annotation Term="OData.Description" String="Firmware version that is installed in main/primary flash"/>
+					<Annotation Term="OData.LongDescription" String="Firmware version that is installed in main/primary flash memory. Sometimes also called golden image"/>
+				</Property>
+				<Property Name="Version" Type="Edm.String" Nullable="false">
+					<Annotation Term="OData.Permissions" EnumMember="OData.Permission/Read"/>
+					<Annotation Term="OData.Description" String="The hardware version of this equipment (from EEPROM)"/>
+					<Annotation Term="OData.LongDescription" String="The hardware version of this equipment (from EEPROM)"/>
+				</Property>
+			</EntityType>
+		</Schema>
+	</edmx:DataServices>
+</edmx:Edmx>

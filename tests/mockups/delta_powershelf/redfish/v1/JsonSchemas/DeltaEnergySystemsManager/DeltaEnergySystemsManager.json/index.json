@@ -1,0 +1,80 @@
+{
+    "$id": "http://redfish.dmtf.org/schemas/v1/DeltaEnergySystemsManager.v1_0_0.json",
+    "$schema": "http://redfish.dmtf.org/schemas/v1/redfish-schema-v1.json",
+    "copyright": "Copyright 2014-2019 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright",
+    "definitions": {
+        "Manager": {
+            "additionalProperties": false,
+            "description": "Delta OEM Extension for Manager",
+            "longDescription": "Delta OEM Extension for Manager",
+            "patternProperties": {
+                "^([a-zA-Z_][a-zA-Z0-9_]*)?@(odata|Redfish|Message)\\.[a-zA-Z_][a-zA-Z0-9_]*$": {
+                    "description": "This property shall specify a valid odata or Redfish property.",
+                    "type": [
+                        "array",
+                        "boolean",
+                        "integer",
+                        "number",
+                        "null",
+                        "object",
+                        "string"
+                    ]
+                }
+            },
+            "properties": {
+                "BackupFirmwareVersion": {
+                    "description": "Backup firmware version",
+                    "longDescription": "Firmware version that is installed in the other (backup) flash memory",
+                    "readonly": true,
+                    "type": "string"
+                },
+                "BootedFromBackupFlash": {
+                    "description": "True if we booted from the backup flash memory, otherwise false.",
+                    "longDescription": "True if we booted from the backup flash memory, otherwise false",
+                    "readonly": true,
+                    "type": "boolean"
+                },
+                "FlashSelector": {
+                    "description": "Which SPI flash is used when updating the BMC",
+                    "longDescription": "Which SPI flash is used when updating the BMC with a firmware. Only 'Primary' and 'Backup' are allowed values",
+                    "readonly": false,
+                    "type": "string"
+                },
+                "IsPOE": {
+                    "description": "Whether or not this BMC is PoE capable",
+                    "longDescription": "Whether or not this BMC is PoE capable",
+                    "readonly": true,
+                    "type": "boolean"
+                },
+                "IsPOEActive": {
+                    "description": "Whether or not this BMC is powered by PoE",
+                    "longDescription": "Whether or not this BMC is powered by PoE",
+                    "readonly": true,
+                    "type": "boolean"
+                },
+                "PcbRevision": {
+                    "description": "The hardware version of this equipment (from hardware signals)",
+                    "longDescription": "The hardware version of this equipment (from hardware signals)",
+                    "readonly": true,
+                    "type": "string"
+                },
+                "PrimaryFirmwareVersion": {
+                    "description": "Firmware version that is installed in main/primary flash",
+                    "longDescription": "Firmware version that is installed in main/primary flash memory. Sometimes also called golden image",
+                    "readonly": true,
+                    "type": "string"
+                },
+                "Version": {
+                    "description": "The hardware version of this equipment (from EEPROM)",
+                    "longDescription": "The hardware version of this equipment (from EEPROM)",
+                    "readonly": true,
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        }
+    },
+    "owningEntity": "deltaenergysystems",
+    "release": "1.0",
+    "title": "#DeltaEnergySystemsManager.v1_0_0"
+}

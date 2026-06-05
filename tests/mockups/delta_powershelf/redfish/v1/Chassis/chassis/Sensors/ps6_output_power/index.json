@@ -1,0 +1,15 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps6_output_power",
+    "@odata.type": "#Sensor.v1_4_0.Sensor",
+    "Id": "ps6_output_power",
+    "Name": "ps6 output power",
+    "Reading": 564.0,
+    "ReadingRangeMax": 3200.0,
+    "ReadingRangeMin": 0.0,
+    "ReadingType": "Power",
+    "ReadingUnits": "W",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    }
+}

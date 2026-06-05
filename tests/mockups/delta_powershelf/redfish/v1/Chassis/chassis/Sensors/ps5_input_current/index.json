@@ -1,0 +1,15 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps5_input_current",
+    "@odata.type": "#Sensor.v1_4_0.Sensor",
+    "Id": "ps5_input_current",
+    "Name": "ps5 input current",
+    "Reading": 2.8,
+    "ReadingRangeMax": 16.0,
+    "ReadingRangeMin": 0.0,
+    "ReadingType": "Current",
+    "ReadingUnits": "A",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    }
+}

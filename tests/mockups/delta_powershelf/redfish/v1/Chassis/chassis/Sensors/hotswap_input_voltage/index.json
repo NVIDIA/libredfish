@@ -1,0 +1,15 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/hotswap_input_voltage",
+    "@odata.type": "#Sensor.v1_4_0.Sensor",
+    "Id": "hotswap_input_voltage",
+    "Name": "hotswap input voltage",
+    "Reading": 50.07,
+    "ReadingRangeMax": 0.0,
+    "ReadingRangeMin": 0.0,
+    "ReadingType": "Voltage",
+    "ReadingUnits": "V",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    }
+}

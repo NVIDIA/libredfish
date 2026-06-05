@@ -1,0 +1,55 @@
+{
+    "@odata.id": "/redfish/v1/PowerEquipment/PowerShelves/1/PowerSupplies/2",
+    "@odata.type": "#PowerSupply.v1_1_0.PowerSupply",
+    "EfficiencyRatings": [
+        {
+            "EfficiencyPercent": 94.0,
+            "LoadPercent": 30
+        },
+        {
+            "EfficiencyPercent": 96.5,
+            "LoadPercent": 50
+        },
+        {
+            "EfficiencyPercent": 96.5,
+            "LoadPercent": 90
+        }
+    ],
+    "FirmwareVersion": "01040104",
+    "HotPluggable": true,
+    "Id": "PowerSupplyUnit 2",
+    "InputNominalVoltageType": "AC200To240V",
+    "Location": {
+        "PartLocation": {
+            "LocationOrdinalValue": 2,
+            "LocationType": "Bay",
+            "Orientation": "LeftToRight",
+            "Reference": "Top",
+            "ServiceLabel": "PSU Bay 2"
+        }
+    },
+    "Manufacturer": "Delta",
+    "Metrics": {
+        "@odata.id": "/redfish/v1/PowerEquipment/PowerShelves/1/PowerSupplies/2/Metrics"
+    },
+    "Model": "ECD17020036",
+    "Name": "PowerSupplyUnit 2",
+    "Oem": {
+        "deltaenergysystems": {
+            "@odata.id": "/redfish/v1/PowerEquipment/PowerShelves/1/PowerSupplies/2#/Oem/deltaenergysystems",
+            "@odata.type": "#DeltaEnergySystemsPowerSupply.v1_0_0.PowerSupply",
+            "FanSpeedTarget": 0,
+            "Power": true
+        }
+    },
+    "PartNumber": "ECD17020036",
+    "PowerCapacityWatts": 5504,
+    "PowerSupplyType": "DC",
+    "ProductionDate": "2025-03-31T00:00:00+00:00",
+    "SerialNumber": "THAXB251401MN",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    },
+    "Version": "PR1"
+}

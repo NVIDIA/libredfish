@@ -1,0 +1,18 @@
+{
+    "@odata.id": "/redfish/v1/PowerEquipment/PowerShelves/1/Branches/1",
+    "@odata.type": "#Circuit.v1_3_0.Circuit",
+    "CurrentAmps": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/total_current_out",
+        "Reading": 69.39
+    },
+    "Id": "1",
+    "Name": "Branch Circuit",
+    "PowerWatts": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/total_power_out",
+        "Reading": 3465.0
+    },
+    "Voltage": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/max_voltage_out",
+        "Reading": 49.87
+    }
+}

@@ -1,0 +1,387 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors",
+    "@odata.type": "#SensorCollection.SensorCollection",
+    "Description": "Collection of Sensors for this Chassis",
+    "Members": [
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/current_in_A_A"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/current_in_A_B"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/current_in_A_C"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/hotswap_input_current"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps1_input_current"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps1_output_current"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps2_input_current"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps2_output_current"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps3_input_current"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps3_output_current"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps4_input_current"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps4_output_current"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps5_input_current"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps5_output_current"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps6_input_current"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps6_output_current"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/total_current_out"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps1_energy_in"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps1_energy_out"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps2_energy_in"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps2_energy_out"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps3_energy_in"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps3_energy_out"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps4_energy_in"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps4_energy_out"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps5_energy_in"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps5_energy_out"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps6_energy_in"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps6_energy_out"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps1_total_energy_in"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps2_total_energy_in"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps3_total_energy_in"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps4_total_energy_in"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps5_total_energy_in"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps6_total_energy_in"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps1_powerfactor"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps2_powerfactor"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps3_powerfactor"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps4_powerfactor"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps5_powerfactor"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps6_powerfactor"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps1_fan1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps1_fan2"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps2_fan1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps2_fan2"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps3_fan1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps3_fan2"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps4_fan1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps4_fan2"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps5_fan1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps5_fan2"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps6_fan1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps6_fan2"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/hotswap_input_power"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps1_input_power"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps1_output_power"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps2_input_power"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps2_output_power"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps3_input_power"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps3_output_power"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps4_input_power"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps4_output_power"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps5_input_power"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps5_output_power"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps6_input_power"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps6_output_power"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/total_power_in"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/total_power_in_A"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/total_power_out"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/bmc_temp"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/hotswap_temp"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps1_temp_clip_minus"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps1_temp_clip_plus"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps1_temp_hotspot"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps1_temp_input"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps1_temp_output"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps2_temp_clip_minus"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps2_temp_clip_plus"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps2_temp_hotspot"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps2_temp_input"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps2_temp_output"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps3_temp_clip_minus"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps3_temp_clip_plus"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps3_temp_hotspot"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps3_temp_input"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps3_temp_output"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps4_temp_clip_minus"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps4_temp_clip_plus"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps4_temp_hotspot"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps4_temp_input"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps4_temp_output"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps5_temp_clip_minus"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps5_temp_clip_plus"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps5_temp_hotspot"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps5_temp_input"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps5_temp_output"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps6_temp_clip_minus"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps6_temp_clip_plus"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps6_temp_hotspot"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps6_temp_input"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps6_temp_output"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/CPU"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/Memory"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/Storage_RW"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/total_efficiency"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/bmc_12v"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/bmc_3v3"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/bmc_5v"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/hotswap_input_voltage"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/hotswap_output_voltage"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/max_voltage_out"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps1_input_voltage"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps1_output_voltage"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps2_input_voltage"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps2_output_voltage"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps3_input_voltage"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps3_output_voltage"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps4_input_voltage"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps4_output_voltage"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps5_input_voltage"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps5_output_voltage"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps6_input_voltage"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/ps6_output_voltage"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/voltage_in_A_A"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/voltage_in_A_B"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/voltage_in_A_C"
+        }
+    ],
+    "Members@odata.count": 126,
+    "Name": "Sensors for Chassis"
+}

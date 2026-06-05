@@ -199,25 +199,37 @@ impl RedfishClientPool {
         let client = RedfishHttpClient::new(self.http_client.clone(), endpoint, custom_headers);
         let mut s = RedfishStandard::new(client);
         let service_root = s.get_service_root().await?;
-        let systems = s.get_systems().await?;
+
+        // Resolve the vendor up-front (explicit override, else from the service
+        // root, which get_service_root backfills from the chassis manufacturer
+        // for vendorless power shelves). Knowing the vendor here lets us skip
+        // resource lookups for platforms that don't expose them.
+        let vendor = match vendor {
+            Some(v) => v,
+            None => service_root.vendor().ok_or(RedfishError::MissingVendor)?,
+        };
+
         let managers = s.get_managers().await?;
-        let system_id = systems.first().ok_or_else(|| RedfishError::GenericError {
-            error: "No systems found in service root".to_string(),
-        })?;
         let manager_id = managers.first().ok_or_else(|| RedfishError::GenericError {
             error: "No managers found in service root".to_string(),
         })?;
         let chassis = s.get_chassis_all().await?;
 
-        // call set_system_id always before calling set_vendor
-        s.set_system_id(system_id)?;
+        // Delta power shelves expose no `/Systems` resource (a real query 404s)
+        // and the Delta client never references a system id, so skip both the
+        // lookup and the set entirely. For every other vendor, resolve the
+        // system id and set it before set_vendor (DGX detection depends on it).
+        if vendor != RedfishVendor::DeltaPowerShelf {
+            let systems = s.get_systems().await?;
+            let system_id = systems.first().ok_or_else(|| RedfishError::GenericError {
+                error: "No systems found in service root".to_string(),
+            })?;
+            // call set_system_id always before calling set_vendor
+            s.set_system_id(system_id)?;
+        }
+
         s.set_manager_id(manager_id)?;
         s.set_service_root(service_root.clone())?;
-
-        let vendor = match vendor {
-            Some(v) => v,
-            None => service_root.vendor().ok_or(RedfishError::MissingVendor)?,
-        };
 
         // P3809 is a placeholder — always resolve it based on chassis
         // contents, whether it was auto-detected or explicitly provided.

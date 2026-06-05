@@ -1,0 +1,17 @@
+{
+    "@odata.id": "/redfish/v1/UpdateService",
+    "@odata.type": "#UpdateService.v1_10_0.UpdateService",
+    "Description": "Service for Software Update",
+    "FirmwareInventory": {
+        "@odata.id": "/redfish/v1/UpdateService/FirmwareInventory"
+    },
+    "HttpPushUri": "/redfish/v1/UpdateService/update",
+    "HttpPushUriOptions": {
+        "HttpPushUriApplyTime": {
+            "ApplyTime": "Immediate"
+        }
+    },
+    "Id": "UpdateService",
+    "Name": "Update Service",
+    "ServiceEnabled": true
+}

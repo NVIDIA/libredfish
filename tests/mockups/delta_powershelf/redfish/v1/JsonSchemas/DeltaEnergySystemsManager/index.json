@@ -1,0 +1,20 @@
+{
+    "@odata.context": "/redfish/v1/$metadata#JsonSchemaFile.JsonSchemaFile",
+    "@odata.id": "/redfish/v1/JsonSchemas/DeltaEnergySystemsManager",
+    "@odata.type": "#JsonSchemaFile.v1_0_2.JsonSchemaFile",
+    "Name": "DeltaEnergySystemsManager Schema File",
+    "Schema": "#DeltaEnergySystemsManager.Manager",
+    "Description": "DeltaEnergySystemsManager Schema File Location",
+    "Id": "DeltaEnergySystemsManager",
+    "Languages": [
+        "en"
+    ],
+    "Languages@odata.count": 1,
+    "Location": [
+        {
+            "Language": "en",
+            "Uri": "/redfish/v1/JsonSchemas/DeltaEnergySystemsManager/DeltaEnergySystemsManager.json"
+        }
+    ],
+    "Location@odata.count": 1
+}

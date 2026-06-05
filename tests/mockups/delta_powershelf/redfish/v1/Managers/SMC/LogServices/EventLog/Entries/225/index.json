@@ -1,0 +1,14 @@
+{
+    "@odata.id": "/redfish/v1/Managers/SMC/LogServices/EventLog/Entries/225",
+    "@odata.type": "#LogEntry.v1_9_0.LogEntry",
+    "Created": "1970-01-02T15:03:10+00:00",
+    "EntryType": "Event",
+    "EventTimestamp": "1970-01-02T15:03:10+00:00",
+    "Id": "225",
+    "Message": "The SMC event log was cleared.",
+    "MessageId": "DeltaEnergySystems.0.1.xyz.openbmc_project.DeltaEnergySystems.Shelf.Error.ClearedSmcLogEvents",
+    "Modified": "1970-01-02T15:03:10+00:00",
+    "Name": "System Event Log Entry",
+    "Resolved": true,
+    "Severity": "OK"
+}

@@ -1,0 +1,29 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/total_efficiency",
+    "@odata.type": "#Sensor.v1_4_0.Sensor",
+    "Id": "total_efficiency",
+    "Name": "total efficiency",
+    "Reading": 95.23,
+    "ReadingRangeMax": 0.0,
+    "ReadingRangeMin": 0.0,
+    "ReadingType": "Percent",
+    "ReadingUnits": "%",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    },
+    "Thresholds": {
+        "LowerCaution": {
+            "Reading": null
+        },
+        "LowerCritical": {
+            "Reading": null
+        },
+        "UpperCaution": {
+            "Reading": null
+        },
+        "UpperCritical": {
+            "Reading": null
+        }
+    }
+}

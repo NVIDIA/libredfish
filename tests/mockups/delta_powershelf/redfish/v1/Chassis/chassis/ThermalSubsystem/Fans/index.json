@@ -1,0 +1,44 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/chassis/ThermalSubsystem/Fans",
+    "@odata.type": "#FanCollection.FanCollection",
+    "Members": [
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/ThermalSubsystem/Fans/ps1_fan1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/ThermalSubsystem/Fans/ps1_fan2"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/ThermalSubsystem/Fans/ps2_fan1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/ThermalSubsystem/Fans/ps2_fan2"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/ThermalSubsystem/Fans/ps3_fan1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/ThermalSubsystem/Fans/ps3_fan2"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/ThermalSubsystem/Fans/ps4_fan1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/ThermalSubsystem/Fans/ps4_fan2"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/ThermalSubsystem/Fans/ps5_fan1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/ThermalSubsystem/Fans/ps5_fan2"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/ThermalSubsystem/Fans/ps6_fan1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis/ThermalSubsystem/Fans/ps6_fan2"
+        }
+    ],
+    "Members@odata.count": 12,
+    "Name": "Chassis Fans"
+}

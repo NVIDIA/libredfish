@@ -1,0 +1,14 @@
+{
+    "@odata.id": "/redfish/v1/PowerEquipment/PowerShelves/1/Metrics",
+    "@odata.type": "#PowerDistributionMetrics.v1_2_0.PowerDistributionMetrics",
+    "Id": "Metrics",
+    "Name": "Summary Metrics",
+    "PowerWatts": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/total_power_in",
+        "Reading": 3632.0
+    },
+    "TemperatureCelsius": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/bmc_temp",
+        "Reading": 49.0
+    }
+}

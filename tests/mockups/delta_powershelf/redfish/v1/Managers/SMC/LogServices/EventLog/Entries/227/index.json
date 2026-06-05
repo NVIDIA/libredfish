@@ -1,0 +1,17 @@
+{
+    "@odata.id": "/redfish/v1/Managers/SMC/LogServices/EventLog/Entries/227",
+    "@odata.type": "#LogEntry.v1_9_0.LogEntry",
+    "Created": "2026-04-07T12:52:35+00:00",
+    "EntryType": "Event",
+    "EventTimestamp": "2026-04-07T12:52:35+00:00",
+    "Id": "227",
+    "Message": "The power supply ALL was turned on by a user.",
+    "MessageArgs": [
+        "ALL"
+    ],
+    "MessageId": "DeltaEnergySystems.0.1.xyz.openbmc_project.DeltaEnergySystems.PSU.Error.PsuForceOn",
+    "Modified": "2026-04-07T12:52:35+00:00",
+    "Name": "System Event Log Entry",
+    "Resolved": true,
+    "Severity": "OK"
+}
