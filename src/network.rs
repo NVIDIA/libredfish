@@ -654,6 +654,32 @@ impl RedfishHttpClient {
         drop_redfish_url_part: bool,
         timeout: Duration,
     ) -> Result<(StatusCode, Option<String>, String), RedfishError> {
+        self.req_update_firmware_multipart_with_oem(
+            filename,
+            file,
+            parameters,
+            None,
+            api,
+            drop_redfish_url_part,
+            timeout,
+        )
+        .await
+    }
+
+    // req_update_firmware_multipart_with_oem is like req_update_firmware_multipart, but allows
+    // sending an additional OEM-specific `OemParameters` JSON part. AMI MegaRAC BMCs require this
+    // third part; vendors that do not use it (e.g. Lenovo XCC) pass `None`.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn req_update_firmware_multipart_with_oem(
+        &self,
+        filename: &Path,
+        file: tokio::fs::File,
+        parameters: String,
+        oem_parameters: Option<String>,
+        api: &str,
+        drop_redfish_url_part: bool,
+        timeout: Duration,
+    ) -> Result<(StatusCode, Option<String>, String), RedfishError> {
         let user = match &self.endpoint.user {
             Some(user) => user,
             None => return Err(RedfishError::NotSupported("User not specified".to_string())),
@@ -687,42 +713,52 @@ impl RedfishHttpClient {
             .metadata()
             .map_err(|e| RedfishError::FileError(e.to_string()))?
             .len();
+        // The spec is for two parts to the form: UpdateParameters, which is JSON encoded metadata,
+        // and UpdateFile, which is the file itself.  Exact details of UpdateParameters end up being implementation specific.
+        let mut form = Form::new()
+            .part(
+                "UpdateParameters",
+                reqwest::multipart::Part::text(parameters)
+                    // mime_str_to_part parses the MIME type. Technically this is
+                    // infallible for known MIME types, including application/json,
+                    // but still check for an error instead of unwrapping.
+                    .mime_str("application/json")
+                    .map_err(|e| RedfishError::GenericError {
+                        error: format!("Invalid MIME type 'application/json': {}", e),
+                    })?,
+            )
+            .part(
+                "UpdateFile",
+                Part::stream_with_length(file, length)
+                    // mime_str_to_part parses the MIME type. Technically this is
+                    // infallible for known MIME types, including application/octet-stream,
+                    // but still check for an error instead of unwrapping.
+                    .mime_str("application/octet-stream")
+                    .map_err(|e| RedfishError::GenericError {
+                        error: format!("Invalid MIME type 'application/octet-stream': {}", e),
+                    })?
+                    // Yes, the filename passed does matter for some reason, at least for Dells, and it has to be the basename.
+                    .file_name(basename.clone()),
+            );
+
+        // AMI MegaRAC BMCs expect a third `OemParameters` JSON part alongside UpdateParameters
+        // and UpdateFile. Other vendors omit it.
+        if let Some(oem_parameters) = oem_parameters {
+            form = form.part(
+                "OemParameters",
+                reqwest::multipart::Part::text(oem_parameters)
+                    .mime_str("application/json")
+                    .map_err(|e| RedfishError::GenericError {
+                        error: format!("Invalid MIME type 'application/json': {}", e),
+                    })?,
+            );
+        }
+
         let response = self
             .http_client
             .post(url.clone())
             .timeout(timeout)
-            .multipart(
-                Form::new()
-                    // The spec is for two parts to the form: UpdateParameters, which is JSON encoded metadata,
-                    // and UpdateFile, which is the file itself.  Exact details of UpdateParameters end up being implementation specific.
-                    .part(
-                        "UpdateParameters",
-                        reqwest::multipart::Part::text(parameters)
-                            // mime_str_to_part parses the MIME type. Technically this is
-                            // infallible for known MIME types, including application/json,
-                            // but still check for an error instead of unwrapping.
-                            .mime_str("application/json")
-                            .map_err(|e| RedfishError::GenericError {
-                                error: format!("Invalid MIME type 'application/json': {}", e),
-                            })?,
-                    )
-                    .part(
-                        "UpdateFile",
-                        Part::stream_with_length(file, length)
-                            // mime_str_to_part parses the MIME type. Technically this is
-                            // infallible for known MIME types, including application/octet-stream,
-                            // but still check for an error instead of unwrapping.
-                            .mime_str("application/octet-stream")
-                            .map_err(|e| RedfishError::GenericError {
-                                error: format!(
-                                    "Invalid MIME type 'application/octet-stream': {}",
-                                    e
-                                ),
-                            })?
-                            // Yes, the filename passed does matter for some reason, at least for Dells, and it has to be the basename.
-                            .file_name(basename.clone()),
-                    ),
-            )
+            .multipart(form)
             .basic_auth(user, self.endpoint.password.as_ref())
             .send()
             .await
