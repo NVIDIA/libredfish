@@ -698,9 +698,57 @@ impl Redfish for Bmc {
         component_type: ComponentType,
     ) -> crate::RedfishFuture<'a, Result<String, RedfishError>> {
         Box::pin(async move {
-            self.s
-                .update_firmware_multipart(filename, reboot, timeout, component_type)
+            // The hardcoded URIs and keys below are only verified for the Lenovo HS350x, so
+            // restrict this native path to LenovoAMI; other AMI platforms fall back to NotSupported.
+            if self.s.vendor != Some(RedfishVendor::LenovoAMI) {
+                return self
+                    .s
+                    .update_firmware_multipart(filename, reboot, timeout, component_type)
+                    .await;
+            }
+
+            let (oem, targets) = ami_update_targets(&component_type)?;
+
+            // BMC images preserve all BMC configuration via a pre-upload PATCH; BIOS preservation
+            // is expressed inside OemParameters (PreserveBIOS) instead.
+            if matches!(component_type, ComponentType::BMC) {
+                self.set_preserve_configuration_all().await?;
+            }
+
+            let file = tokio::fs::File::open(filename)
                 .await
+                .map_err(|e| RedfishError::FileError(format!("Could not open file: {}", e)))?;
+
+            let update_parameters = serde_json::to_string(&AmiUpdateParameters { targets })
+                .map_err(|e| RedfishError::JsonSerializeError {
+                    url: "UpdateService/upload".to_string(),
+                    object_debug: "AmiUpdateParameters".to_string(),
+                    source: e,
+                })?;
+            let oem_parameters =
+                serde_json::to_string(&oem).map_err(|e| RedfishError::JsonSerializeError {
+                    url: "UpdateService/upload".to_string(),
+                    object_debug: "AmiOemParameters".to_string(),
+                    source: e,
+                })?;
+
+            let (_status_code, loc, body) = self
+                .s
+                .client
+                .req_update_firmware_multipart_with_oem(
+                    filename,
+                    file,
+                    update_parameters,
+                    Some(oem_parameters),
+                    "UpdateService/upload", // AMI MegaRAC does "upload" instead of "MultiPartUpload"
+                    false,
+                    timeout,
+                )
+                .await?;
+
+            extract_ami_task_id(loc.as_deref(), &body).ok_or_else(|| RedfishError::GenericError {
+                error: format!("Could not locate AMI update task in response: {}", body),
+            })
         })
     }
 
@@ -1176,6 +1224,28 @@ impl Redfish for Bmc {
 }
 
 impl Bmc {
+    /// Enable preservation of all BMC configuration before a BMC firmware flash. PATCHes
+    /// `UpdateService` with `If-Match: *` setting every `Oem.AMIUpdateService.PreserveConfiguration`
+    /// key to `true`. A non-2xx response is an error so we never silently flash without preserving
+    /// config.
+    async fn set_preserve_configuration_all(&self) -> Result<(), RedfishError> {
+        let preserve: HashMap<&str, bool> = AMI_PRESERVE_CONFIGURATION_KEYS
+            .iter()
+            .map(|key| (*key, true))
+            .collect();
+        let body = serde_json::json!({
+            "Oem": {
+                "AMIUpdateService": {
+                    "PreserveConfiguration": preserve,
+                }
+            }
+        });
+        self.s
+            .client
+            .patch_with_if_match("UpdateService", body)
+            .await
+    }
+
     async fn get_system_and_boot_options(
         &self,
     ) -> Result<(ComputerSystem, Vec<BootOption>), RedfishError> {
@@ -1327,5 +1397,237 @@ impl Bmc {
         }
 
         Ok(diffs)
+    }
+}
+
+/// FirmwareInventory collection prefix for AMI update `Targets` URIs (absolute).
+const AMI_FIRMWARE_INVENTORY: &str = "/redfish/v1/UpdateService/FirmwareInventory";
+
+/// All `Oem.AMIUpdateService.PreserveConfiguration` keys set to `true` for a BMC flash.
+const AMI_PRESERVE_CONFIGURATION_KEYS: [&str; 14] = [
+    "Authentication",
+    "EXTLOG",
+    "FRU",
+    "IPMI",
+    "KVM",
+    "NTP",
+    "Network",
+    "REDFISH",
+    "SDR",
+    "SEL",
+    "SNMP",
+    "SSH",
+    "Syslog",
+    "WEB",
+];
+
+/// `UpdateParameters` JSON part for an AMI multipart upload. Unlike the standard Redfish path, AMI
+/// names explicit `FirmwareInventory` targets and does not use `@Redfish.OperationApplyTime`.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "PascalCase")]
+struct AmiUpdateParameters {
+    targets: Vec<String>,
+}
+
+/// `OemParameters` JSON part for an AMI multipart upload. `image_type` is "BMC" or "BIOS";
+/// `preserve_bios` carries BIOS NVRAM preservation ("true"/"false") and is omitted for BMC.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "PascalCase")]
+struct AmiOemParameters {
+    image_type: String,
+    // PascalCase would produce "PreserveBios"; the AMI MegaRAC API expects BIOS
+    // fully capitalized, so rename explicitly.
+    #[serde(rename = "PreserveBIOS", skip_serializing_if = "Option::is_none")]
+    preserve_bios: Option<String>,
+}
+
+/// Map a `ComponentType` to the AMI (`OemParameters`, `Targets`) pair using the HS350x's exact
+/// URIs. BMC flashes both ROM banks; BIOS flashes `BIOSImage1` with NVRAM preservation. ROM-bank
+/// selection is not expressible via `ComponentType`, so it is hardcoded.
+fn ami_update_targets(
+    component: &ComponentType,
+) -> Result<(AmiOemParameters, Vec<String>), RedfishError> {
+    match component {
+        ComponentType::BMC => Ok((
+            AmiOemParameters {
+                image_type: "BMC".to_string(),
+                preserve_bios: None,
+            },
+            vec![
+                format!("{AMI_FIRMWARE_INVENTORY}/BMCImage1"),
+                format!("{AMI_FIRMWARE_INVENTORY}/BMCImage2"),
+            ],
+        )),
+        ComponentType::UEFI => Ok((
+            AmiOemParameters {
+                image_type: "BIOS".to_string(),
+                preserve_bios: Some("true".to_string()),
+            },
+            vec![format!("{AMI_FIRMWARE_INVENTORY}/BIOSImage1")],
+        )),
+        other => Err(RedfishError::NotSupported(format!(
+            "AMI multipart update not implemented for component type {:?}",
+            other
+        ))),
+    }
+}
+
+/// Extract the task id from an AMI multipart upload response. AMI returns the task reference in
+/// `Messages[]` where `MessageId == "Task.1.0.New"` and `MessageArgs[0]` is the task URI; we return
+/// its last path segment because `get_task` formats `TaskService/Tasks/{id}`. Falls back to a
+/// top-level `Id` (some firmware returns a Task object) and then the `Location` header.
+fn extract_ami_task_id(location: Option<&str>, body: &str) -> Option<String> {
+    let last_segment = |s: &str| {
+        s.trim_end_matches('/')
+            .rsplit('/')
+            .next()
+            .map(str::to_string)
+    };
+
+    if let Ok(value) = serde_json::from_str::<serde_json::Value>(body) {
+        if let Some(messages) = value.get("Messages").and_then(|m| m.as_array()) {
+            for message in messages {
+                if message.get("MessageId").and_then(|x| x.as_str()) == Some("Task.1.0.New") {
+                    if let Some(arg) = message
+                        .get("MessageArgs")
+                        .and_then(|a| a.as_array())
+                        .and_then(|a| a.first())
+                        .and_then(|x| x.as_str())
+                    {
+                        return last_segment(arg);
+                    }
+                }
+            }
+        }
+        if let Some(id) = value.get("Id").and_then(|x| x.as_str()) {
+            return Some(id.to_string());
+        }
+    }
+
+    location.and_then(last_segment)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn update_parameters_serializes_to_pascal_case_targets() {
+        let params = AmiUpdateParameters {
+            targets: vec![
+                format!("{AMI_FIRMWARE_INVENTORY}/BMCImage1"),
+                format!("{AMI_FIRMWARE_INVENTORY}/BMCImage2"),
+            ],
+        };
+        let json: serde_json::Value =
+            serde_json::from_str(&serde_json::to_string(&params).unwrap()).unwrap();
+        assert_eq!(
+            json,
+            serde_json::json!({
+                "Targets": [
+                    "/redfish/v1/UpdateService/FirmwareInventory/BMCImage1",
+                    "/redfish/v1/UpdateService/FirmwareInventory/BMCImage2",
+                ]
+            })
+        );
+    }
+
+    #[test]
+    fn oem_parameters_bmc_omits_preserve_bios() {
+        let oem = AmiOemParameters {
+            image_type: "BMC".to_string(),
+            preserve_bios: None,
+        };
+        let json: serde_json::Value =
+            serde_json::from_str(&serde_json::to_string(&oem).unwrap()).unwrap();
+        assert_eq!(json, serde_json::json!({ "ImageType": "BMC" }));
+    }
+
+    #[test]
+    fn oem_parameters_bios_includes_preserve_bios() {
+        let oem = AmiOemParameters {
+            image_type: "BIOS".to_string(),
+            preserve_bios: Some("true".to_string()),
+        };
+        let json: serde_json::Value =
+            serde_json::from_str(&serde_json::to_string(&oem).unwrap()).unwrap();
+        assert_eq!(
+            json,
+            serde_json::json!({ "ImageType": "BIOS", "PreserveBIOS": "true" })
+        );
+    }
+
+    #[test]
+    fn ami_update_targets_maps_bmc_to_both_rom_banks() {
+        let (oem, targets) = ami_update_targets(&ComponentType::BMC).unwrap();
+        assert_eq!(oem.image_type, "BMC");
+        assert!(oem.preserve_bios.is_none());
+        assert_eq!(
+            targets,
+            vec![
+                "/redfish/v1/UpdateService/FirmwareInventory/BMCImage1".to_string(),
+                "/redfish/v1/UpdateService/FirmwareInventory/BMCImage2".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn ami_update_targets_maps_uefi_to_bios_image() {
+        let (oem, targets) = ami_update_targets(&ComponentType::UEFI).unwrap();
+        assert_eq!(oem.image_type, "BIOS");
+        assert_eq!(oem.preserve_bios.as_deref(), Some("true"));
+        assert_eq!(
+            targets,
+            vec!["/redfish/v1/UpdateService/FirmwareInventory/BIOSImage1".to_string()]
+        );
+    }
+
+    #[test]
+    fn ami_update_targets_rejects_unsupported_component() {
+        let result = ami_update_targets(&ComponentType::PSU { num: 0 });
+        assert!(matches!(result, Err(RedfishError::NotSupported(_))));
+    }
+
+    #[test]
+    fn ami_update_targets_rejects_unknown_component() {
+        let result = ami_update_targets(&ComponentType::Unknown);
+        assert!(matches!(result, Err(RedfishError::NotSupported(_))));
+    }
+
+    #[test]
+    fn extract_task_id_from_messages() {
+        let body = serde_json::json!({
+            "Messages": [
+                {
+                    "MessageId": "Base.1.0.Success",
+                    "MessageArgs": []
+                },
+                {
+                    "MessageId": "Task.1.0.New",
+                    "MessageArgs": ["/redfish/v1/TaskService/Tasks/3"]
+                }
+            ]
+        })
+        .to_string();
+        assert_eq!(extract_ami_task_id(None, &body), Some("3".to_string()));
+    }
+
+    #[test]
+    fn extract_task_id_from_top_level_id() {
+        let body = serde_json::json!({ "Id": "42" }).to_string();
+        assert_eq!(extract_ami_task_id(None, &body), Some("42".to_string()));
+    }
+
+    #[test]
+    fn extract_task_id_falls_back_to_location_header() {
+        assert_eq!(
+            extract_ami_task_id(Some("/redfish/v1/TaskService/Tasks/7"), "not json"),
+            Some("7".to_string())
+        );
+    }
+
+    #[test]
+    fn extract_task_id_returns_none_when_absent() {
+        assert_eq!(extract_ami_task_id(None, "{}"), None);
     }
 }
