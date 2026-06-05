@@ -613,6 +613,28 @@ pub trait Redfish: Send + Sync + 'static {
         volume_name: &'a str,
     ) -> RedfishFuture<'a, Result<Option<String>, RedfishError>>;
 
+    // Only applicable to Dells.
+    //
+    // TEMPORARY WORKAROUND: On Dell PowerEdge R770 (iDRAC10, firmware
+    // 1.30.10.50) volume creation on a BOSS controller fails with STOR060
+    // ("Configuration operations are not supported on the specified storage
+    // controller") after a ControllerDrivesDecommission. Resetting the
+    // controller configuration via DellRaidService.ResetConfig (followed by a
+    // host reboot) clears the condition and lets volume creation succeed.
+    // Dell is investigating; remove this once a fixed iDRAC firmware ships.
+    //
+    // Returns the job ID for the reset operation, if one was created.
+    fn reset_storage_config<'a>(
+        &'a self,
+        _controller_id: &'a str,
+    ) -> RedfishFuture<'a, Result<Option<String>, RedfishError>> {
+        Box::pin(async move {
+            Err(RedfishError::NotSupported(
+                "reset_storage_config".to_string(),
+            ))
+        })
+    }
+
     fn ac_powercycle_supported_by_power(&self) -> bool;
 
     /// Check if the boot order is configured as we expect (Network boot)

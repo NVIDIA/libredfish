@@ -1299,6 +1299,13 @@ impl Redfish for Bmc {
         })
     }
 
+    fn reset_storage_config<'a>(
+        &'a self,
+        controller_id: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
+        Box::pin(async move { Ok(Some(self.reset_controller_config(controller_id).await?)) })
+    }
+
     fn is_boot_order_setup<'a>(
         &'a self,
         boot_interface_mac: &'a str,
@@ -2407,6 +2414,27 @@ impl Bmc {
         let url: String = format!("Systems/System.Embedded.1/Storage/{controller_id}/Actions/Oem/DellStorage.ControllerDrivesDecommission");
         let mut arg = HashMap::new();
         arg.insert("@Redfish.OperationApplyTime", "Immediate");
+
+        match self.s.client.post(&url, arg).await? {
+            (_, Some(headers)) => self.parse_job_id_from_response_headers(&url, headers).await,
+            (_, None) => Err(RedfishError::NoHeader),
+        }
+    }
+
+    /// TEMPORARY WORKAROUND for STOR060 on Dell PowerEdge R770 (iDRAC10).
+    /// After a ControllerDrivesDecommission, newer iDRAC firmware rejects volume
+    /// creation on the BOSS controller until its configuration is reset. Issues
+    /// DellRaidService.ResetConfig for the given controller; the reset takes
+    /// effect after a host reboot, after which volume creation succeeds.
+    /// Returns the job ID for the reset operation.
+    /// Remove once Dell ships a fixed iDRAC firmware.
+    async fn reset_controller_config(&self, controller_id: &str) -> Result<String, RedfishError> {
+        // wait for the lifecycle controller status to become Ready before resetting the controller
+        self.lifecycle_controller_is_ready().await?;
+
+        let url: String = "Systems/System.Embedded.1/Oem/Dell/DellRaidService/Actions/DellRaidService.ResetConfig".to_string();
+        let mut arg = HashMap::new();
+        arg.insert("TargetFQDD", controller_id);
 
         match self.s.client.post(&url, arg).await? {
             (_, Some(headers)) => self.parse_job_id_from_response_headers(&url, headers).await,
