@@ -673,6 +673,12 @@ pub trait Redfish: Send + Sync + 'static {
     // Sets the timezone to UTC
     // Only applicable to Dells
     fn set_utc_timezone<'a>(&'a self) -> RedfishFuture<'a, Result<(), RedfishError>>;
+
+    // Sets the NTP servers
+    fn set_ntp_servers<'a>(
+        &'a self,
+        servers: &'a [String],
+    ) -> RedfishFuture<'a, Result<(), RedfishError>>;
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]

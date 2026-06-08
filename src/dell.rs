@@ -1445,6 +1445,13 @@ impl Redfish for Bmc {
             Ok(())
         })
     }
+
+    fn set_ntp_servers<'a>(
+        &'a self,
+        servers: &'a [String],
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.set_manager_ntp_servers(servers).await })
+    }
 }
 
 impl Bmc {
