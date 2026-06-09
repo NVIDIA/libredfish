@@ -1074,6 +1074,15 @@ impl Redfish for Bmc {
             let job_state_value = jsonmap::get_str(&body, "JobState", &url)?;
 
             let job_state = match JobState::from_str(job_state_value) {
+                JobState::Unknown => {
+                    tracing::warn!(
+                        bmc_ip = %self.s.client.host(),
+                        job_id = %job_id,
+                        raw_job_state = %job_state_value,
+                        "Unrecognized Redfish JobState; mapping to JobState::Unknown"
+                    );
+                    JobState::Unknown
+                }
                 JobState::Scheduled => {
                     let message_value = jsonmap::get_str(&body, "Message", &url)?;
                     match message_value {

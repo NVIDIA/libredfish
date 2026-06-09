@@ -876,16 +876,27 @@ pub enum JobState {
     Running,
     Completed,
     CompletedWithErrors,
+    Failed,
     Unknown,
 }
 
 impl JobState {
+    /// Returns `true` when the job is in a terminal failure state and will not
+    /// progress to completion.
+    pub fn is_error_state(&self) -> bool {
+        matches!(
+            self,
+            JobState::ScheduledWithErrors | JobState::CompletedWithErrors | JobState::Failed
+        )
+    }
+
     fn from_str(s: &str) -> JobState {
         match s {
             "Scheduled" => JobState::Scheduled,
             "Running" => JobState::Running,
             "Completed" => JobState::Completed,
             "CompletedWithErrors" => JobState::CompletedWithErrors,
+            "Failed" => JobState::Failed,
             _ => JobState::Unknown,
         }
     }
