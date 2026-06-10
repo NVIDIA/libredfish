@@ -1450,7 +1450,45 @@ impl Redfish for Bmc {
         &'a self,
         servers: &'a [String],
     ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
-        Box::pin(async move { self.s.set_manager_ntp_servers(servers).await })
+        Box::pin(async move {
+            if servers.is_empty() {
+                return Ok(());
+            }
+
+            let mut attrs = HashMap::new();
+            attrs.insert("NTPConfigGroup.1.NTPEnable", "Enabled");
+            if let Some(s1) = servers.first() {
+                attrs.insert("NTPConfigGroup.1.NTP1", s1.as_str());
+            }
+            if let Some(s2) = servers.get(1) {
+                attrs.insert("NTPConfigGroup.1.NTP2", s2.as_str());
+            }
+            if let Some(s3) = servers.get(2) {
+                attrs.insert("NTPConfigGroup.1.NTP3", s3.as_str());
+            }
+
+            // Try standard path first
+            let body = HashMap::from([("Attributes", attrs)]);
+            let manager_id = self.s.manager_id();
+            let standard_url = format!("Managers/{manager_id}/Attributes");
+            match self.s.client.patch(&standard_url, &body).await {
+                Ok(_) => return Ok(()),
+                Err(RedfishError::HTTPErrorCode {
+                    status_code: StatusCode::NOT_FOUND,
+                    ..
+                }) => {
+                    tracing::info!(
+                        "Managers/Attributes not found, using OEM DellAttributes path for NTP server config"
+                    );
+                }
+                Err(e) => return Err(e),
+            }
+
+            // Fallback to OEM DellAttributes path
+            let oem_url = format!("Managers/{manager_id}/Oem/Dell/DellAttributes/{manager_id}");
+            self.s.client.patch(&oem_url, body).await?;
+            Ok(())
+        })
     }
 }
 

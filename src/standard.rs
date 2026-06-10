@@ -1691,13 +1691,20 @@ impl RedfishStandard {
         Ok(body)
     }
 
+    /// Set NTP servers via the standard ManagerNetworkProtocol resource.
     pub async fn set_manager_ntp_servers(&self, servers: &[String]) -> Result<(), RedfishError> {
         if servers.is_empty() {
             return Ok(());
         }
 
         let url = format!("Managers/{}/NetworkProtocol", self.manager_id(),);
-        let ntp_servers = HashMap::from([("NTP", json!({ "NTPServers": servers }))]);
+        let ntp_servers = HashMap::from([(
+            "NTP",
+            json!({
+                "NTPServers": servers,
+                "ProtocolEnabled": true,
+            }),
+        )]);
         self.client.patch(&url, ntp_servers).await.map(|_resp| ())
     }
 
