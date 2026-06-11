@@ -1,0 +1,37 @@
+// Test fixture for the Rune vendor host API (src/rune_vendor.rs).
+// `returns_*` drive `interpret`'s result and error channel. `power_state` and
+// `reset_and_wait` exercise the script HTTP API (get/post, matching on the
+// response, `?`, indexing into `#{ status, headers, body }`) and must compile
+// against the registered host module.
+
+pub async fn returns_err() {
+    Err("boom")
+}
+
+pub async fn returns_ok() {
+    Ok(42)
+}
+
+pub async fn returns_bare() {
+    42
+}
+
+// Branch on a response without failing the method.
+pub async fn power_state(ctx) {
+    match ctx.get(`Systems/${ctx.system_id()}`).await {
+        Ok(resp) => resp["body"]["PowerState"],
+        Err(_) => "Unknown",
+    }
+}
+
+// Multiple calls driven by the response. POST an action, then poll the returned
+// Task via the Location header. `?` fails the method (returns a RedfishError) on any error.
+pub async fn reset_and_wait(ctx) {
+    let r = ctx.post(`Systems/${ctx.system_id()}/Actions/ComputerSystem.Reset`,
+                     #{ "ResetType": "On" }).await?;
+    if r["status"] == 202 {
+        let task = r["headers"]["location"];
+        ctx.get(task).await?;
+    }
+    None
+}

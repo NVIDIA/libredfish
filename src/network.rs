@@ -196,23 +196,36 @@ impl RedfishClientPool {
         vendor: Option<RedfishVendor>,
         custom_headers: Vec<(HeaderName, String)>,
     ) -> Result<Box<dyn crate::Redfish>, RedfishError> {
+        // Host is the vendor-override key; capture it before `endpoint` moves.
+        let host = endpoint.host.clone();
         let client = RedfishHttpClient::new(self.http_client.clone(), endpoint, custom_headers);
         let mut s = RedfishStandard::new(client);
         let service_root = s.get_service_root().await?;
 
-        // Resolve the vendor up-front (explicit override, else from the service
-        // root, which get_service_root backfills from the chassis manufacturer
-        // for vendorless power shelves). Knowing the vendor here lets us skip
-        // resource lookups for platforms that don't expose them.
-        let vendor = match vendor {
-            Some(v) => v,
-            None => service_root.vendor().ok_or(RedfishError::MissingVendor)?,
-        };
-
+        // Manager id is needed both as the vendor-override key and for set_manager_id.
         let managers = s.get_managers().await?;
         let manager_id = managers.first().ok_or_else(|| RedfishError::GenericError {
             error: "No managers found in service root".to_string(),
         })?;
+
+        // Resolve the vendor: override file wins, then the caller's vendor, then
+        // auto-detection. Knowing it now lets us skip lookups some platforms 404 on.
+        let ov = crate::vendor_override::resolve(&host, manager_id)?;
+        let vendor = ov
+            .as_ref()
+            .map(|o| o.vendor)
+            .or(vendor)
+            .or_else(|| service_root.vendor())
+            .ok_or(RedfishError::MissingVendor)?;
+        // Variant and script come only from the override file; they ride the
+        // `RedfishStandard` clone into `set_vendor`.
+        let (ov_variant, ov_script) = match ov {
+            Some(o) => (o.variant, o.script),
+            None => (None, None),
+        };
+        s.set_vendor_variant(ov_variant);
+        s.set_vendor_script(ov_script);
+
         let chassis = s.get_chassis_all().await?;
 
         // Delta power shelves expose no `/Systems` resource (a real query 404s)

@@ -67,6 +67,12 @@ pub struct RedfishStandard {
     manager_id: String,
     system_id: String,
     service_root: ServiceRoot,
+    /// Optional free-form variant from the vendor-override file, handed to the
+    /// vendor implementation so it can branch on a host-specific type.
+    vendor_variant: Option<String>,
+    /// Optional Rune script path (from the vendor-override file) implementing
+    /// the vendor; consumed by the `rune` vendor.
+    vendor_script: Option<String>,
 }
 impl Redfish for RedfishStandard {
     fn create_user<'a>(
@@ -810,6 +816,17 @@ impl Redfish for RedfishStandard {
     ) -> crate::RedfishFuture<'a, Result<ServiceRoot, RedfishError>> {
         Box::pin(async move {
             let (_status_code, mut body): (StatusCode, ServiceRoot) = self.client.get("").await?;
+            // Honor a vendor-override file: stamp the forced vendor onto the service
+            // root so auto-detection and any reader of `vendor` pick it up.
+            // Fail-closed on a bad file, matching client creation.
+            if let Some(ov) =
+                crate::vendor_override::resolve(self.client.host(), self.manager_id())?
+            {
+                body.override_vendor = Some(ov.vendor);
+                if body.vendor.is_none() {
+                    body.vendor = Some(ov.vendor.to_string());
+                }
+            }
             if body.vendor.is_none() && !self.client.is_anonymous() {
                 // Power shelves don't advertise a vendor in the service root,
                 // so fall back to the Manufacturer of the first chassis that
@@ -1329,6 +1346,7 @@ impl RedfishStandard {
             RedfishVendor::DeltaPowerShelf => {
                 Ok(Box::new(crate::delta_powershelf::Bmc::new(self.clone())?))
             }
+            RedfishVendor::Rune => Ok(Box::new(crate::rune_vendor::Bmc::new(self.clone())?)),
             _ => Ok(Box::new(self.clone())),
         }
     }
@@ -1359,6 +1377,8 @@ impl RedfishStandard {
             system_id: "".to_string(),
             vendor: None,
             service_root: default::Default::default(),
+            vendor_variant: None,
+            vendor_script: None,
         }
     }
 
@@ -1368,6 +1388,28 @@ impl RedfishStandard {
 
     pub fn manager_id(&self) -> &str {
         &self.manager_id
+    }
+
+    /// Set the optional vendor variant (from the vendor-override file). Call
+    /// before `set_vendor` so the value is carried into the vendor client.
+    pub fn set_vendor_variant(&mut self, variant: Option<String>) {
+        self.vendor_variant = variant;
+    }
+
+    /// The optional vendor variant supplied via the vendor-override file, if any.
+    pub fn vendor_variant(&self) -> Option<&str> {
+        self.vendor_variant.as_deref()
+    }
+
+    /// Set the optional Rune script path (from the vendor-override file). Call
+    /// before `set_vendor` so it is carried into the vendor client.
+    pub fn set_vendor_script(&mut self, script: Option<String>) {
+        self.vendor_script = script;
+    }
+
+    /// The optional Rune script path supplied via the vendor-override file, if any.
+    pub fn vendor_script(&self) -> Option<&str> {
+        self.vendor_script.as_deref()
     }
 
     /// Gets the location of the update service from the saved service root
