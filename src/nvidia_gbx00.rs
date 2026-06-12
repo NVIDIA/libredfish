@@ -1344,6 +1344,7 @@ impl Bmc {
     ///
     /// The host system model (e.g."GB NVL") can be too vague, so detect via the HGX
     /// baseboard model ("GB300 ...").
+    #[allow(dead_code)]
     async fn is_gb300(&self) -> Result<bool, RedfishError> {
         let systems: Vec<ComputerSystem> = self
             .get_collection(ODataId {
