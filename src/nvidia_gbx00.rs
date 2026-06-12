@@ -1340,6 +1340,23 @@ impl Redfish for Bmc {
 }
 
 impl Bmc {
+    /// Returns true if this is a GB300 platform.
+    ///
+    /// The host system model (e.g."GB NVL") can be too vague, so detect via the HGX
+    /// baseboard model ("GB300 ...").
+    async fn is_gb300(&self) -> Result<bool, RedfishError> {
+        let systems: Vec<ComputerSystem> = self
+            .get_collection(ODataId {
+                odata_id: "/redfish/v1/Systems".to_string(),
+            })
+            .await
+            .and_then(|c| c.try_get::<ComputerSystem>())?
+            .members;
+        Ok(systems
+            .iter()
+            .any(|s| s.model.as_deref().unwrap_or_default().contains("GB300")))
+    }
+
     /// Check BIOS and BMC attributes and return differences
     async fn diff_bios_bmc_attr(&self) -> Result<Vec<MachineSetupDiff>, RedfishError> {
         let mut diffs = vec![];

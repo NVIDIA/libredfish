@@ -111,7 +111,10 @@ impl ServiceRoot {
                 _ => RedfishVendor::NvidiaDpu,
             },
             "wiwynn" => RedfishVendor::NvidiaGBx00,
-            "supermicro" => RedfishVendor::Supermicro,
+            "supermicro" => match self.product.as_deref() {
+                Some("GB NVL") => RedfishVendor::NvidiaGBx00,
+                _ => RedfishVendor::Supermicro,
+            },
             "lite-on technology corp." => RedfishVendor::LiteOnPowerShelf,
             "delta" => RedfishVendor::DeltaPowerShelf,
             _ => RedfishVendor::Unknown,
@@ -135,6 +138,29 @@ mod test {
     fn test_supermicro_service_root() {
         let data = include_str!("testdata/supermicro_service_root.json");
         let result: super::ServiceRoot = serde_json::from_str(data).unwrap();
+        assert_eq!(result.vendor().unwrap(), RedfishVendor::Supermicro);
+    }
+
+    #[test]
+    fn test_supermicro_gb300_service_root() {
+        // Supermicro GB300 NVL exposes an OpenBMC/NVIDIA GB tree, so it must route
+        // to the shared GB implementation rather than the AMI Supermicro path.
+        let result = ServiceRoot {
+            vendor: Some("Supermicro".to_string()),
+            product: Some("GB NVL".to_string()),
+            ..Default::default()
+        };
+        assert_eq!(result.vendor().unwrap(), RedfishVendor::NvidiaGBx00);
+    }
+
+    #[test]
+    fn test_supermicro_non_gb_service_root() {
+        // A classic Supermicro (no GB NVL product) still uses the Supermicro path.
+        let result = ServiceRoot {
+            vendor: Some("Supermicro".to_string()),
+            product: Some("SYS-821GE-TNHR".to_string()),
+            ..Default::default()
+        };
         assert_eq!(result.vendor().unwrap(), RedfishVendor::Supermicro);
     }
 
