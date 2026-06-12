@@ -1455,10 +1455,6 @@ impl Redfish for Bmc {
                 return Ok(());
             }
 
-            if self.is_lockdown().await? {
-                return Err(RedfishError::Lockdown);
-            }
-
             let mut attrs = HashMap::from([("NTPConfigGroup.1.NTPEnable", "Enabled")]);
             const NTP_KEYS: [&str; 3] = [
                 "NTPConfigGroup.1.NTP1",
