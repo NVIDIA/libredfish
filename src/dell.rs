@@ -1455,16 +1455,19 @@ impl Redfish for Bmc {
                 return Ok(());
             }
 
-            let mut attrs = HashMap::new();
-            attrs.insert("NTPConfigGroup.1.NTPEnable", "Enabled");
-            if let Some(s1) = servers.first() {
-                attrs.insert("NTPConfigGroup.1.NTP1", s1.as_str());
+            if self.is_lockdown().await? {
+                return Err(RedfishError::Lockdown);
             }
-            if let Some(s2) = servers.get(1) {
-                attrs.insert("NTPConfigGroup.1.NTP2", s2.as_str());
-            }
-            if let Some(s3) = servers.get(2) {
-                attrs.insert("NTPConfigGroup.1.NTP3", s3.as_str());
+
+            let mut attrs = HashMap::from([("NTPConfigGroup.1.NTPEnable", "Enabled")]);
+            const NTP_KEYS: [&str; 3] = [
+                "NTPConfigGroup.1.NTP1",
+                "NTPConfigGroup.1.NTP2",
+                "NTPConfigGroup.1.NTP3",
+            ];
+            for (i, key) in NTP_KEYS.into_iter().enumerate() {
+                // blank unused slots so the set is authoritative
+                attrs.insert(key, servers.get(i).map_or("", String::as_str));
             }
 
             // Try standard path first

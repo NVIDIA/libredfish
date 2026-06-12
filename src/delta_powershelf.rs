@@ -857,6 +857,13 @@ impl Redfish for Bmc {
     fn set_utc_timezone<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
         Box::pin(async move { self.s.set_utc_timezone().await })
     }
+
+    fn set_ntp_servers<'a>(
+        &'a self,
+        servers: &'a [String],
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.set_manager_ntp_servers(servers).await })
+    }
 }
 
 impl Bmc {

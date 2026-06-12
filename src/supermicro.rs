@@ -1180,7 +1180,12 @@ impl Redfish for Bmc {
         &'a self,
         servers: &'a [String],
     ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
-        Box::pin(async move { self.s.set_manager_ntp_servers(servers).await })
+        Box::pin(async move {
+            if self.get_syslockdown().await? {
+                return Err(RedfishError::Lockdown);
+            }
+            self.s.set_manager_ntp_servers(servers).await
+        })
     }
 }
 

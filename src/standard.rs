@@ -1697,7 +1697,7 @@ impl RedfishStandard {
             return Ok(());
         }
 
-        let url = format!("Managers/{}/NetworkProtocol", self.manager_id(),);
+        let url = format!("Managers/{}/NetworkProtocol", self.manager_id());
         let ntp_servers = HashMap::from([(
             "NTP",
             json!({
@@ -1705,7 +1705,15 @@ impl RedfishStandard {
                 "ProtocolEnabled": true,
             }),
         )]);
-        self.client.patch(&url, ntp_servers).await.map(|_resp| ())
+
+        if matches!(
+            self.vendor,
+            Some(RedfishVendor::AMI | RedfishVendor::LenovoAMI)
+        ) {
+            self.client.patch_with_if_match(&url, ntp_servers).await
+        } else {
+            self.client.patch(&url, ntp_servers).await.map(|_resp| ())
+        }
     }
 
     pub async fn reset_manager(

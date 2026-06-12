@@ -1217,6 +1217,12 @@ impl Redfish for Bmc {
             }
 
             // iLO supports at most 2 static NTP servers; extra entries are ignored.
+            if servers.len() > 2 {
+                tracing::warn!(
+                    "iLO supports at most 2 static NTP servers; ignoring {} extra entries",
+                    servers.len() - 2,
+                );
+            }
             let static_ntp_servers = vec![
                 servers.first().cloned().unwrap_or_default(),
                 servers.get(1).cloned().unwrap_or_default(),
