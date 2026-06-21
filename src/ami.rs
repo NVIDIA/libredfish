@@ -57,6 +57,26 @@ use crate::{
 /// AMI uses BIOS attribute SETUP001 for Administrator Password (UEFI password)
 const UEFI_PASSWORD_NAME: &str = "SETUP001";
 
+/// LenovoGB300 has no "EndlessBoot" BIOS attribute; infinite
+/// boot is expressed via the LEM0003 boot-retry count, where 50 is the
+/// firmware's representation for endless retries.
+const GB300_INFINITE_BOOT_RETRY: i64 = 50;
+
+/// Build a lockdown `Status` from the fully-locked / fully-unlocked booleans,
+/// defaulting to `Partial` when the readout is neither.
+fn lockdown_status_from(message: String, is_locked: bool, is_unlocked: bool) -> Status {
+    Status {
+        message,
+        status: if is_locked {
+            StatusInternal::Enabled
+        } else if is_unlocked {
+            StatusInternal::Disabled
+        } else {
+            StatusInternal::Partial
+        },
+    }
+}
+
 pub struct Bmc {
     s: RedfishStandard,
 }
@@ -64,6 +84,58 @@ pub struct Bmc {
 impl Bmc {
     pub fn new(s: RedfishStandard) -> Result<Bmc, RedfishError> {
         Ok(Bmc { s })
+    }
+
+    /// Serial-console BIOS attributes as `(key, enabled_value, disabled_value)`.
+    /// A `disabled_value` of "any" means any value counts as correctly disabled.
+    ///
+    /// LenovoGB300's BIOS registry mostly prefixes enum values with the
+    /// attribute id, but irregularly: TER001/TER010 stay bare, the port is COM0
+    /// not COM1, and the hyphen in VT-UTF8 is dropped. So both forms are listed
+    /// explicitly per attribute rather than derived via a prefix rule.
+    fn serial_console_attrs(&self) -> Vec<(&'static str, &'static str, &'static str)> {
+        let gb300 = self.s.vendor == Some(RedfishVendor::LenovoGB300);
+        // (key, generic_enabled, gb300_enabled, disabled)
+        const ATTRS: &[(&str, &str, &str, &str)] = &[
+            ("TER001", "Enabled", "Enabled", "Disabled"), // Console Redirection
+            ("TER010", "Enabled", "Enabled", "Disabled"), // Console Redirection EMS
+            ("TER06B", "COM1", "TER06BCOM0", "any"),      // Out-of-Band Mgmt Port
+            ("TER0021", "115200", "TER0021115200", "any"), // Bits per second
+            ("TER0020", "115200", "TER0020115200", "any"), // Bits per second EMS
+            ("TER012", "VT100Plus", "TER012VT100Plus", "any"), // Terminal Type
+            ("TER011", "VT-UTF8", "TER011VTUTF8", "any"), // Terminal Type EMS
+            ("TER05D", "None", "TER05DNone", "any"),      // Flow Control
+        ];
+        ATTRS
+            .iter()
+            .map(|&(key, generic, gb300_val, disabled)| {
+                (key, if gb300 { gb300_val } else { generic }, disabled)
+            })
+            .collect()
+    }
+
+    /// LenovoGB300 lockdown status: USB support (attribute-id prefixed enum,
+    /// e.g. "USB000Disabled") plus the host interface. There is no KCS BIOS
+    /// attribute on this platform, so it is not part of the status.
+    async fn lockdown_status_gb300(&self) -> Result<Status, RedfishError> {
+        let bios = self.s.bios().await?;
+        let url = format!("Systems/{}/Bios", self.s.system_id());
+        let attrs = jsonmap::get_object(&bios, "Attributes", &url)?;
+        let usb000 = jsonmap::get_str(attrs, "USB000", "Bios Attributes")?;
+
+        let hi_url = format!("Managers/{}/HostInterfaces/Self", self.s.manager_id());
+        let (_status, hi): (_, serde_json::Value) = self.s.client.get(&hi_url).await?;
+        let hi_enabled = hi
+            .get("InterfaceEnabled")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true);
+
+        let message = format!("usb_support={usb000}, host_interface={hi_enabled}");
+
+        let is_locked = usb000 == "USB000Disabled" && !hi_enabled;
+        let is_unlocked = usb000 == "USB000Enabled" && hi_enabled;
+
+        Ok(lockdown_status_from(message, is_locked, is_unlocked))
     }
 
     /// LenovoAMI-specific lockdown status via OEM ConfigBMC endpoint.
@@ -75,8 +147,8 @@ impl Bmc {
             "LockdownBiosUpgradeDowngrade",
         ];
 
-        let (_status, body): (_, serde_json::Value) =
-            self.s.client.get("Managers/Self/Oem/ConfigBMC").await?;
+        let config_bmc_url = format!("Managers/{}/Oem/ConfigBMC", self.s.manager_id());
+        let (_status, body): (_, serde_json::Value) = self.s.client.get(&config_bmc_url).await?;
 
         let values: Vec<&str> = LOCKDOWN_FIELDS
             .iter()
@@ -93,16 +165,7 @@ impl Bmc {
         let is_locked = values.iter().all(|&v| v == "Enable");
         let is_unlocked = values.iter().all(|&v| v == "Disable");
 
-        Ok(Status {
-            message,
-            status: if is_locked {
-                StatusInternal::Enabled
-            } else if is_unlocked {
-                StatusInternal::Disabled
-            } else {
-                StatusInternal::Partial
-            },
-        })
+        Ok(lockdown_status_from(message, is_locked, is_unlocked))
     }
 }
 impl Redfish for Bmc {
@@ -443,37 +506,54 @@ impl Redfish for Bmc {
                     ("LockdownBiosSettingsChange", value),
                     ("LockdownBiosUpgradeDowngrade", value),
                 ]);
+                let config_bmc_url = format!("Managers/{}/Oem/ConfigBMC", self.s.manager_id());
                 return self
                     .s
                     .client
-                    .post("Managers/Self/Oem/ConfigBMC", body)
+                    .post(&config_bmc_url, body)
                     .await
                     .map(|_| ());
             }
 
-            let (kcsacp, usb, hi_enabled) = match target {
-                Enabled => ("Deny All", "Disabled", false),
-                Disabled => ("Allow All", "Enabled", true),
+            // LenovoGB300 has neither the OEM ConfigBMC endpoint nor
+            // the generic AMI `KCSACP` BIOS attribute, and its USB enum values
+            // are attribute-id prefixed (e.g. "USB000Disabled").
+            let hi_enabled = target == Disabled;
+            let bios_attrs = if self.s.vendor == Some(RedfishVendor::LenovoGB300) {
+                let usb = match target {
+                    Enabled => "USB000Disabled",
+                    Disabled => "USB000Enabled",
+                };
+                HashMap::from([("USB000".to_string(), usb.into())])
+            } else {
+                let (kcsacp, usb) = match target {
+                    Enabled => ("Deny All", "Disabled"),
+                    Disabled => ("Allow All", "Enabled"),
+                };
+                HashMap::from([
+                    ("KCSACP".to_string(), kcsacp.into()),
+                    ("USB000".to_string(), usb.into()),
+                ])
             };
-            self.set_bios(HashMap::from([
-                ("KCSACP".to_string(), kcsacp.into()),
-                ("USB000".to_string(), usb.into()),
-            ]))
-            .await?;
+            self.set_bios(bios_attrs).await?;
+
+            let hi_url = format!("Managers/{}/HostInterfaces/Self", self.s.manager_id());
             let hi_body = HashMap::from([("InterfaceEnabled", hi_enabled)]);
-            self.s
-                .client
-                .patch_with_if_match("Managers/Self/HostInterfaces/Self", hi_body)
-                .await
+            self.s.client.patch_with_if_match(&hi_url, hi_body).await
         })
     }
 
     /// AMI lockdown status - checks KCS access, USB support, and Host Interface.
-    /// On LenovoAMI, reads the OEM ConfigBMC endpoint instead.
+    /// On LenovoAMI, reads the OEM ConfigBMC endpoint instead. On LenovoGB300,
+    /// checks USB support and the host interface (no KCS/ConfigBMC there).
     fn lockdown_status<'a>(&'a self) -> crate::RedfishFuture<'a, Result<Status, RedfishError>> {
         Box::pin(async move {
             if self.s.vendor == Some(RedfishVendor::LenovoAMI) {
                 return self.lockdown_status_lenovo_ami().await;
+            }
+
+            if self.s.vendor == Some(RedfishVendor::LenovoGB300) {
+                return self.lockdown_status_gb300().await;
             }
 
             let bios = self.s.bios().await?;
@@ -482,8 +562,8 @@ impl Redfish for Bmc {
             let kcsacp = jsonmap::get_str(attrs, "KCSACP", "Bios Attributes")?;
             let usb000 = jsonmap::get_str(attrs, "USB000", "Bios Attributes")?;
 
-            let hi_url = "Managers/Self/HostInterfaces/Self";
-            let (_status, hi): (_, serde_json::Value) = self.s.client.get(hi_url).await?;
+            let hi_url = format!("Managers/{}/HostInterfaces/Self", self.s.manager_id());
+            let (_status, hi): (_, serde_json::Value) = self.s.client.get(&hi_url).await?;
             let hi_enabled = hi
                 .get("InterfaceEnabled")
                 .and_then(|v| v.as_bool())
@@ -497,34 +577,18 @@ impl Redfish for Bmc {
             let is_locked = kcsacp == "Deny All" && usb000 == "Disabled" && !hi_enabled;
             let is_unlocked = kcsacp == "Allow All" && usb000 == "Enabled" && hi_enabled;
 
-            Ok(Status {
-                message,
-                status: if is_locked {
-                    StatusInternal::Enabled
-                } else if is_unlocked {
-                    StatusInternal::Disabled
-                } else {
-                    StatusInternal::Partial
-                },
-            })
+            Ok(lockdown_status_from(message, is_locked, is_unlocked))
         })
     }
 
     /// Setup serial console for AMI BMC via BIOS attributes.
     fn setup_serial_console<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
         Box::pin(async move {
-            use serde_json::Value;
-
-            let attributes: HashMap<String, Value> = HashMap::from([
-                ("TER001".to_string(), "Enabled".into()), // Console Redirection
-                ("TER010".to_string(), "Enabled".into()), // Console Redirection EMS
-                ("TER06B".to_string(), "COM1".into()),    // Out-of-Band Mgmt Port
-                ("TER0021".to_string(), "115200".into()), // Bits per second
-                ("TER0020".to_string(), "115200".into()), // Bits per second EMS
-                ("TER012".to_string(), "VT100Plus".into()), // Terminal Type
-                ("TER011".to_string(), "VT-UTF8".into()), // Terminal Type EMS
-                ("TER05D".to_string(), "None".into()),    // Flow Control
-            ]);
+            let attributes: HashMap<String, serde_json::Value> = self
+                .serial_console_attrs()
+                .into_iter()
+                .map(|(key, enabled, _)| (key.to_string(), enabled.into()))
+                .collect();
 
             self.set_bios(attributes).await
         })
@@ -539,16 +603,7 @@ impl Redfish for Bmc {
             let url = format!("Systems/{}/Bios", self.s.system_id());
             let attrs = jsonmap::get_object(&bios, "Attributes", &url)?;
 
-            let expected = vec![
-                ("TER001", "Enabled", "Disabled"),
-                ("TER010", "Enabled", "Disabled"),
-                ("TER06B", "COM1", "any"),
-                ("TER0021", "115200", "any"),
-                ("TER0020", "115200", "any"),
-                ("TER012", "VT100Plus", "any"),
-                ("TER011", "VT-UTF8", "any"),
-                ("TER05D", "None", "any"),
-            ];
+            let expected = self.serial_console_attrs();
 
             let mut message = String::new();
             let mut enabled = true;
@@ -672,7 +727,15 @@ impl Redfish for Bmc {
 
     fn clear_tpm<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
         Box::pin(async move {
-            self.set_bios(HashMap::from([("TCG006".to_string(), "TPM Clear".into())]))
+            // GB300's Grace BIOS registry prefixes the TCG006 enum value with
+            // the attribute id ("TCG006TPMClear"); other AMI platforms use the
+            // bare "TPM Clear".
+            let clear_value = if self.s.vendor == Some(RedfishVendor::LenovoGB300) {
+                "TCG006TPMClear"
+            } else {
+                "TPM Clear"
+            };
+            self.set_bios(HashMap::from([("TCG006".to_string(), clear_value.into())]))
                 .await
         })
     }
@@ -1047,8 +1110,8 @@ impl Redfish for Bmc {
         Box::pin(async move {
             let interface_enabled = target == EnabledDisabled::Disabled;
             let hi_body = HashMap::from([("InterfaceEnabled", interface_enabled)]);
-            let hi_url = "Managers/Self/HostInterfaces/Self";
-            self.s.client.patch_with_if_match(hi_url, hi_body).await
+            let hi_url = format!("Managers/{}/HostInterfaces/Self", self.s.manager_id());
+            self.s.client.patch_with_if_match(&hi_url, hi_body).await
         })
     }
 
@@ -1078,6 +1141,13 @@ impl Redfish for Bmc {
     /// AMI clear_nvram - sets RECV000 (Reset NVRAM) to "Enabled"
     fn clear_nvram<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
         Box::pin(async move {
+            // The GB300 Grace BIOS registry has no RECV000 (Reset NVRAM)
+            // attribute, so there is no equivalent knob to set.
+            if self.s.vendor == Some(RedfishVendor::LenovoGB300) {
+                return Err(RedfishError::NotSupported(
+                    "clear_nvram: no RECV000 BIOS attribute on LenovoGB300".to_string(),
+                ));
+            }
             self.set_bios(HashMap::from([("RECV000".to_string(), "Enabled".into())]))
                 .await
         })
@@ -1098,6 +1168,14 @@ impl Redfish for Bmc {
 
     fn enable_infinite_boot<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
         Box::pin(async move {
+            if self.s.vendor == Some(RedfishVendor::LenovoGB300) {
+                return self
+                    .set_bios(HashMap::from([(
+                        "LEM0003".to_string(),
+                        GB300_INFINITE_BOOT_RETRY.into(),
+                    )]))
+                    .await;
+            }
             self.set_bios(HashMap::from([(
                 "EndlessBoot".to_string(),
                 "Enabled".into(),
@@ -1113,6 +1191,16 @@ impl Redfish for Bmc {
             let bios = self.s.bios().await?;
             let url = format!("Systems/{}/Bios", self.s.system_id());
             let attrs = jsonmap::get_object(&bios, "Attributes", &url)?;
+            if self.s.vendor == Some(RedfishVendor::LenovoGB300) {
+                // LEM0003 may be reported as a JSON number or a numeric string.
+                let Some(value) = attrs.get("LEM0003") else {
+                    return Ok(None);
+                };
+                let retry = value
+                    .as_i64()
+                    .or_else(|| value.as_str().and_then(|s| s.parse::<i64>().ok()));
+                return Ok(retry.map(|r| r == GB300_INFINITE_BOOT_RETRY));
+            }
             let endless_boot = jsonmap::get_str(attrs, "EndlessBoot", "Bios Attributes")?;
             Ok(Some(endless_boot == "Enabled"))
         })
@@ -1348,6 +1436,24 @@ impl Bmc {
 
     /// Get the BIOS attributes for machine setup.
     fn machine_setup_attrs(&self) -> HashMap<String, serde_json::Value> {
+        // The LenovoGB300 (Grace-based) uses a distinct BIOS registry: enum
+        // values are prefixed with the attribute ID (e.g. "PCIS007Enabled"),
+        // there is no Intel VMX knob (VMXEN) or boot-mode selector (FBO001),
+        // and "Infinite Boot" is expressed via the LEM0003 retry count (50 =
+        // endless boot) instead of the "EndlessBoot" attribute.
+        if self.s.vendor == Some(RedfishVendor::LenovoGB300) {
+            return HashMap::from([
+                ("PCIS007".to_string(), "PCIS007Enabled".into()), // SR-IOV Support
+                ("LEM0001".to_string(), 3.into()),                // PXE retry count
+                ("NWSK000".to_string(), "NWSK000Enabled".into()), // Network Stack
+                ("NWSK001".to_string(), "NWSK001Disabled".into()), // IPv4 PXE Support
+                ("NWSK006".to_string(), "NWSK006Enabled".into()), // IPv4 HTTP Support
+                ("NWSK002".to_string(), "NWSK002Disabled".into()), // IPv6 PXE Support
+                ("NWSK007".to_string(), "NWSK007Disabled".into()), // IPv6 HTTP Support
+                ("LEM0003".to_string(), GB300_INFINITE_BOOT_RETRY.into()), // Infinite Boot
+            ]);
+        }
+
         HashMap::from([
             ("VMXEN".to_string(), "Enable".into()), // VMX (Intel Virtualization)
             ("PCIS007".to_string(), "Enabled".into()), // SR-IOV Support

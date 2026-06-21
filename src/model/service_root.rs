@@ -61,6 +61,7 @@ pub struct ServiceRoot {
 pub enum RedfishVendor {
     Lenovo,
     LenovoAMI,
+    LenovoGB300,
     Dell,
     NvidiaDpu,
     Supermicro,

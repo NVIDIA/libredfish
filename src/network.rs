@@ -32,6 +32,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use tracing::{debug, Instrument};
 
 use crate::model::service_root::RedfishVendor;
+use crate::model::{ComputerSystem, ODataId};
 use crate::{model::InvalidValueError, standard::RedfishStandard, Redfish, RedfishError};
 
 pub const REDFISH_ENDPOINT: &str = "redfish/v1";
@@ -221,9 +222,19 @@ impl RedfishClientPool {
         // system id and set it before set_vendor (DGX detection depends on it).
         if vendor != RedfishVendor::DeltaPowerShelf {
             let systems = s.get_systems().await?;
-            let system_id = systems.first().ok_or_else(|| RedfishError::GenericError {
-                error: "No systems found in service root".to_string(),
-            })?;
+            // Prefer the canonical host system `System_0` when present. Some
+            // platforms enumerate an auxiliary system (e.g. the NVIDIA
+            // `HGX_Baseboard_0`) ahead of the real host, so picking the first
+            // member blindly targets the wrong system (no BIOS/boot). Falling
+            // back to the first member preserves behavior for every platform
+            // that does not expose `System_0` (e.g. Viking's `DGX`).
+            let system_id = systems
+                .iter()
+                .find(|id| *id == "System_0")
+                .or_else(|| systems.first())
+                .ok_or_else(|| RedfishError::GenericError {
+                    error: "No systems found in service root".to_string(),
+                })?;
             // call set_system_id always before calling set_vendor
             s.set_system_id(system_id)?;
         }
@@ -231,16 +242,48 @@ impl RedfishClientPool {
         s.set_manager_id(manager_id)?;
         s.set_service_root(service_root.clone())?;
 
-        // P3809 is a placeholder — always resolve it based on chassis
-        // contents, whether it was auto-detected or explicitly provided.
-        let vendor = if vendor == RedfishVendor::P3809 {
-            if chassis.contains(&"MGX_NVSwitch_0".to_string()) {
-                RedfishVendor::NvidiaGBSwitch
-            } else {
-                RedfishVendor::NvidiaGH200
+        // Resolve placeholder/ambiguous vendors that can only be settled from
+        // fetched resources:
+        // - P3809 is a placeholder — pick the GBx variant from chassis contents,
+        //   whether it was auto-detected or explicitly provided.
+        // - AMI is shared by Viking/DGX/GB300. The "GB300" marker lives on the
+        //   NVIDIA HGX baseboard system (e.g. "GB300 1CPU:2GPU Board PC"), not
+        //   on the Lenovo host system (System_0, whose model is e.g.
+        //   "HG634N_V2"). So expand the whole Systems collection and inspect
+        //   every member: a Lenovo host alongside a GB300 board marks a Lenovo
+        //   GB300.
+        let vendor = match vendor {
+            RedfishVendor::P3809 => {
+                if chassis.contains(&"MGX_NVSwitch_0".to_string()) {
+                    RedfishVendor::NvidiaGBSwitch
+                } else {
+                    RedfishVendor::NvidiaGH200
+                }
             }
-        } else {
-            vendor
+            RedfishVendor::AMI => {
+                let all_systems: Vec<ComputerSystem> = s
+                    .get_collection(ODataId {
+                        odata_id: "/redfish/v1/Systems".to_string(),
+                    })
+                    .await
+                    .and_then(|c| c.try_get::<ComputerSystem>())?
+                    .members;
+                let is_lenovo = all_systems.iter().any(|sys| {
+                    sys.manufacturer
+                        .as_deref()
+                        .unwrap_or_default()
+                        .contains("Lenovo")
+                });
+                let is_gb300 = all_systems.iter().any(|sys| {
+                    sys.model.as_deref().unwrap_or_default().contains("GB300")
+                });
+                if is_lenovo && is_gb300 {
+                    RedfishVendor::LenovoGB300
+                } else {
+                    RedfishVendor::AMI
+                }
+            }
+            other => other,
         };
 
         s.set_vendor(vendor).await
