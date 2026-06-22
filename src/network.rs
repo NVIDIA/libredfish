@@ -271,10 +271,20 @@ impl RedfishClientPool {
         let mut is_gb300 = false;
         for id in s.get_systems().await? {
             let (_, system): (_, ComputerSystem) = s.client.get(&format!("Systems/{id}")).await?;
-            if system.manufacturer.as_deref().unwrap_or_default().contains("Lenovo") {
+            if system
+                .manufacturer
+                .as_deref()
+                .unwrap_or_default()
+                .contains("Lenovo")
+            {
                 is_lenovo = true;
             }
-            if system.model.as_deref().unwrap_or_default().contains("GB300") {
+            if system
+                .model
+                .as_deref()
+                .unwrap_or_default()
+                .contains("GB300")
+            {
                 is_gb300 = true;
             }
             if is_lenovo && is_gb300 {

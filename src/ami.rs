@@ -507,12 +507,7 @@ impl Redfish for Bmc {
                     ("LockdownBiosUpgradeDowngrade", value),
                 ]);
                 let config_bmc_url = format!("Managers/{}/Oem/ConfigBMC", self.s.manager_id());
-                return self
-                    .s
-                    .client
-                    .post(&config_bmc_url, body)
-                    .await
-                    .map(|_| ());
+                return self.s.client.post(&config_bmc_url, body).await.map(|_| ());
             }
 
             // LenovoGB300 has neither the OEM ConfigBMC endpoint nor
