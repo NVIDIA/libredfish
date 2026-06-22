@@ -32,7 +32,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use tracing::{debug, Instrument};
 
 use crate::model::service_root::RedfishVendor;
-use crate::model::{ComputerSystem, ODataId};
+use crate::model::ComputerSystem;
 use crate::{model::InvalidValueError, standard::RedfishStandard, Redfish, RedfishError};
 
 pub const REDFISH_ENDPOINT: &str = "redfish/v1";
@@ -246,12 +246,8 @@ impl RedfishClientPool {
         // fetched resources:
         // - P3809 is a placeholder — pick the GBx variant from chassis contents,
         //   whether it was auto-detected or explicitly provided.
-        // - AMI is shared by Viking/DGX/GB300. The "GB300" marker lives on the
-        //   NVIDIA HGX baseboard system (e.g. "GB300 1CPU:2GPU Board PC"), not
-        //   on the Lenovo host system (System_0, whose model is e.g.
-        //   "HG634N_V2"). So expand the whole Systems collection and inspect
-        //   every member: a Lenovo host alongside a GB300 board marks a Lenovo
-        //   GB300.
+        // - AMI is shared by Viking/DGX/GB300, distinguished by inspecting the
+        //   host systems (see `refine_ami_vendor`).
         let vendor = match vendor {
             RedfishVendor::P3809 => {
                 if chassis.contains(&"MGX_NVSwitch_0".to_string()) {
@@ -260,33 +256,32 @@ impl RedfishClientPool {
                     RedfishVendor::NvidiaGH200
                 }
             }
-            RedfishVendor::AMI => {
-                let all_systems: Vec<ComputerSystem> = s
-                    .get_collection(ODataId {
-                        odata_id: "/redfish/v1/Systems".to_string(),
-                    })
-                    .await
-                    .and_then(|c| c.try_get::<ComputerSystem>())?
-                    .members;
-                let is_lenovo = all_systems.iter().any(|sys| {
-                    sys.manufacturer
-                        .as_deref()
-                        .unwrap_or_default()
-                        .contains("Lenovo")
-                });
-                let is_gb300 = all_systems.iter().any(|sys| {
-                    sys.model.as_deref().unwrap_or_default().contains("GB300")
-                });
-                if is_lenovo && is_gb300 {
-                    RedfishVendor::LenovoGB300
-                } else {
-                    RedfishVendor::AMI
-                }
-            }
+            RedfishVendor::AMI => Self::refine_ami_vendor(&s).await?,
             other => other,
         };
 
         s.set_vendor(vendor).await
+    }
+
+    /// Refine a service-root `AMI` vendor to `LenovoGB300` when the host is a
+    /// Lenovo system alongside an NVIDIA GB300 baseboard; other AMI platforms
+    /// (Viking/DGX, plain AMI) stay `AMI`.
+    async fn refine_ami_vendor(s: &RedfishStandard) -> Result<RedfishVendor, RedfishError> {
+        let mut is_lenovo = false;
+        let mut is_gb300 = false;
+        for id in s.get_systems().await? {
+            let (_, system): (_, ComputerSystem) = s.client.get(&format!("Systems/{id}")).await?;
+            if system.manufacturer.as_deref().unwrap_or_default().contains("Lenovo") {
+                is_lenovo = true;
+            }
+            if system.model.as_deref().unwrap_or_default().contains("GB300") {
+                is_gb300 = true;
+            }
+            if is_lenovo && is_gb300 {
+                return Ok(RedfishVendor::LenovoGB300);
+            }
+        }
+        Ok(RedfishVendor::AMI)
     }
 
     /// Creates a Redfish BMC client for a certain endpoint
