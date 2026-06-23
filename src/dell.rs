@@ -429,7 +429,7 @@ impl Redfish for Bmc {
                 let (expected, actual) = self
                     .get_expected_and_actual_first_boot_option(crate::BootInterfaceRef::Mac(mac))
                     .await?;
-                if expected.is_none() || expected != actual {
+                if !matches!((&expected, &actual), (Some(e), Some(a)) if a.starts_with(e)) {
                     diffs.push(MachineSetupDiff {
                         key: "boot_first".to_string(),
                         expected: expected.unwrap_or_else(|| "Not found".to_string()),
@@ -1146,7 +1146,7 @@ impl Redfish for Bmc {
                 .await?;
             let boot_order = self.get_boot_order().await?;
             for (idx, boot_option) in boot_order.iter().enumerate() {
-                if boot_option.display_name == expected_boot_option_name {
+                if boot_option.display_name.starts_with(&expected_boot_option_name) {
                     if idx == 0 {
                         // Dells will not generate a bios config job below if the boot orders already configured correctly
                         tracing::info!(
@@ -1358,7 +1358,7 @@ impl Redfish for Bmc {
             let (expected, actual) = self
                 .get_expected_and_actual_first_boot_option(boot_interface)
                 .await?;
-            Ok(expected.is_some() && expected == actual)
+            Ok(matches!((&expected, &actual), (Some(e), Some(a)) if a.starts_with(e)))
         })
     }
 
