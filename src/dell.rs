@@ -2608,13 +2608,36 @@ impl Bmc {
     }
 
     async fn get_boot_order(&self) -> Result<Vec<BootOption>, RedfishError> {
-        let boot_options = self.get_boot_options().await?;
-        let mut boot_order: Vec<BootOption> = Vec::new();
-        for boot_option in boot_options.members.iter() {
-            let id = boot_option.odata_id_get()?;
-            let boot_option = self.get_boot_option(id).await?;
-            boot_order.push(boot_option)
-        }
+        let system = self.s.get_system().await?;
+
+        let boot_options_id =
+            system
+                .boot
+                .boot_options
+                .clone()
+                .ok_or_else(|| RedfishError::MissingKey {
+                    key: "Boot.BootOptions".to_string(),
+                    url: system.odata.odata_id.clone(),
+                })?;
+
+        let all_boot_options = self
+            .s
+            .get_collection(boot_options_id)
+            .await?
+            .try_get::<BootOption>()?
+            .members;
+
+        let boot_order = system
+            .boot
+            .boot_order
+            .iter()
+            .filter_map(|reference| {
+                all_boot_options
+                    .iter()
+                    .find(|opt| opt.boot_option_reference == *reference)
+                    .cloned()
+            })
+            .collect();
 
         Ok(boot_order)
     }

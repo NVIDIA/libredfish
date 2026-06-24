@@ -349,11 +349,6 @@ impl RedfishHttpClient {
         self.endpoint.user.is_none()
     }
 
-    /// Returns the hostname or IP address of the BMC this client targets.
-    pub fn host(&self) -> &str {
-        &self.endpoint.host
-    }
-
     pub async fn get<T>(&self, api: &str) -> Result<(StatusCode, T), RedfishError>
     where
         T: DeserializeOwned + ::std::fmt::Debug,
