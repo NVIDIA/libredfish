@@ -862,7 +862,20 @@ impl Redfish for Bmc {
     }
 
     fn bmc_reset_to_defaults<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
-        Box::pin(async move { self.s.bmc_reset_to_defaults().await })
+        Box::pin(async move {
+            // Supermicro uses an OEM action whose `Option` parameter selects one
+            // of three resets: `PreserveUser` keeps existing accounts,
+            // `ResetToADMIN` restores the legacy ADMIN/ADMIN credentials, and
+            // `ClearConfig` wipes the config and restores the unique factory
+            // password printed on the chassis label.
+            let url = format!(
+                "Managers/{}/Actions/Oem/SmcManagerConfig.Reset",
+                self.s.manager_id()
+            );
+            let mut arg = HashMap::new();
+            arg.insert("Option", "ClearConfig".to_string());
+            self.s.client.post(&url, arg).await.map(|_resp| ())
+        })
     }
 
     fn get_job_state<'a>(
