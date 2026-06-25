@@ -185,8 +185,8 @@ pub struct ComputerSystem {
     pub manufacturer: Option<String>,
     pub model: Option<String>,
     pub oem: Option<SystemExtensions>,
-    // Dell: String. Lenovo: always null
-    //pub part_number: String,
+    // Dell: String. Lenovo: null
+    pub part_number: Option<String>,
     #[serde(default)]
     pub power_state: PowerState,
     pub processor_summary: Option<SystemProcessors>,
@@ -379,6 +379,7 @@ mod test {
         let result: super::ComputerSystem = serde_json::from_str(data).unwrap();
         assert_eq!(result.power_state, crate::PowerState::On);
         assert_eq!(result.processor_summary.unwrap().count, Some(2));
+        assert_eq!(result.part_number.as_deref(), Some("0H28RRA06"));
     }
 
     #[test]
@@ -432,6 +433,7 @@ mod test {
             Some(3816)
         );
         assert_eq!(result.processor_summary.unwrap().count, Some(2));
+        assert_eq!(result.part_number, None);
     }
 
     #[test]
