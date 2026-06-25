@@ -314,17 +314,11 @@ impl Redfish for Bmc {
                 apply_time: dell::RedfishSettingsApplyTime::OnReset, // requires reboot to apply
             };
 
-            let (nic_slot, has_dpu) = match boot_interface {
-                Some(crate::BootInterfaceRef::Mac(mac)) => {
-                    let slot: String = self.dpu_nic_slot(&mac.to_string()).await?;
-                    (slot, true)
-                }
-                // Caller already knows the interface id/interface partition id,
-                // so skip the MAC lookup and use the interface provided.
-                Some(crate::BootInterfaceRef::InterfaceId(id)) => (id.to_string(), true),
-                // Zero-DPU case
-                None => ("".to_string(), false),
-            };
+            // A boot interface means a managed DPU NIC to pin as the boot device;
+            // `nic_slot_for` uses the interface id directly and only falls back to
+            // a by-MAC NetworkDeviceFunction lookup when a MAC is all we have.
+            let has_dpu = boot_interface.is_some();
+            let nic_slot = self.nic_slot_for(boot_interface).await?;
 
             // dell idrac requires applying all bios settings at once.
             let machine_settings = self.machine_setup_attrs(&nic_slot).await?;
@@ -399,16 +393,10 @@ impl Redfish for Bmc {
         boot_interface: Option<crate::BootInterfaceRef<'a>>,
     ) -> crate::RedfishFuture<'a, Result<MachineSetupStatus, RedfishError>> {
         Box::pin(async move {
-            // Resolve `InterfaceId` to a MAC via the Redfish-standard
-            // EthernetInterface resource.
-            let resolved_mac = match boot_interface {
-                Some(b) => Some(crate::resolve_boot_interface_mac(self, b).await?),
-                None => None,
-            };
-            let boot_interface_mac = resolved_mac.as_deref();
-
-            // Check BIOS and BMC attributes
-            let mut diffs = self.diff_bios_bmc_attr(boot_interface_mac).await?;
+            // Check BIOS and BMC attributes. Pass the boot interface through so an
+            // interface id resolves the NIC slot directly (no by-MAC
+            // NetworkDeviceFunction lookup, which fails when the NDF MAC is empty).
+            let mut diffs = self.diff_bios_bmc_attr(boot_interface).await?;
 
             // Check lockdown
             let lockdown = self.lockdown_status().await?;
@@ -421,13 +409,9 @@ impl Redfish for Bmc {
             }
 
             // Check the first boot option
-            if let Some(mac_str) = boot_interface_mac {
-                let mac: mac_address::MacAddress =
-                    mac_str.parse().map_err(|e| RedfishError::GenericError {
-                        error: format!("could not parse boot interface MAC `{mac_str}`: {e}"),
-                    })?;
+            if let Some(boot_interface) = boot_interface {
                 let (expected, actual) = self
-                    .get_expected_and_actual_first_boot_option(crate::BootInterfaceRef::Mac(mac))
+                    .get_expected_and_actual_first_boot_option(boot_interface)
                     .await?;
                 if expected.is_none() || expected != actual {
                     diffs.push(MachineSetupDiff {
@@ -1367,13 +1351,10 @@ impl Redfish for Bmc {
         boot_interface: Option<crate::BootInterfaceRef<'a>>,
     ) -> crate::RedfishFuture<'a, Result<bool, RedfishError>> {
         Box::pin(async move {
-            // See `machine_setup_status` above for the resolver pattern.
-            let resolved_mac = match boot_interface {
-                Some(b) => Some(crate::resolve_boot_interface_mac(self, b).await?),
-                None => None,
-            };
-            let boot_interface_mac = resolved_mac.as_deref();
-            let diffs = self.diff_bios_bmc_attr(boot_interface_mac).await?;
+            // Pass the boot interface straight through: `diff_bios_bmc_attr`
+            // resolves the NIC slot from an interface id directly, so a boot NIC
+            // whose NetworkDeviceFunction MAC is empty still verifies.
+            let diffs = self.diff_bios_bmc_attr(boot_interface).await?;
             Ok(diffs.is_empty())
         })
     }
@@ -1499,15 +1480,12 @@ impl Bmc {
     /// Check BIOS and BMC attributes and return differences
     async fn diff_bios_bmc_attr(
         &self,
-        boot_interface_mac: Option<&str>,
+        boot_interface: Option<crate::BootInterfaceRef<'_>>,
     ) -> Result<Vec<MachineSetupDiff>, RedfishError> {
         let mut diffs = vec![];
 
         let bios = self.s.bios_attributes().await?;
-        let nic_slot = match boot_interface_mac {
-            Some(mac) => self.dpu_nic_slot(mac).await?,
-            None => "".to_string(),
-        };
+        let nic_slot = self.nic_slot_for(boot_interface).await?;
 
         let mut expected_attrs = self.machine_setup_attrs(&nic_slot).await?;
 
@@ -2454,6 +2432,27 @@ impl Bmc {
         Ok(dell_nic_map.to_owned())
     }
 
+    /// Resolve the Dell NIC slot id (e.g. `"NIC.Slot.40-1-1"`) that the
+    /// `HttpDev1Interface` BIOS attribute and the first-boot-option check key on
+    /// for a boot interface.
+    ///
+    /// A [`crate::BootInterfaceRef::InterfaceId`] already *is* the slot id, so it
+    /// is used directly -- this is the stable identifier that survives a NicMode
+    /// flip (or any case where the `NetworkDeviceFunction`'s `Ethernet.MACAddress`
+    /// is empty): a by-MAC lookup can't find the NDF, but the partition id still
+    /// resolves it. A [`crate::BootInterfaceRef::Mac`] is resolved to the slot via
+    /// the `NetworkDeviceFunction`, matched by MAC. `None` is the zero-DPU case.
+    async fn nic_slot_for(
+        &self,
+        boot_interface: Option<crate::BootInterfaceRef<'_>>,
+    ) -> Result<String, RedfishError> {
+        Ok(match boot_interface {
+            Some(crate::BootInterfaceRef::InterfaceId(id)) => id.to_string(),
+            Some(crate::BootInterfaceRef::Mac(mac)) => self.dpu_nic_slot(&mac.to_string()).await?,
+            None => String::new(),
+        })
+    }
+
     // Returns a string like "NIC.Slot.5-1"
     async fn dpu_nic_slot(&self, mac_address: &str) -> Result<String, RedfishError> {
         let mac: mac_address::MacAddress =
@@ -2719,8 +2718,67 @@ impl std::fmt::Display for XmlPcdata<'_> {
 
 #[cfg(test)]
 mod tests {
-    use super::XmlPcdata;
+    use super::{nw_dev_func_matches, XmlPcdata};
+    use crate::model::network_device_function::{Ethernet, NetworkDeviceFunction};
+    use crate::BootInterfaceRef;
     use std::collections::HashMap;
+
+    fn ndf_with(id: Option<&str>, mac: Option<&str>) -> NetworkDeviceFunction {
+        NetworkDeviceFunction {
+            odata: None,
+            description: None,
+            id: id.map(str::to_string),
+            ethernet: Some(Ethernet {
+                ethernet_interfaces: None,
+                mac_address: mac.map(str::to_string),
+                mtu_size: None,
+            }),
+            name: None,
+            net_dev_func_capabilities: None,
+            net_dev_func_type: None,
+            links: None,
+            oem: None,
+        }
+    }
+
+    // A NicMode-stripped (or otherwise empty-MAC) partition: the EthernetInterface
+    // still reports the MAC, but the NetworkDeviceFunction's MACAddress is empty. A
+    // by-MAC match can't find it; the stable interface id can. This is the
+    // resolution `is_bios_setup` / `machine_setup` rely on so such a host finishes
+    // provisioning instead of looping in PollingBiosSetup.
+    #[test]
+    fn nw_dev_func_matches_by_interface_id_when_ndf_mac_empty() {
+        let stripped = ndf_with(Some("NIC.Slot.40-1-1"), None);
+
+        // Exact id matches; a parent NDF id matches a partitioned target.
+        assert!(nw_dev_func_matches(
+            &stripped,
+            BootInterfaceRef::InterfaceId("NIC.Slot.40-1-1")
+        ));
+        assert!(nw_dev_func_matches(
+            &ndf_with(Some("NIC.Slot.40-1"), None),
+            BootInterfaceRef::InterfaceId("NIC.Slot.40-1-1")
+        ));
+
+        // A MAC can't match an NDF whose MACAddress is empty.
+        let mac: mac_address::MacAddress = "C4:70:BD:2C:3C:0A".parse().unwrap();
+        assert!(!nw_dev_func_matches(&stripped, BootInterfaceRef::Mac(mac)));
+
+        // A different interface id does not match.
+        assert!(!nw_dev_func_matches(
+            &stripped,
+            BootInterfaceRef::InterfaceId("NIC.Slot.7-1-1")
+        ));
+    }
+
+    // When the NDF does report a MAC, by-MAC matching still works
+    // (case-insensitive), so the existing host path is unchanged.
+    #[test]
+    fn nw_dev_func_matches_by_mac_when_present() {
+        let populated = ndf_with(Some("NIC.Slot.40-1-1"), Some("c4:70:bd:2c:3c:0a"));
+        let mac: mac_address::MacAddress = "C4:70:BD:2C:3C:0A".parse().unwrap();
+        assert!(nw_dev_func_matches(&populated, BootInterfaceRef::Mac(mac)));
+    }
 
     // Mirrors the attribute-merge logic in machine_setup_oem so we can test it
     // without a live HTTP connection.
