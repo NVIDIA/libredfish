@@ -353,17 +353,9 @@ impl Redfish for Bmc {
             }
 
             let url = format!("Systems/{}/Bios/Settings/", self.s.system_id());
-            let bios_job_id = match self.s.client.patch(&url, set_machine_attrs).await? {
-                (_, Some(headers)) => {
-                    let jid = self
-                        .parse_job_id_from_response_headers(&url, headers)
-                        .await?;
-                    Some(jid)
-                }
-                (_, None) => {
-                    return Err(RedfishError::NoHeader);
-                }
-            };
+            let bios_job_id = self
+                .patch_settings_for_job_id(&url, set_machine_attrs)
+                .await?;
 
             let oem_attrs = if let Some(dell) = oem_manager_profiles.get(&RedfishVendor::Dell) {
                 let model = crate::model_coerce(
@@ -1145,13 +1137,7 @@ impl Redfish for Bmc {
                         HashMap::from([("BootOrder", vec![boot_option.id.clone()])]),
                     )]);
 
-                    let job_id = match self.s.client.patch(&url, body).await? {
-                        (_, Some(headers)) => {
-                            self.parse_job_id_from_response_headers(&url, headers).await
-                        }
-                        (_, None) => Err(RedfishError::NoHeader),
-                    }?;
-                    return Ok(Some(job_id));
+                    return self.patch_settings_for_job_id(&url, body).await;
                 }
             }
 
@@ -2288,6 +2274,58 @@ impl Bmc {
         };
 
         self.import_system_configuration(system_configuration).await
+    }
+
+    /// PATCHes a Dell settings endpoint and resolves the optional config job
+    /// id from the response.
+    ///
+    /// Dell responds to a settings PATCH in one of two ways:
+    /// - iDRAC9/iDRAC10 schedule a config job and return `202 Accepted` with a
+    ///   `location` header pointing at the job; we parse and return its id so
+    ///   the caller can wait on the job (`Some(job_id)`).
+    /// - Newer iDRAC (e.g. 17G PowerEdge R770), when the requested settings are
+    ///   already staged in the pending-settings buffer, return `200 OK` with no
+    ///   `location` header (message ID SYS011 "successfully committed", or
+    ///   SYS413). No job was scheduled, so there is nothing to wait on and we
+    ///   return `None`.
+    ///
+    /// We deliberately do NOT parse the response message ID: it varies across
+    /// iDRAC versions and conditions (SYS011 vs SYS413, etc.), so gating on a
+    /// specific value is brittle. A `200` with no job `location` is unambiguous
+    /// on its own; any other status surfaces as [`RedfishError::NoHeader`].
+    async fn patch_settings_for_job_id<B>(
+        &self,
+        url: &str,
+        body: B,
+    ) -> Result<Option<String>, RedfishError>
+    where
+        B: Serialize + std::fmt::Debug,
+    {
+        // Pass `body` by reference so it stays available to log on the no-job
+        // path below; serde implements `Serialize`/`Debug` for `&B`.
+        let (status_code, resp_headers) = self.s.client.patch(url, &body).await?;
+
+        match resp_headers
+            .as_ref()
+            .filter(|headers| headers.contains_key("location"))
+        {
+            Some(headers) => Ok(Some(
+                self.parse_job_id_from_response_headers(url, headers.clone())
+                    .await?,
+            )),
+            None if status_code == StatusCode::OK => {
+                tracing::info!(
+                    bmc_ip = %self.s.client.host(),
+                    %url,
+                    %status_code,
+                    ?resp_headers,
+                    ?body,
+                    "Dell settings PATCH applied without scheduling a job (no location header); treating as success"
+                );
+                Ok(None)
+            }
+            None => Err(RedfishError::NoHeader),
+        }
     }
 
     async fn parse_job_id_from_response_headers(
