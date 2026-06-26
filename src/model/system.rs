@@ -383,6 +383,18 @@ mod test {
     }
 
     #[test]
+    fn test_system_dell_null_temp_rollup() {
+        let data = include_str!("testdata/system_dell_null_temp_rollup.json");
+        let result: super::ComputerSystem = serde_json::from_str(data).unwrap();
+        let dell = result
+            .oem
+            .expect("should contain OEM data")
+            .dell
+            .expect("should contain dell-specific OEM data");
+        assert!(dell.dell_system.temp_rollup_status.is_empty());
+    }
+
+    #[test]
     fn test_system_bluefield_boot_valid() {
         // Old firmware versions of Bluefield deliver empty values for Boot fields
         // that are not valid enumeration values

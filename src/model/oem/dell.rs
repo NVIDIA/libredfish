@@ -3,6 +3,7 @@ use std::fmt;
 use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DefaultOnNull};
 
 use crate::model::BiosCommon;
 use crate::model::InvalidValueError;
@@ -90,6 +91,7 @@ pub struct SystemWrapper {
     pub dell_system: System,
 }
 
+#[serde_as]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct System {
@@ -116,7 +118,9 @@ pub struct System {
     pub populated_pcie_slots: i64,
     pub power_cap_enabled_state: Option<String>, // We see this field explicitly returned as null by Dell XE9680s
     pub system_generation: String,
-    pub temp_rollup_status: String,
+    #[serde(default)]
+    #[serde_as(deserialize_as = "DefaultOnNull")]
+    pub temp_rollup_status: String, // Observed as null if machine is off, kept as String for backwards-compat
     #[serde(rename = "UUID")]
     pub uuid: String,
     pub volt_rollup_status: String,
