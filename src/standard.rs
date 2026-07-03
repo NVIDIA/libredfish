@@ -1405,6 +1405,17 @@ impl RedfishStandard {
         Ok(b)
     }
 
+    pub fn get_manager_with_id<'a>(
+        &'a self,
+        manager_id: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<Manager, RedfishError>> {
+        Box::pin(async move {
+            let (_, manager): (_, Manager) =
+                self.client.get(&format!("Managers/{}", manager_id)).await?;
+            Ok(manager)
+        })
+    }
+
     pub async fn fetch_bmc_event_log(
         &self,
         url: String,
@@ -1505,6 +1516,20 @@ impl RedfishStandard {
                 key: "Attributes".to_string(),
                 url,
             })
+    }
+
+    pub async fn is_bios_attributes(&self, system_id: &str) -> Result<bool, RedfishError> {
+        let url = format!("Systems/{}/Bios", system_id);
+        let result = self.client.get::<serde_json::Value>(&url).await;
+        match result {
+            Ok((_code, _data)) => Ok(true),
+            Err(RedfishError::HTTPErrorCode { status_code, .. })
+                if status_code == StatusCode::NOT_FOUND =>
+            {
+                Ok(false)
+            }
+            Err(e) => Err(e),
+        }
     }
 
     pub async fn factory_reset_bios(&self) -> Result<(), RedfishError> {
