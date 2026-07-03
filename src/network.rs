@@ -211,7 +211,7 @@ impl RedfishClientPool {
         };
 
         let managers = s.get_managers().await?;
-        let manager_id = managers.first().ok_or_else(|| RedfishError::GenericError {
+        let mut manager_id = managers.first().ok_or_else(|| RedfishError::GenericError {
             error: "No managers found in service root".to_string(),
         })?;
         let chassis = s.get_chassis_all().await?;
@@ -228,15 +228,57 @@ impl RedfishClientPool {
             // member blindly targets the wrong system (no BIOS/boot). Falling
             // back to the first member preserves behavior for every platform
             // that does not expose `System_0` (e.g. Viking's `DGX`).
-            let system_id = systems
+            let at_least_one_system_id = systems
                 .iter()
                 .find(|id| *id == "System_0")
                 .or_else(|| systems.first())
                 .ok_or_else(|| RedfishError::GenericError {
                     error: "No systems found in service root".to_string(),
                 })?;
+
+            //Find another system with BIOS section
+            let mut system_with_bios = None;
+            for system_member in &systems {
+                // Treat any error as "no BIOS here": we already have
+                // `at_least_one_system_id` as a fallback, and this also handles the
+                // test mockup, which drops the connection instead of returning 404
+                // when the Bios section is empty.
+                if let Ok(has_bios) = s.is_bios_attributes(system_member).await {
+                    if has_bios {
+                        system_with_bios = Some(system_member);
+                        break;
+                    }
+                }
+            }
+            let system_id = system_with_bios.unwrap_or(at_least_one_system_id);
+
             // call set_system_id always before calling set_vendor
             s.set_system_id(system_id)?;
+
+            //  Try to find manager with ManagerForServers related to System
+            for m in &managers {
+                if let Some(links) = s.get_manager_with_id(m).await?.links {
+                    let manager_for_servers: Result<Vec<String>, RedfishError> = links
+                        .manager_for_servers
+                        .iter()
+                        .map(|d| {
+                            d.odata_id
+                                .trim_matches('/')
+                                .split('/')
+                                .next_back()
+                                .map(|s| s.to_string())
+                                .ok_or_else(|| RedfishError::GenericError {
+                                    error: format!("Invalid odata_id format: {}", d.odata_id),
+                                })
+                        })
+                        .collect();
+                    let manager_for_servers = manager_for_servers?;
+                    if manager_for_servers.contains(system_id) {
+                        manager_id = m;
+                        break;
+                    }
+                }
+            }
         }
 
         s.set_manager_id(manager_id)?;
