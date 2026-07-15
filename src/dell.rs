@@ -1142,6 +1142,14 @@ impl Redfish for Bmc {
                         return Ok(None);
                     }
 
+                    // Clear any committed-but-unapplied pending config first, as
+                    // the sibling BIOS-config writers do (machine_setup,
+                    // setup_serial_console, clear_tpm, change_uefi_password): on
+                    // Dell a staged pending config makes this PATCH fail with
+                    // SYS011 ("pending configuration values are already
+                    // committed").
+                    self.delete_job_queue().await?;
+
                     let url = format!("Systems/{}/Settings", self.s.system_id());
                     let body = HashMap::from([(
                         "Boot",
