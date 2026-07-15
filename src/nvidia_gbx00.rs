@@ -813,7 +813,7 @@ impl Redfish for Bmc {
     }
 
     fn reset_bios<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
-        Box::pin(async move { self.s.reset_bios().await })
+        Box::pin(async move { self.s.factory_reset_bios().await })
     }
 
     fn pending<'a>(
