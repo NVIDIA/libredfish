@@ -1061,14 +1061,38 @@ impl Redfish for Bmc {
             let target_id = target.boot_option_reference.clone();
             let mut boot_order = system.boot.boot_order;
 
-            if boot_order.first() == Some(&target_id) {
+            let boot_order_is_set = boot_order.first() == Some(&target_id);
+            if boot_order_is_set {
                 tracing::info!("NO-OP: DPU ({mac}) is already first in boot order ({target_id})");
-                return Ok(None);
+            } else {
+                boot_order.retain(|id| id != &target_id);
+                boot_order.insert(0, target_id.clone());
+                self.change_boot_order(boot_order).await?;
             }
 
-            boot_order.retain(|id| id != &target_id);
-            boot_order.insert(0, target_id);
-            self.change_boot_order(boot_order).await?;
+            if self.s.vendor == Some(RedfishVendor::LenovoGB300) {
+                for option in all_boot_options
+                    .iter()
+                    .filter(|option| matches!(option.alias.as_deref(), Some("Pxe" | "UefiHttp")))
+                {
+                    let should_be_enabled = option.boot_option_reference == target_id;
+                    if option.boot_option_enabled != Some(should_be_enabled) {
+                        let url = format!(
+                            "Systems/{}/BootOptions/{}/SD",
+                            self.s.system_id(),
+                            option.id
+                        );
+                        self.s
+                            .client
+                            .patch_with_if_match(
+                                &url,
+                                HashMap::from([("BootOptionEnabled", should_be_enabled)]),
+                            )
+                            .await?;
+                    }
+                }
+            }
+
             Ok(None)
         })
     }
@@ -1081,7 +1105,25 @@ impl Redfish for Bmc {
         Box::pin(async move {
             let mac = crate::resolve_boot_interface_mac(self, boot_interface).await?;
             let (expected, actual) = self.get_expected_and_actual_first_boot_option(&mac).await?;
-            Ok(expected.is_some() && expected == actual)
+            let Some(expected) = expected else {
+                return Ok(false);
+            };
+            if actual.as_deref() != Some(&expected) {
+                return Ok(false);
+            }
+
+            let network_options_setup = if self.s.vendor == Some(RedfishVendor::LenovoGB300) {
+                let (_, all_boot_options) = self.get_system_and_boot_options().await?;
+                all_boot_options
+                    .iter()
+                    .filter(|option| matches!(option.alias.as_deref(), Some("Pxe" | "UefiHttp")))
+                    .all(|option| {
+                        option.boot_option_enabled == Some(option.display_name == expected)
+                    })
+            } else {
+                true
+            };
+            Ok(network_options_setup)
         })
     }
 
@@ -1439,7 +1481,7 @@ impl Bmc {
         if self.s.vendor == Some(RedfishVendor::LenovoGB300) {
             return HashMap::from([
                 ("PCIS007".to_string(), "PCIS007Enabled".into()), // SR-IOV Support
-                ("LEM0001".to_string(), 3.into()),                // PXE retry count
+                ("LEM0001".to_string(), 0.into()),                // PXE retry count
                 ("NWSK000".to_string(), "NWSK000Enabled".into()), // Network Stack
                 ("NWSK001".to_string(), "NWSK001Disabled".into()), // IPv4 PXE Support
                 ("NWSK006".to_string(), "NWSK006Enabled".into()), // IPv4 HTTP Support
