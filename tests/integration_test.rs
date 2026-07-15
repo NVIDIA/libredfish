@@ -247,6 +247,8 @@ async fn nvidia_dpu_integration_test(redfish: &dyn Redfish) -> Result<(), anyhow
         .get("CommonName")
         .is_some_and(|x| x.as_str().unwrap().contains("NVIDIA BlueField")));
 
+    redfish.reset_bios().await?;
+
     Ok(())
 }
 
@@ -403,6 +405,21 @@ async fn run_integration_test(
         && vendor_dir != "delta_powershelf"
     {
         assert!(redfish.bios().await?.len() > 8);
+    }
+
+    // Exercise vendor-specific BIOS reset dispatch. The mock server validates
+    // that the target resource or action exists, but does not apply the reset.
+    if matches!(
+        vendor_dir,
+        "dell"
+            | "dell_multi_dpu"
+            | "lenovo"
+            | "supermicro"
+            | "nvidia_viking"
+            | "nvidia_gb200"
+            | "nvidia_gh200"
+    ) {
+        redfish.reset_bios().await?;
     }
 
     // Delta power shelves expose no `/Systems` resource, so there is no

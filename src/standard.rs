@@ -1513,9 +1513,9 @@ impl RedfishStandard {
     pub async fn factory_reset_bios(&self) -> Result<(), RedfishError> {
         let url = format!("Systems/{}/Bios/Actions/Bios.ResetBios", self.system_id());
         self.client
-            .req::<(), ()>(Method::POST, &url, None, None, None, Vec::new())
+            .post(&url, HashMap::<String, String>::new())
             .await
-            .map(|_resp| Ok(()))?
+            .map(|_| ())
     }
 
     pub async fn get_account_by_id(
