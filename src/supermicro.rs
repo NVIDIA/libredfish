@@ -65,12 +65,8 @@ const NVIDIA_UEFI_HTTP_IPV4: &str = "UEFI HTTP IPv4 Nvidia Network Adapter";
 /// MGX C2 systems use SSIF instead of x86 KCS for in-band BMC communication,
 /// so the KCSInterface endpoint doesn't exist. These models require the
 /// IPMIHostInterface fallback on Systems/{id}.
-const MGX_C2_MODELS: [&str; 4] = [
-    "ARS-121L-DNR",
-    "ARS-221GL-NR",
-    "SYS-221H-TNR",
-    "SYS-221H-TN24R",
-];
+const MGX_C2_PROCESSOR_MODULE_MODEL_PREFIX: &str = "PG535";
+const MGX_C2_PROCESSOR_MODULE_PART_NUMBER_FRAGMENT: &str = "2G535";
 
 /// Minimum BMC firmware version that exposes `IPMIHostInterface` on
 /// `Systems/{id}` for MGX C2 systems.
@@ -328,8 +324,8 @@ impl Redfish for Bmc {
             use EnabledDisabled::*;
             match target {
                 Enabled => {
-                    // Grace-Grace SMCs can't PXE boot if host interface is disabled
-                    if !self.is_grace_grace_smc().await? {
+                    // ARS-121L-DNR can't PXE boot if the host interface is disabled.
+                    if !self.is_ars_121l_dnr().await? {
                         self.set_host_interfaces(Disabled).await?;
                     }
                     self.set_kcs_privilege(supermicro::Privilege::Callback)
@@ -355,12 +351,11 @@ impl Redfish for Bmc {
             let is_syslockdown = self.get_syslockdown().await?;
             let message = format!("SysLockdownEnabled={is_syslockdown}, kcs_privilege={kcs_privilege:#?}, host_interface_enabled={is_hi_on}");
 
-            // Grace-Grace SMCs (ARS-121L-DNR) need host_interface enabled even with lockdown
-            let is_grace_grace = self.is_grace_grace_smc().await?;
+            let must_keep_host_interface_enabled = self.is_ars_121l_dnr().await?;
 
             let is_locked = is_syslockdown
                 && kcs_privilege == supermicro::Privilege::Callback
-                && (is_grace_grace || !is_hi_on);
+                && (must_keep_host_interface_enabled || !is_hi_on);
             let is_unlocked = !is_syslockdown
                 && kcs_privilege == supermicro::Privilege::Administrator
                 && is_hi_on;
@@ -1307,7 +1302,7 @@ impl Bmc {
 
         macro_rules! add_keys {
             ($name:literal, $value:expr) => {
-                for real_key in bios_keys.remove($name).unwrap_or(vec![]) {
+                for real_key in bios_keys.remove($name).unwrap_or_default() {
                     bios_attrs.push((real_key, $value.into()));
                 }
             };
@@ -1328,6 +1323,7 @@ impl Bmc {
         add_keys!("IntelVTforDirectedI/O(VT-d)", EnableDisable::Enable);
         add_keys!("IntelVirtualizationTechnology", EnableDisable::Enable);
         add_keys!("SR-IOVSupport", EnabledDisabled::Enabled);
+        add_keys!("SR_IOVSupport", EnabledDisabled::Enabled);
 
         // UEFI NIC boot
         add_keys!("IPv4HTTPSupport", EnabledDisabled::Enabled);
@@ -1681,9 +1677,9 @@ impl Bmc {
         self.change_boot_order(ordered).await
     }
 
-    // BIOS attribute names by their clean name.
-    // e.g.{ QuietBoot -> [QuietBoot#002E]
-    //       TXTSupport -> [TXTSupport#0062, TXTSupport#0072] }
+    // BIOS attribute names by their canonical name.
+    // e.g. QuietBoot -> [QuietBoot_002E]
+    //      TXTSupport -> [TXTSupport_0062, TXTSupport_0072]
     async fn bios_attributes_name_map(&self) -> Result<HashMap<String, Vec<String>>, RedfishError> {
         let bios_attrs = self.s.bios_attributes().await?;
 
@@ -1696,7 +1692,10 @@ impl Bmc {
         };
         let mut by_name: HashMap<String, Vec<String>> = HashMap::with_capacity(attrs_map.len());
         for k in attrs_map.keys() {
-            let clean_key = k.split('_').next().unwrap().to_string();
+            let clean_key = k
+                .rsplit_once('_')
+                .map_or(k.as_str(), |(name, _suffix)| name.trim_end_matches('_'))
+                .to_string();
             by_name
                 .entry(clean_key)
                 .and_modify(|e| e.push(k.clone()))
@@ -1706,13 +1705,22 @@ impl Bmc {
     }
 
     /// MGX C2 systems use SSIF instead of x86 KCS, so the KCSInterface
-    /// endpoint doesn't exist. Detect them by matching the system model.
+    /// endpoint doesn't exist. Detect them by the NVIDIA PG535
+    /// processor-module identity.
+    /// See: https://docs.nvidia.com/dccpu/grace-perf-tuning-guide/system.html
     async fn is_mgx_c2(&self) -> Result<bool, RedfishError> {
-        let model = self.s.get_system().await?.model.unwrap_or_default();
-        Ok(MGX_C2_MODELS.iter().any(|m| model.contains(m)))
+        let chassis = self
+            .s
+            .get_collection(ODataId {
+                odata_id: "/redfish/v1/Chassis".to_string(),
+            })
+            .await?
+            .try_get::<Chassis>()?;
+
+        Ok(chassis.members.iter().any(is_mgx_c2_processor_module))
     }
 
-    async fn is_grace_grace_smc(&self) -> Result<bool, RedfishError> {
+    async fn is_ars_121l_dnr(&self) -> Result<bool, RedfishError> {
         Ok(self
             .s
             .get_system()
@@ -1721,6 +1729,20 @@ impl Bmc {
             .unwrap_or_default()
             .contains("ARS-121L-DNR"))
     }
+}
+
+fn is_mgx_c2_processor_module(chassis: &Chassis) -> bool {
+    chassis
+        .manufacturer
+        .as_deref()
+        .is_some_and(|manufacturer| manufacturer.eq_ignore_ascii_case("NVIDIA"))
+        && (chassis
+            .model
+            .as_deref()
+            .is_some_and(|model| model.starts_with(MGX_C2_PROCESSOR_MODULE_MODEL_PREFIX))
+            || chassis.part_number.as_deref().is_some_and(|part_number| {
+                part_number.contains(MGX_C2_PROCESSOR_MODULE_PART_NUMBER_FRAGMENT)
+            }))
 }
 
 // UpdateParameters is what is sent for a multipart firmware upload's metadata.
@@ -1779,6 +1801,49 @@ impl UpdateParameters {
             targets: vec![target],
             apply_time: "Immediate".to_string(),
             oem,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn identifies_mgx_c2_processor_modules() {
+        let cases = [
+            ("PG535 model", Some("NVIDIA"), Some("PG535-B02"), None, true),
+            (
+                "2G535 part number",
+                Some("Nvidia"),
+                None,
+                Some("699-2G535-0200-310"),
+                true,
+            ),
+            (
+                "unrelated NVIDIA module",
+                Some("NVIDIA"),
+                Some("B4240"),
+                Some("900-9D3B4-00CC-EA0"),
+                false,
+            ),
+            (
+                "non-NVIDIA PG535",
+                Some("Supermicro"),
+                Some("PG535-B02"),
+                Some("699-2G535-0200-310"),
+                false,
+            ),
+        ];
+
+        for (case, manufacturer, model, part_number, expected) in cases {
+            let chassis = Chassis {
+                manufacturer: manufacturer.map(str::to_string),
+                model: model.map(str::to_string),
+                part_number: part_number.map(str::to_string),
+                ..Default::default()
+            };
+            assert_eq!(is_mgx_c2_processor_module(&chassis), expected, "{case}");
         }
     }
 }
