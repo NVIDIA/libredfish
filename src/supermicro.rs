@@ -352,13 +352,14 @@ impl Redfish for Bmc {
             let message = format!("SysLockdownEnabled={is_syslockdown}, kcs_privilege={kcs_privilege:#?}, host_interface_enabled={is_hi_on}");
 
             let must_keep_host_interface_enabled = self.is_ars_121l_dnr().await?;
+            let kcs_locked =
+                kcs_privilege.is_none() || kcs_privilege == Some(supermicro::Privilege::Callback);
+            let kcs_unlocked = kcs_privilege.is_none()
+                || kcs_privilege == Some(supermicro::Privilege::Administrator);
 
-            let is_locked = is_syslockdown
-                && kcs_privilege == supermicro::Privilege::Callback
-                && (must_keep_host_interface_enabled || !is_hi_on);
-            let is_unlocked = !is_syslockdown
-                && kcs_privilege == supermicro::Privilege::Administrator
-                && is_hi_on;
+            let is_locked =
+                is_syslockdown && kcs_locked && (must_keep_host_interface_enabled || !is_hi_on);
+            let is_unlocked = !is_syslockdown && kcs_unlocked && is_hi_on;
             Ok(Status {
                 message,
                 status: if is_locked {
@@ -1368,13 +1369,16 @@ impl Bmc {
         Ok(bios_attrs)
     }
 
-    async fn get_kcs_privilege(&self) -> Result<supermicro::Privilege, RedfishError> {
+    async fn get_kcs_privilege(&self) -> Result<Option<supermicro::Privilege>, RedfishError> {
         if self.is_mgx_c2().await? {
+            if !self.bmc_supports_ipmi_host_iface().await? {
+                return Ok(None);
+            }
             let enabled = self.get_ipmi_host_interface_enabled().await?;
             return if enabled {
-                Ok(supermicro::Privilege::Administrator)
+                Ok(Some(supermicro::Privilege::Administrator))
             } else {
-                Ok(supermicro::Privilege::Callback)
+                Ok(Some(supermicro::Privilege::Callback))
             };
         }
 
@@ -1400,11 +1404,14 @@ impl Bmc {
                 expected_type: "&str".to_string(),
                 url: url.to_string(),
             })?;
-        p_str.parse().map_err(|_| RedfishError::InvalidKeyType {
-            key: key.to_string(),
-            expected_type: "oem::supermicro::Privilege".to_string(),
-            url: url.to_string(),
-        })
+        p_str
+            .parse()
+            .map(Some)
+            .map_err(|_| RedfishError::InvalidKeyType {
+                key: key.to_string(),
+                expected_type: "oem::supermicro::Privilege".to_string(),
+                url: url.to_string(),
+            })
     }
 
     async fn set_kcs_privilege(
@@ -1412,6 +1419,14 @@ impl Bmc {
         privilege: supermicro::Privilege,
     ) -> Result<(), RedfishError> {
         if self.is_mgx_c2().await? {
+            if !self.bmc_supports_ipmi_host_iface().await? {
+                tracing::warn!(
+                    smc_bmc_ip = self.s.client.host(),
+                    "MGX C2 BMC firmware is older than {MIN_BMC_FW_IPMI_HOST_IFACE}; \
+                     skipping IPMIHostInterface write"
+                );
+                return Ok(());
+            }
             let enabled = privilege == supermicro::Privilege::Administrator;
             return self.set_ipmi_host_interface(enabled).await;
         }
@@ -1437,18 +1452,7 @@ impl Bmc {
 
     /// Disable/enable SSIF in-band access via `IPMIHostInterface` on `Systems/{id}`.
     /// Used for MGX C2 systems that lack the KCSInterface endpoint.
-    /// No-op when the BMC firmware is older than 01.05.01.
     async fn set_ipmi_host_interface(&self, enabled: bool) -> Result<(), RedfishError> {
-        if !self.bmc_supports_ipmi_host_iface().await? {
-            let smc_bmc_ip = self.s.client.host();
-            tracing::warn!(
-                smc_bmc_ip,
-                "MGX C2 BMC firmware is older than {MIN_BMC_FW_IPMI_HOST_IFACE}; \
-                 skipping IPMIHostInterface write"
-            );
-            return Ok(());
-        }
-
         use crate::model::system::IpmiHostInterface;
         let url = format!("Systems/{}", self.s.system_id());
         let body = HashMap::from([(
@@ -1462,18 +1466,7 @@ impl Bmc {
 
     /// Get whether SSIF in-band access is enabled via `IPMIHostInterface` on `Systems/{id}`.
     /// Used for MGX C2 systems that lack the KCSInterface endpoint.
-    /// Returns `false` when the BMC firmware is older than 01.05.01.
     async fn get_ipmi_host_interface_enabled(&self) -> Result<bool, RedfishError> {
-        if !self.bmc_supports_ipmi_host_iface().await? {
-            let smc_bmc_ip = self.s.client.host();
-            tracing::warn!(
-                smc_bmc_ip,
-                "MGX C2 BMC firmware is older than {MIN_BMC_FW_IPMI_HOST_IFACE}; \
-                 IPMIHostInterface unavailable, reporting disabled"
-            );
-            return Ok(false);
-        }
-
         let system = self.s.get_system().await?;
         let iface = system
             .ipmi_host_interface
