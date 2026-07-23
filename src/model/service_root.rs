@@ -114,7 +114,10 @@ impl ServiceRoot {
                 _ => RedfishVendor::NvidiaDpu,
             },
             "wiwynn" => RedfishVendor::NvidiaGBx00,
-            "supermicro" => RedfishVendor::Supermicro,
+            "supermicro" => match self.product.as_deref() {
+                Some("GB NVL") => RedfishVendor::NvidiaGBx00,
+                _ => RedfishVendor::Supermicro,
+            },
             "lite-on technology corp." => RedfishVendor::LiteOnPowerShelf,
             "delta" => RedfishVendor::DeltaPowerShelf,
             _ => RedfishVendor::Unknown,
@@ -151,6 +154,16 @@ mod test {
         let result = ServiceRoot {
             vendor: Some("NVIDIA".to_string()),
             product: Some("GB BMC".to_string()),
+            ..Default::default()
+        };
+        assert_eq!(result.vendor().unwrap(), RedfishVendor::NvidiaGBx00);
+    }
+
+    #[test]
+    fn test_supermicro_gb300_service_root() {
+        let result = ServiceRoot {
+            vendor: Some("Supermicro".to_string()),
+            product: Some("GB NVL".to_string()),
             ..Default::default()
         };
         assert_eq!(result.vendor().unwrap(), RedfishVendor::NvidiaGBx00);

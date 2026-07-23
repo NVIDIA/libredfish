@@ -66,6 +66,20 @@ impl Bmc {
     pub fn new(s: RedfishStandard) -> Result<Bmc, RedfishError> {
         Ok(Bmc { s })
     }
+
+    async fn is_gb300(&self) -> Result<bool, RedfishError> {
+        let systems = self
+            .s
+            .get_collection(ODataId::from("/redfish/v1/Systems"))
+            .await?
+            .try_get::<ComputerSystem>()?;
+        Ok(systems.members.iter().any(|system| {
+            system
+                .model
+                .as_deref()
+                .is_some_and(|model| model.contains("GB300"))
+        }))
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -521,9 +535,15 @@ impl Redfish for Bmc {
         >,
     ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
         Box::pin(async move {
-            self.disable_secure_boot().await?;
+            let is_gb300 = self.is_gb300().await?;
 
-            let bios_attrs = self.machine_setup_attrs().await?;
+            // The Supermicro GB300 SecureBoot resource does not expose
+            // SecureBootEnable, so there is no supported setting to change.
+            if !is_gb300 {
+                self.disable_secure_boot().await?;
+            }
+
+            let bios_attrs = self.machine_setup_attrs(is_gb300).await?;
             let mut attrs = HashMap::new();
             attrs.extend(bios_attrs);
             let body = HashMap::from([("Attributes", attrs)]);
@@ -1172,6 +1192,11 @@ impl Redfish for Bmc {
 
     fn enable_infinite_boot<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
         Box::pin(async move {
+            if self.is_gb300().await? {
+                return Err(RedfishError::NotSupported(
+                    "Supermicro GB300 does not expose EmbeddedUefiShell".to_string(),
+                ));
+            }
             let attrs: HashMap<String, serde_json::Value> =
                 HashMap::from([("EmbeddedUefiShell".to_string(), "Disabled".into())]);
             let body = HashMap::from([("Attributes", attrs)]);
@@ -1184,6 +1209,9 @@ impl Redfish for Bmc {
         &'a self,
     ) -> crate::RedfishFuture<'a, Result<Option<bool>, RedfishError>> {
         Box::pin(async move {
+            if self.is_gb300().await? {
+                return Ok(None);
+            }
             let embedded_uefi_shell = self.get_embedded_uefi_shell_status().await?;
             // Infinite boot is enabled when EmbeddedUefiShell is disabled
             Ok(Some(embedded_uefi_shell == EnabledDisabled::Disabled))
@@ -1362,7 +1390,8 @@ impl Bmc {
         }
 
         let bios = self.s.bios_attributes().await?;
-        let expected_attrs = self.machine_setup_attrs().await?;
+        let is_gb300 = self.is_gb300().await?;
+        let expected_attrs = self.machine_setup_attrs(is_gb300).await?;
         for (key, expected) in expected_attrs {
             let Some(actual) = bios.get(&key) else {
                 diffs.push(MachineSetupDiff {
@@ -1491,14 +1520,22 @@ impl Bmc {
         Ok(log_entries)
     }
 
-    async fn machine_setup_attrs(&self) -> Result<Vec<(String, serde_json::Value)>, RedfishError> {
+    async fn machine_setup_attrs(
+        &self,
+        is_gb300: bool,
+    ) -> Result<Vec<(String, serde_json::Value)>, RedfishError> {
         let mut bios_attrs: Vec<(String, serde_json::Value)> = vec![];
 
-        // Enabled TPM
-        bios_attrs.push(("TPM".into(), "Enabled".into()));
+        if is_gb300 {
+            // This platform exposes the TPM through the AMI BIOS name.
+            bios_attrs.push(("SecurityDeviceSupport".into(), "Enabled".into()));
+        } else {
+            // Enable TPM.
+            bios_attrs.push(("TPM".into(), "Enabled".into()));
 
-        // Disabled EmbeddedUefiShell (infinite boot workaround)
-        bios_attrs.push(("EmbeddedUefiShell".into(), "Disabled".into()));
+            // Disable EmbeddedUefiShell (infinite boot workaround).
+            bios_attrs.push(("EmbeddedUefiShell".into(), "Disabled".into()));
+        }
 
         // Enable Option ROM so that the DPU will show up in the Host's network devce list
         // Otherwise, we will never see the DPU's Host PF MAC in the boot option list
