@@ -860,11 +860,25 @@ impl Redfish for Bmc {
     }
 
     fn enable_secure_boot<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
-        Box::pin(async move { self.s.enable_secure_boot().await })
+        Box::pin(async move {
+            if self.is_gb300().await? {
+                return Err(RedfishError::NotSupported(
+                    "Supermicro GB300 does not expose SecureBootEnable".to_string(),
+                ));
+            }
+            self.s.enable_secure_boot().await
+        })
     }
 
     fn disable_secure_boot<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
-        Box::pin(async move { self.s.disable_secure_boot().await })
+        Box::pin(async move {
+            if self.is_gb300().await? {
+                return Err(RedfishError::NotSupported(
+                    "Supermicro GB300 does not expose SecureBootEnable".to_string(),
+                ));
+            }
+            self.s.disable_secure_boot().await
+        })
     }
 
     fn get_secure_boot_certificate<'a>(
