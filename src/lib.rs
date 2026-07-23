@@ -224,13 +224,12 @@ pub trait Redfish: Send + Sync + 'static {
 
     /// Sets up a reasonable UEFI configuration.
     /// remember to call lockdown() afterwards to secure the server
-    /// - boot_interface: identifies the NIC you wish to boot from. Either a
-    ///   `BootInterfaceRef::Mac` (existing behavior: vendor impl looks up
-    ///   the partition by MAC via its BMC enumeration) or a
-    ///   `BootInterfaceRef::InterfaceId` (vendor-native Redfish
-    ///   `EthernetInterface.Id` — used when we already know the interface
-    ///   partition ID (and don't need to look it up by MAC). One case
-    ///   being if we flip a DPU to NIC mode.
+    /// - boot_interface: identifies the NIC you wish to boot from. A
+    ///   `BootInterfaceRef::Mac` uses the existing vendor lookup by MAC, while
+    ///   `BootInterfaceRef::InterfaceId` uses a vendor-native Redfish
+    ///   `EthernetInterface.Id`. `BootInterfaceRef::Pair` supplies both so each
+    ///   vendor can use its native identifier without resolving one from the
+    ///   other.
     ///   If not given we look for a Mellanox Bluefield DPU and use that.
     ///   Not applicable to Supermicro and the DPU itself.
     ///   bios_profiles: Map of vendor/model (with spaces replaced by underscores)/profile/type
@@ -537,11 +536,11 @@ pub trait Redfish: Send + Sync + 'static {
 
     /// Change the boot order so the system will boot from the chosen NIC first.
     ///
-    /// `boot_interface` selects the target NIC. A `BootInterfaceRef::Mac` is the
-    /// classic path: the vendor impl looks the NIC up via its BMC enumeration
-    /// by MAC. A `BootInterfaceRef::InterfaceId` is the vendor-native Redfish
-    /// `EthernetInterface.Id` -- used when the caller already knows the
-    /// partition ID.
+    /// `boot_interface` selects the target NIC. A `BootInterfaceRef::Mac` uses
+    /// the existing vendor lookup by MAC, while `BootInterfaceRef::InterfaceId`
+    /// uses a vendor-native Redfish `EthernetInterface.Id`.
+    /// `BootInterfaceRef::Pair` supplies both so the vendor can use its native
+    /// identifier directly.
     fn set_boot_order_dpu_first<'a>(
         &'a self,
         boot_interface: BootInterfaceRef<'a>,
@@ -772,8 +771,7 @@ impl Status {
 }
 
 /// How a caller identifies a boot interface to [`Redfish::machine_setup`]
-/// and supporting query methods. Callers can pass either form; vendor
-/// impls handle both.
+/// and supporting query methods.
 #[derive(Debug, Clone, Copy)]
 pub enum BootInterfaceRef<'a> {
     /// MAC address of the boot interface. Vendor impl translates it into
@@ -783,25 +781,34 @@ pub enum BootInterfaceRef<'a> {
     /// interface (e.g. `"NIC.Slot.7-1-1"`). Vendor impl uses it
     /// directly.
     InterfaceId(&'a str),
+    /// Complete identity for one boot interface. Both fields must identify the
+    /// same interface; this is one target, not an instruction to try both.
+    /// MAC-oriented vendor paths use `mac_address`, while interface-ID-oriented
+    /// paths use `interface_id`.
+    Pair {
+        mac_address: mac_address::MacAddress,
+        interface_id: &'a str,
+    },
 }
 
 impl BootInterfaceRef<'_> {
-    /// Returns the MAC if this is the [`BootInterfaceRef::Mac`] variant.
-    /// Returns `None` if this is the [`BootInterfaceRef::InterfaceId`]
-    /// variant.
+    /// Returns the supplied MAC when this selector contains one.
     pub fn mac(&self) -> Option<mac_address::MacAddress> {
         match self {
-            BootInterfaceRef::Mac(mac) => Some(*mac),
+            BootInterfaceRef::Mac(mac)
+            | BootInterfaceRef::Pair {
+                mac_address: mac, ..
+            } => Some(*mac),
             BootInterfaceRef::InterfaceId(_) => None,
         }
     }
 }
 
 /// Returns the MAC address for a [`BootInterfaceRef`].
-/// [`BootInterfaceRef::Mac`] is a pass-through; [`BootInterfaceRef::InterfaceId`]
-/// is resolved by fetching `Systems/{}/EthernetInterfaces/{id}` via the
-/// Redfish-standard `EthernetInterface` resource (every vendor
-/// implements it).
+/// [`BootInterfaceRef::Mac`] and [`BootInterfaceRef::Pair`] pass through their
+/// supplied MAC. [`BootInterfaceRef::InterfaceId`] is resolved by fetching
+/// `Systems/{}/EthernetInterfaces/{id}` via the Redfish-standard
+/// `EthernetInterface` resource (every vendor implements it).
 ///
 /// Used by methods that compare against a MAC (verification paths that
 /// walk boot options by MAC substring, etc.) so the caller can pass
@@ -811,7 +818,10 @@ pub async fn resolve_boot_interface_mac<R: Redfish + ?Sized>(
     boot_interface: BootInterfaceRef<'_>,
 ) -> Result<String, RedfishError> {
     match boot_interface {
-        BootInterfaceRef::Mac(mac) => Ok(mac.to_string()),
+        BootInterfaceRef::Mac(mac)
+        | BootInterfaceRef::Pair {
+            mac_address: mac, ..
+        } => Ok(mac.to_string()),
         BootInterfaceRef::InterfaceId(id) => {
             let eif = redfish.get_system_ethernet_interface(id).await?;
             extract_resolved_mac(eif.mac_address.as_deref(), id)
@@ -943,6 +953,37 @@ mod tests {
     fn boot_interface_ref_interface_id_mac_is_none() {
         let r = BootInterfaceRef::InterfaceId("NIC.Slot.7-1-1");
         assert!(r.mac().is_none());
+    }
+
+    #[test]
+    fn boot_interface_ref_pair_mac_returns_inner() {
+        let mac: mac_address::MacAddress = "AA:BB:CC:DD:EE:01".parse().unwrap();
+        let r = BootInterfaceRef::Pair {
+            mac_address: mac,
+            interface_id: "NIC.Slot.7-1-1",
+        };
+        assert_eq!(r.mac(), Some(mac));
+    }
+
+    #[tokio::test]
+    async fn resolve_boot_interface_mac_uses_pair_mac_without_lookup() {
+        let pool = RedfishClientPool::builder().build().unwrap();
+        let redfish = pool
+            .create_standard_client(Endpoint::default())
+            .expect("test Redfish client should be constructed without a request");
+        let mac: mac_address::MacAddress = "AA:BB:CC:DD:EE:01".parse().unwrap();
+
+        let got = resolve_boot_interface_mac(
+            redfish.as_ref(),
+            BootInterfaceRef::Pair {
+                mac_address: mac,
+                interface_id: "NIC.Slot.7-1-1",
+            },
+        )
+        .await
+        .expect("pair should use its MAC without querying the empty endpoint");
+
+        assert_eq!(got, mac.to_string());
     }
 
     #[test]
