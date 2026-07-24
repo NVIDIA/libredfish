@@ -1399,14 +1399,26 @@ impl Bmc {
         let boot_options = self.s.get_system().await?.boot.boot_order;
 
         let actual_first_boot_option = if let Some(first) = boot_options.first() {
-            Some(self.s.get_boot_option(first.as_str()).await?.display_name)
+            Some(
+                self.s
+                    .get_boot_option(crate::model::boot::boot_order_entry_boot_option_id(
+                        first.as_str(),
+                    ))
+                    .await?
+                    .display_name,
+            )
         } else {
             None
         };
 
         let mut expected_first_boot_option = None;
         for member in &boot_options {
-            let b = self.s.get_boot_option(member.as_str()).await?;
+            let b = self
+                .s
+                .get_boot_option(crate::model::boot::boot_order_entry_boot_option_id(
+                    member.as_str(),
+                ))
+                .await?;
             if b.display_name.starts_with(&boot_option_name) {
                 expected_first_boot_option = Some(b.display_name);
                 break;
@@ -1473,11 +1485,20 @@ impl Bmc {
         };
 
         let target_id = target.id.clone();
+        let uses_display_name_suffix =
+            crate::model::boot::boot_order_uses_display_name_suffix(&system.boot.boot_order);
+        let first_entry = if uses_display_name_suffix {
+            crate::model::boot::boot_order_entry_with_display_name(&target_id, &target.display_name)
+        } else {
+            target_id.clone()
+        };
 
         // Prepend the found option to the front of the existing boot order
         let mut ordered = system.boot.boot_order;
-        ordered.retain(|id| id != &target_id);
-        ordered.insert(0, target_id);
+        ordered.retain(|entry| {
+            crate::model::boot::boot_order_entry_boot_option_id(entry) != target_id.as_str()
+        });
+        ordered.insert(0, first_entry);
 
         Ok(ordered)
     }

@@ -145,3 +145,58 @@ impl std::fmt::Display for TrustedModuleRequiredToBoot {
         std::fmt::Debug::fmt(self, f)
     }
 }
+
+/// Extracts the BootOption resource Id from a `BootOrder` entry.
+///
+/// Vera Rubin host BMC firmware reports entries like `Boot0019: Ubuntu` while
+/// BootOption resources are addressed at `/BootOptions/Boot0019`.
+pub fn boot_order_entry_boot_option_id(entry: &str) -> &str {
+    entry.split_once(": ").map(|(id, _)| id).unwrap_or(entry)
+}
+
+/// Formats a BootOrder entry the way Vera Rubin firmware exposes it.
+pub fn boot_order_entry_with_display_name(id: &str, display_name: &str) -> String {
+    format!("{id}: {display_name}")
+}
+
+/// Returns true when the BMC uses `Id: DisplayName` strings in `BootOrder`.
+pub fn boot_order_uses_display_name_suffix(entries: &[String]) -> bool {
+    entries.iter().any(|entry| entry.contains(": "))
+}
+
+#[cfg(test)]
+mod boot_order_entry_tests {
+    use super::{
+        boot_order_entry_boot_option_id, boot_order_entry_with_display_name,
+        boot_order_uses_display_name_suffix,
+    };
+
+    #[test]
+    fn boot_order_entry_boot_option_id_strips_display_name_suffix() {
+        assert_eq!(
+            boot_order_entry_boot_option_id("Boot0019: Ubuntu"),
+            "Boot0019"
+        );
+        assert_eq!(boot_order_entry_boot_option_id("Boot0010"), "Boot0010");
+    }
+
+    #[test]
+    fn boot_order_entry_with_display_name_formats_like_firmware() {
+        assert_eq!(
+            boot_order_entry_with_display_name("Boot0019", "Ubuntu"),
+            "Boot0019: Ubuntu"
+        );
+    }
+
+    #[test]
+    fn boot_order_uses_display_name_suffix_detects_firmware_format() {
+        assert!(boot_order_uses_display_name_suffix(&[
+            "Boot0019: Ubuntu".to_string(),
+            "Boot0010: UEFI HTTPv4 (MAC:F4204D494ECC)".to_string(),
+        ]));
+        assert!(!boot_order_uses_display_name_suffix(&[
+            "Boot0019".to_string(),
+            "Boot0010".to_string(),
+        ]));
+    }
+}
