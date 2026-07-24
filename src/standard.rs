@@ -40,7 +40,9 @@ use crate::model::{job::Job, oem::nvidia_dpu::NicMode};
 use crate::model::{
     manager_network_protocol::ManagerNetworkProtocol, update_service::TransferProtocolType,
 };
-use crate::model::{power, thermal, BootOption, InvalidValueError, Manager, Managers, ODataId};
+use crate::model::{
+    power, thermal, BootOption, ComputerSystem, InvalidValueError, Manager, Managers, ODataId,
+};
 use crate::model::{power::Power, update_service::UpdateService};
 use crate::model::{secure_boot::SecureBoot, sensor::GPUSensors};
 use crate::model::{sel::LogEntry, ManagerResetType};
@@ -1518,18 +1520,12 @@ impl RedfishStandard {
             })
     }
 
-    pub async fn is_bios_attributes(&self, system_id: &str) -> Result<bool, RedfishError> {
-        let url = format!("Systems/{}/Bios", system_id);
-        let result = self.client.get::<serde_json::Value>(&url).await;
-        match result {
-            Ok((_code, _data)) => Ok(true),
-            Err(RedfishError::HTTPErrorCode { status_code, .. })
-                if status_code == StatusCode::NOT_FOUND =>
-            {
-                Ok(false)
-            }
-            Err(e) => Err(e),
-        }
+    pub async fn if_system_has_bios(&self, system_id: &str) -> Option<ComputerSystem> {
+        self.client
+            .get::<ComputerSystem>(&format!("Systems/{system_id}"))
+            .await
+            .map_or(None, |(_code, cs)| Some(cs))
+            .and_then(|cs| if cs.bios.is_some() { Some(cs) } else { None })
     }
 
     pub async fn factory_reset_bios(&self) -> Result<(), RedfishError> {
