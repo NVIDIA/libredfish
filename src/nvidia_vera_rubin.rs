@@ -19,6 +19,7 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
+ *
  */
 use crate::{Chassis, EnabledDisabled, REDFISH_ENDPOINT};
 use regex::Regex;
@@ -565,7 +566,7 @@ impl Redfish for Bmc {
                 }
             }
 
-            // We don't lockdown on GB200, so we don't need to check for it
+            // We don't lockdown on Vera Rubin, so we don't need to check for it
 
             Ok(MachineSetupStatus {
                 is_done: diffs.is_empty(),
@@ -813,7 +814,7 @@ impl Redfish for Bmc {
     }
 
     fn reset_bios<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
-        Box::pin(async move { self.s.factory_reset_bios().await })
+        Box::pin(async move { self.s.reset_bios().await })
     }
 
     fn pending<'a>(
@@ -1397,14 +1398,12 @@ impl Bmc {
 
         let boot_options = self.s.get_system().await?.boot.boot_order;
 
-        // Get actual first boot option
         let actual_first_boot_option = if let Some(first) = boot_options.first() {
             Some(self.s.get_boot_option(first.as_str()).await?.display_name)
         } else {
             None
         };
 
-        // Find expected boot option
         let mut expected_first_boot_option = None;
         for member in &boot_options {
             let b = self.s.get_boot_option(member.as_str()).await?;
@@ -1492,25 +1491,11 @@ impl Bmc {
     }
 
     async fn machine_setup_attrs(&self) -> Result<Vec<(String, serde_json::Value)>, RedfishError> {
-        let mut bios_attrs: Vec<(String, serde_json::Value)> = vec![];
-
-        // Enabled TPM
-        bios_attrs.push(("TPM".into(), "Enabled".into()));
-
-        // Disabled EmbeddedUefiShell (infinite boot workaround)
-        bios_attrs.push(("EmbeddedUefiShell".into(), "Disabled".into()));
-
-        // Enable Option ROM so that the DPU will show up in the Host's network devce list
-        // Otherwise, we will never see the DPU's Host PF MAC in the boot option list
-        if let Some(curr_bios_attributes) = self.s.bios_attributes().await?.as_object() {
-            for attribute in curr_bios_attributes.keys() {
-                if attribute.contains("Pcie6DisableOptionROM") {
-                    bios_attrs.push((attribute.into(), false.into()));
-                }
-            }
-        }
-
-        Ok(bios_attrs)
+        Ok(vec![
+            ("TPM".into(), "Enabled".into()),
+            ("EmbeddedUefiShell".into(), "Disabled".into()),
+            ("GpuExposeAsPcie".into(), true.into()),
+        ])
     }
 
     // get_embedded_uefi_shell_status returns the current status of the EmbeddedUefiShell BIOS attribute.

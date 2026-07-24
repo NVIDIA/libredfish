@@ -62,6 +62,7 @@ const SUPERMICRO_PORT: &str = "8738";
 const DELL_MULTI_DPU_PORT: &str = "8739";
 const NVIDIA_GH200_PORT: &str = "8740";
 const NVIDIA_GB200_PORT: &str = "8741";
+const NVIDIA_VERA_RUBIN_PORT: &str = "8745";
 const NVIDIA_GBSWITCH_PORT: &str = "8742";
 const LITEON_POWERSHELF_PORT: &str = "8743";
 const DELTA_POWERSHELF_PORT: &str = "8744";
@@ -122,6 +123,12 @@ async fn test_supermicro() -> Result<(), anyhow::Error> {
 #[tokio::test]
 async fn test_nvidia_gb200() -> Result<(), anyhow::Error> {
     run_integration_test("nvidia_gb200", NVIDIA_GB200_PORT).await
+}
+
+#[tokio::test]
+#[ignore = "VR redfish not available"]
+async fn test_nvidia_vera_rubin() -> Result<(), anyhow::Error> {
+    run_integration_test("nvidia_vera_rubin", NVIDIA_VERA_RUBIN_PORT).await
 }
 
 #[tokio::test]
@@ -240,6 +247,8 @@ async fn nvidia_dpu_integration_test(redfish: &dyn Redfish) -> Result<(), anyhow
         .get("CommonName")
         .is_some_and(|x| x.as_str().unwrap().contains("NVIDIA BlueField")));
 
+    redfish.reset_bios().await?;
+
     Ok(())
 }
 
@@ -345,6 +354,7 @@ async fn run_integration_test(
 
     if vendor_dir != "nvidia_gh200"
         && vendor_dir != "nvidia_gb200"
+        && vendor_dir != "nvidia_vera_rubin"
         && vendor_dir != "nvidia_gbswitch"
         && vendor_dir != "liteon_powershelf"
         && vendor_dir != "delta_powershelf"
@@ -397,6 +407,21 @@ async fn run_integration_test(
         assert!(redfish.bios().await?.len() > 8);
     }
 
+    // Exercise vendor-specific BIOS reset dispatch. The mock server validates
+    // that the target resource or action exists, but does not apply the reset.
+    if matches!(
+        vendor_dir,
+        "dell"
+            | "dell_multi_dpu"
+            | "lenovo"
+            | "supermicro"
+            | "nvidia_viking"
+            | "nvidia_gb200"
+            | "nvidia_gh200"
+    ) {
+        redfish.reset_bios().await?;
+    }
+
     // Delta power shelves expose no `/Systems` resource, so there is no
     // `ComputerSystem.Reset` action to drive system power control.
     if vendor_dir != "delta_powershelf" {
@@ -428,6 +453,7 @@ async fn run_integration_test(
 
     if vendor_dir != "nvidia_gh200"
         && vendor_dir != "nvidia_gb200"
+        && vendor_dir != "nvidia_vera_rubin"
         && vendor_dir != "nvidia_gbswitch"
         && vendor_dir != "liteon_powershelf"
         && vendor_dir != "delta_powershelf"
@@ -442,6 +468,7 @@ async fn run_integration_test(
     if vendor_dir != "supermicro"
         && vendor_dir != "nvidia_gh200"
         && vendor_dir != "nvidia_gb200"
+        && vendor_dir != "nvidia_vera_rubin"
         && vendor_dir != "nvidia_gbswitch"
         && vendor_dir != "liteon_powershelf"
         && vendor_dir != "delta_powershelf"
@@ -604,7 +631,7 @@ async fn run_integration_test(
         && vendor_dir != "delta_powershelf"
     {
         let tm = redfish.get_thermal_metrics().await?;
-        if vendor_dir == "nvidia_gb200" {
+        if vendor_dir == "nvidia_gb200" || vendor_dir == "nvidia_vera_rubin" {
             assert!(tm.leak_detectors.is_some());
         }
         if vendor_dir != "nvidia_gbswitch" {
@@ -673,6 +700,7 @@ async fn run_integration_test(
             ("lenovo", 1),
             ("supermicro", 2),
             ("nvidia_gb200", 4),
+            ("nvidia_vera_rubin", 4),
             ("dell_multi_dpu", 16),
             ("hpe", 2),
         ]
@@ -688,6 +716,7 @@ async fn run_integration_test(
             ("lenovo", 4),
             ("supermicro", 8),
             ("nvidia_gb200", 9),
+            ("nvidia_vera_rubin", 9),
             ("dell_multi_dpu", 2),
             ("hpe", 18),
         ]
@@ -703,6 +732,7 @@ async fn run_integration_test(
             ("lenovo", 15),
             ("supermicro", 26),
             ("nvidia_gb200", 0), // have no pcie devices
+            ("nvidia_vera_rubin", 0),
             ("dell_multi_dpu", 10),
             ("hpe", 6),
         ]
@@ -814,7 +844,7 @@ async fn resource_tests(redfish: &dyn Redfish) -> Result<(), anyhow::Error> {
             result
         }
         RedfishVendor::NvidiaGH200 => "BMC_0",
-        RedfishVendor::NvidiaGBx00 => "Chassis_0", // this is not the catch-all chassis id, gb200 redfish is not structured to aggregate into one chassis id
+        RedfishVendor::NvidiaGBx00 | RedfishVendor::VeraRubin => "Chassis_0", // this is not the catch-all chassis id, gb200 redfish is not structured to aggregate into one chassis id
         RedfishVendor::NvidiaGBSwitch => "MGX_NVSwitch_0",
         _ => return Err(anyhow!("Unknown vendor could not identify chassis")),
     };

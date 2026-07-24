@@ -72,6 +72,8 @@ const MAX_ACCOUNT_ID: u8 = 16;
 ///   matches partition `NIC.Slot.7-1-1`. Equality also matches. This lets us
 ///   locate the NDF for partitions whose MAC has been stripped (the
 ///   NicMode-Disabled case).
+/// - [`BootInterfaceRef::Pair`] uses the same interface-ID match as
+///   [`BootInterfaceRef::InterfaceId`]. Its MAC is not a fallback.
 fn nw_dev_func_matches(
     nw_dev_func: &NetworkDeviceFunction,
     boot_interface: crate::BootInterfaceRef<'_>,
@@ -82,11 +84,22 @@ fn nw_dev_func_matches(
             .as_ref()
             .and_then(|e| e.mac_address.as_ref())
             .is_some_and(|m| m.eq_ignore_ascii_case(&target.to_string())),
-        crate::BootInterfaceRef::InterfaceId(target) => nw_dev_func
+        crate::BootInterfaceRef::InterfaceId(target)
+        | crate::BootInterfaceRef::Pair {
+            interface_id: target,
+            ..
+        } => nw_dev_func
             .id
             .as_deref()
             .is_some_and(|ndf_id| target == ndf_id || target.starts_with(&format!("{ndf_id}-"))),
     }
+}
+
+fn boot_option_name_matches(expected: &str, actual: &str) -> bool {
+    actual == expected
+        || actual
+            .strip_prefix(expected)
+            .is_some_and(|suffix| suffix.starts_with(" - "))
 }
 
 pub struct Bmc {
@@ -405,7 +418,11 @@ impl Redfish for Bmc {
                 let (expected, actual) = self
                     .get_expected_and_actual_first_boot_option(boot_interface)
                     .await?;
-                if expected.is_none() || expected != actual {
+                if !matches!(
+                    (&expected, &actual),
+                    (Some(expected), Some(actual))
+                        if boot_option_name_matches(expected, actual)
+                ) {
                     diffs.push(MachineSetupDiff {
                         key: "boot_first".to_string(),
                         expected: expected.unwrap_or_else(|| "Not found".to_string()),
@@ -1122,7 +1139,7 @@ impl Redfish for Bmc {
                 .await?;
             let boot_order = self.get_boot_order().await?;
             for (idx, boot_option) in boot_order.iter().enumerate() {
-                if boot_option.display_name == expected_boot_option_name {
+                if boot_option_name_matches(&expected_boot_option_name, &boot_option.display_name) {
                     if idx == 0 {
                         // Dells will not generate a bios config job below if the boot orders already configured correctly
                         tracing::info!(
@@ -1130,6 +1147,14 @@ impl Redfish for Bmc {
                     );
                         return Ok(None);
                     }
+
+                    // Clear any committed-but-unapplied pending config first, as
+                    // the sibling BIOS-config writers do (machine_setup,
+                    // setup_serial_console, clear_tpm, change_uefi_password): on
+                    // Dell a staged pending config makes this PATCH fail with
+                    // SYS011 ("pending configuration values are already
+                    // committed").
+                    self.delete_job_queue().await?;
 
                     let url = format!("Systems/{}/Settings", self.s.system_id());
                     let body = HashMap::from([(
@@ -1328,7 +1353,10 @@ impl Redfish for Bmc {
             let (expected, actual) = self
                 .get_expected_and_actual_first_boot_option(boot_interface)
                 .await?;
-            Ok(expected.is_some() && expected == actual)
+            Ok(matches!(
+                (&expected, &actual),
+                (Some(expected), Some(actual)) if boot_option_name_matches(expected, actual)
+            ))
         })
     }
 
@@ -2474,18 +2502,21 @@ impl Bmc {
     /// `HttpDev1Interface` BIOS attribute and the first-boot-option check key on
     /// for a boot interface.
     ///
-    /// A [`crate::BootInterfaceRef::InterfaceId`] already *is* the slot id, so it
-    /// is used directly -- this is the stable identifier that survives a NicMode
-    /// flip (or any case where the `NetworkDeviceFunction`'s `Ethernet.MACAddress`
-    /// is empty): a by-MAC lookup can't find the NDF, but the partition id still
-    /// resolves it. A [`crate::BootInterfaceRef::Mac`] is resolved to the slot via
-    /// the `NetworkDeviceFunction`, matched by MAC. `None` is the zero-DPU case.
+    /// [`crate::BootInterfaceRef::InterfaceId`] and
+    /// [`crate::BootInterfaceRef::Pair`] already contain the slot id, so it is
+    /// used directly. This stable identifier survives a NicMode flip or any case
+    /// where the `NetworkDeviceFunction`'s `Ethernet.MACAddress` is empty.
+    /// [`crate::BootInterfaceRef::Mac`] is resolved to the slot through the
+    /// `NetworkDeviceFunction`, matched by MAC. `None` is the zero-DPU case.
     async fn nic_slot_for(
         &self,
         boot_interface: Option<crate::BootInterfaceRef<'_>>,
     ) -> Result<String, RedfishError> {
         Ok(match boot_interface {
-            Some(crate::BootInterfaceRef::InterfaceId(id)) => id.to_string(),
+            Some(crate::BootInterfaceRef::InterfaceId(id))
+            | Some(crate::BootInterfaceRef::Pair {
+                interface_id: id, ..
+            }) => id.to_string(),
             Some(crate::BootInterfaceRef::Mac(mac)) => self.dpu_nic_slot(&mac.to_string()).await?,
             None => String::new(),
         })
@@ -2756,9 +2787,9 @@ impl std::fmt::Display for XmlPcdata<'_> {
 
 #[cfg(test)]
 mod tests {
-    use super::{nw_dev_func_matches, XmlPcdata};
+    use super::{boot_option_name_matches, nw_dev_func_matches, Bmc, XmlPcdata};
     use crate::model::network_device_function::{Ethernet, NetworkDeviceFunction};
-    use crate::BootInterfaceRef;
+    use crate::{BootInterfaceRef, Endpoint, RedfishClientPool};
     use std::collections::HashMap;
 
     fn ndf_with(id: Option<&str>, mac: Option<&str>) -> NetworkDeviceFunction {
@@ -2816,6 +2847,88 @@ mod tests {
         let populated = ndf_with(Some("NIC.Slot.40-1-1"), Some("c4:70:bd:2c:3c:0a"));
         let mac: mac_address::MacAddress = "C4:70:BD:2C:3C:0A".parse().unwrap();
         assert!(nw_dev_func_matches(&populated, BootInterfaceRef::Mac(mac)));
+    }
+
+    #[test]
+    fn nw_dev_func_pair_matches_by_interface_id() {
+        let mac: mac_address::MacAddress = "C4:70:BD:2C:3C:0A".parse().unwrap();
+        let pair = BootInterfaceRef::Pair {
+            mac_address: mac,
+            interface_id: "NIC.Slot.40-1-1",
+        };
+
+        assert!(nw_dev_func_matches(
+            &ndf_with(Some("NIC.Slot.40-1-1"), None),
+            pair,
+        ));
+        assert!(nw_dev_func_matches(
+            &ndf_with(Some("NIC.Slot.40-1"), None),
+            pair,
+        ));
+    }
+
+    #[test]
+    fn nw_dev_func_pair_does_not_fall_back_to_mac() {
+        let mac: mac_address::MacAddress = "C4:70:BD:2C:3C:0A".parse().unwrap();
+        let pair = BootInterfaceRef::Pair {
+            mac_address: mac,
+            interface_id: "NIC.Slot.40-1-1",
+        };
+        let matching_mac_wrong_id = ndf_with(Some("NIC.Slot.7-1-1"), Some("c4:70:bd:2c:3c:0a"));
+
+        assert!(!nw_dev_func_matches(&matching_mac_wrong_id, pair));
+    }
+
+    #[tokio::test]
+    async fn nic_slot_for_pair_uses_interface_id_directly() {
+        let pool = RedfishClientPool::builder().build().unwrap();
+        let standard = pool
+            .create_standard_client(Endpoint::default())
+            .expect("test Redfish client should be constructed without a request");
+        let bmc = Bmc::new(*standard).unwrap();
+        let mac: mac_address::MacAddress = "C4:70:BD:2C:3C:0A".parse().unwrap();
+
+        let got = bmc
+            .nic_slot_for(Some(BootInterfaceRef::Pair {
+                mac_address: mac,
+                interface_id: "NIC.Slot.40-1-1",
+            }))
+            .await
+            .expect("pair should use its interface ID without querying the empty endpoint");
+
+        assert_eq!(got, "NIC.Slot.40-1-1");
+    }
+
+    #[test]
+    fn boot_option_name_matches_legacy_and_extended_names() {
+        let expected = "HTTP Device 1: NIC in Slot 4 Port 1 Partition 1";
+        let cases = [
+            (expected, true),
+            (
+                "HTTP Device 1: NIC in Slot 4 Port 1 Partition 1 - Nvidia Network Adapter - 00:11:22:33:44:55 - IPv4",
+                true,
+            ),
+            (
+                "HTTP Device 1: NIC in Slot 4 Port 1 Partition 10 - Nvidia Network Adapter - 00:11:22:33:44:55 - IPv4",
+                false,
+            ),
+            (
+                "HTTP Device 1: NIC in Slot 4 Port 2 Partition 1 - Nvidia Network Adapter - 00:11:22:33:44:55 - IPv4",
+                false,
+            ),
+            (
+                "HTTP Device 1: NIC in Slot 4 Port 1 Partition 1 unexpected suffix",
+                false,
+            ),
+        ];
+
+        for (actual, should_match) in cases {
+            assert_eq!(
+                boot_option_name_matches(expected, actual),
+                should_match,
+                "unexpected match result for {actual}"
+            );
+        }
     }
 
     // Mirrors the attribute-merge logic in machine_setup_oem so we can test it

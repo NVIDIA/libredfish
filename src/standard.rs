@@ -1319,6 +1319,9 @@ impl RedfishStandard {
             RedfishVendor::NvidiaGBx00 => {
                 Ok(Box::new(crate::nvidia_gbx00::Bmc::new(self.clone())?))
             }
+            RedfishVendor::VeraRubin => {
+                Ok(Box::new(crate::nvidia_vera_rubin::Bmc::new(self.clone())?))
+            }
             RedfishVendor::NvidiaGBSwitch => {
                 Ok(Box::new(crate::nvidia_gbswitch::Bmc::new(self.clone())?))
             }
@@ -1531,9 +1534,9 @@ impl RedfishStandard {
     pub async fn factory_reset_bios(&self) -> Result<(), RedfishError> {
         let url = format!("Systems/{}/Bios/Actions/Bios.ResetBios", self.system_id());
         self.client
-            .req::<(), ()>(Method::POST, &url, None, None, None, Vec::new())
+            .post(&url, HashMap::<String, String>::new())
             .await
-            .map(|_resp| Ok(()))?
+            .map(|_| ())
     }
 
     pub async fn get_account_by_id(

@@ -67,8 +67,9 @@ pub enum RedfishVendor {
     Supermicro,
     AMI, // Viking DGX H100
     Hpe,
-    NvidiaGH200,    // grace-hopper 200
+    NvidiaGH200, // grace-hopper 200
     NvidiaGBx00, // all Grace-Blackwell combinations 200, .. since openbmc fw and redfish schema are the same
+    VeraRubin,
     NvidiaGBSwitch, // GB NVLink switch
     P3809, // dummy for P3809, needs to be set to NvidiaGH200 or NvidiaGBSwitch based on chassis
     LiteOnPowerShelf,
@@ -108,6 +109,7 @@ impl ServiceRoot {
             }
             "nvidia" => match self.product.as_deref() {
                 Some("P3809") => RedfishVendor::P3809, // could be gh200 compute or nvswitch
+                Some("VR NVL72") => RedfishVendor::VeraRubin,
                 Some("GB200 NVL") | Some("GB BMC") => RedfishVendor::NvidiaGBx00,
                 _ => RedfishVendor::NvidiaDpu,
             },
@@ -117,6 +119,11 @@ impl ServiceRoot {
             "delta" => RedfishVendor::DeltaPowerShelf,
             _ => RedfishVendor::Unknown,
         })
+    }
+
+    /// Vera Rubin compute-tray host BMC.
+    pub fn is_vera_rubin(&self) -> bool {
+        self.vendor() == Some(RedfishVendor::VeraRubin)
     }
 
     /// Check if this system has an AMI-based BMC (indicated by "Ami" key in OEM field)
@@ -157,5 +164,16 @@ mod test {
             ..Default::default()
         };
         assert_eq!(result.vendor().unwrap(), RedfishVendor::NvidiaDpu);
+    }
+
+    #[test]
+    fn test_nvidia_vera_rubin_service_root() {
+        let result = ServiceRoot {
+            vendor: Some("NVIDIA".to_string()),
+            product: Some("VR NVL72".to_string()),
+            ..Default::default()
+        };
+        assert_eq!(result.vendor().unwrap(), RedfishVendor::VeraRubin);
+        assert!(result.is_vera_rubin());
     }
 }
