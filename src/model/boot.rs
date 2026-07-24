@@ -161,14 +161,34 @@ pub fn boot_order_entry_with_display_name(id: &str, display_name: &str) -> Strin
 
 /// Returns true when the BMC uses `Id: DisplayName` strings in `BootOrder`.
 pub fn boot_order_uses_display_name_suffix(entries: &[String]) -> bool {
-    entries.iter().any(|entry| entry.contains(": "))
+    entries
+        .iter()
+        .any(|entry| boot_order_entry_boot_option_id(entry) != entry.as_str())
+}
+
+/// Prepends a boot option to `BootOrder`, preserving Vera Rubin firmware entry format.
+pub fn boot_order_prepend_first(
+    boot_order: &[String],
+    target_id: &str,
+    target_display_name: &str,
+) -> Vec<String> {
+    let first_entry = if boot_order_uses_display_name_suffix(boot_order) {
+        boot_order_entry_with_display_name(target_id, target_display_name)
+    } else {
+        target_id.to_string()
+    };
+
+    let mut ordered = boot_order.to_vec();
+    ordered.retain(|entry| boot_order_entry_boot_option_id(entry) != target_id);
+    ordered.insert(0, first_entry);
+    ordered
 }
 
 #[cfg(test)]
 mod boot_order_entry_tests {
     use super::{
         boot_order_entry_boot_option_id, boot_order_entry_with_display_name,
-        boot_order_uses_display_name_suffix,
+        boot_order_prepend_first, boot_order_uses_display_name_suffix,
     };
 
     #[test]
@@ -198,5 +218,43 @@ mod boot_order_entry_tests {
             "Boot0019".to_string(),
             "Boot0010".to_string(),
         ]));
+    }
+
+    #[test]
+    fn boot_order_prepend_first_uses_id_colon_display_name_when_firmware_requires_it() {
+        let current = vec![
+            "Boot0010: UEFI HTTPv4 (MAC:AA)".to_string(),
+            "Boot0019: Ubuntu".to_string(),
+        ];
+
+        let ordered = boot_order_prepend_first(&current, "Boot0019", "UEFI");
+
+        assert_eq!(ordered[0], "Boot0019: UEFI");
+        assert_eq!(ordered.len(), 2);
+        assert_eq!(ordered[1], "Boot0010: UEFI HTTPv4 (MAC:AA)");
+    }
+
+    #[test]
+    fn boot_order_prepend_first_uses_bare_id_for_legacy_boot_order_format() {
+        let current = vec!["Boot0010".to_string(), "Boot0019".to_string()];
+
+        let ordered = boot_order_prepend_first(&current, "Boot0019", "UEFI");
+
+        assert_eq!(ordered[0], "Boot0019");
+        assert_eq!(ordered[1], "Boot0010");
+    }
+
+    #[test]
+    fn boot_order_prepend_first_replaces_existing_entry_for_same_boot_option_id() {
+        let current = vec![
+            "Boot0019: Ubuntu".to_string(),
+            "Boot0010: UEFI HTTPv4 (MAC:AA)".to_string(),
+        ];
+
+        let ordered = boot_order_prepend_first(&current, "Boot0019", "UEFI");
+
+        assert_eq!(ordered[0], "Boot0019: UEFI");
+        assert_eq!(ordered.len(), 2);
+        assert!(!ordered.contains(&"Boot0019: Ubuntu".to_string()));
     }
 }

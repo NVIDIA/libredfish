@@ -954,7 +954,7 @@ impl Redfish for Bmc {
     ) -> crate::RedfishFuture<'a, Result<crate::EthernetInterface, RedfishError>> {
         Box::pin(async move {
             Err(RedfishError::NotSupported(format!(
-                "GB200 doesn't have Systems EthernetInterface {id}"
+                "Vera Rubin doesn't have Systems EthernetInterface {id}"
             )))
         })
     }
@@ -1484,23 +1484,11 @@ impl Bmc {
             });
         };
 
-        let target_id = target.id.clone();
-        let uses_display_name_suffix =
-            crate::model::boot::boot_order_uses_display_name_suffix(&system.boot.boot_order);
-        let first_entry = if uses_display_name_suffix {
-            crate::model::boot::boot_order_entry_with_display_name(&target_id, &target.display_name)
-        } else {
-            target_id.clone()
-        };
-
-        // Prepend the found option to the front of the existing boot order
-        let mut ordered = system.boot.boot_order;
-        ordered.retain(|entry| {
-            crate::model::boot::boot_order_entry_boot_option_id(entry) != target_id.as_str()
-        });
-        ordered.insert(0, first_entry);
-
-        Ok(ordered)
+        Ok(crate::model::boot::boot_order_prepend_first(
+            &system.boot.boot_order,
+            &target.id,
+            &target.display_name,
+        ))
     }
 
     async fn get_system_event_log(&self) -> Result<Vec<LogEntry>, RedfishError> {
