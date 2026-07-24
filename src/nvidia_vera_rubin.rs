@@ -96,6 +96,12 @@ fn boot_order_entry_reference(entry: &str) -> &str {
     crate::model::boot::boot_order_entry_reference(entry)
 }
 
+fn dpu_http_boot_display_name_matches(display_name: &str, boot_option_name: &str) -> bool {
+    // Vera Rubin firmware can expose duplicate HTTP entries such as
+    // "UEFI HTTPv4 (MAC:…)" and "UEFI HTTPv4 (MAC:…) 2"; prefix match is ambiguous.
+    display_name == boot_option_name
+}
+
 fn promote_boot_order_entry_first(
     boot_order: &mut Vec<String>,
     target_reference: &str,
@@ -1129,7 +1135,9 @@ impl Redfish for Bmc {
                 .members;
             let target = boot_options
                 .iter()
-                .find(|option| option.display_name.starts_with(&boot_option_name))
+                .find(|option| {
+                    dpu_http_boot_display_name_matches(&option.display_name, &boot_option_name)
+                })
                 .ok_or_else(|| RedfishError::GenericError {
                     error: format!("Could not find boot option matching {boot_option_name}"),
                 })?;
@@ -1445,7 +1453,7 @@ impl Bmc {
         for entry in &boot_order {
             let reference = boot_order_entry_reference(entry.as_str());
             let option = self.s.get_boot_option(reference).await?;
-            if option.display_name.starts_with(&boot_option_name) {
+            if dpu_http_boot_display_name_matches(&option.display_name, &boot_option_name) {
                 expected_first_boot_option = Some(option.display_name);
                 break;
             }
@@ -1595,6 +1603,19 @@ impl UpdateParameters {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn dpu_http_boot_display_name_requires_exact_match() {
+        let boot_option_name = "UEFI HTTPv4 (MAC:F4204D494ECC)";
+        assert!(dpu_http_boot_display_name_matches(
+            "UEFI HTTPv4 (MAC:F4204D494ECC)",
+            boot_option_name,
+        ));
+        assert!(!dpu_http_boot_display_name_matches(
+            "UEFI HTTPv4 (MAC:F4204D494ECC) 2",
+            boot_option_name,
+        ));
+    }
 
     #[test]
     fn boot_order_entry_reference_strips_display_name_suffix() {
