@@ -155,3 +155,24 @@ pub fn boot_order_entry_reference(entry: &str) -> &str {
         .split_once(": ")
         .map_or(entry, |(reference, _)| reference)
 }
+
+/// Moves the entry for `target_reference` to the front of `boot_order` while
+/// preserving the exact string reported by the BMC.
+///
+/// Returns `false` when the reference is not present.
+pub fn promote_boot_order_entry_first(
+    boot_order: &mut Vec<String>,
+    target_reference: &str,
+) -> bool {
+    let Some(target_index) = boot_order
+        .iter()
+        .position(|entry| boot_order_entry_reference(entry) == target_reference)
+    else {
+        return false;
+    };
+
+    let target_entry = boot_order.remove(target_index);
+    boot_order.retain(|entry| boot_order_entry_reference(entry) != target_reference);
+    boot_order.insert(0, target_entry);
+    true
+}

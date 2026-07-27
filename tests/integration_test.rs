@@ -491,6 +491,21 @@ async fn run_integration_test(
         redfish.boot_first(libredfish::Boot::HardDisk).await?;
     }
 
+    if vendor_dir == "nvidia_gh200" {
+        let target = libredfish::BootInterfaceRef::Mac(mac_address::MacAddress::new([
+            0x58, 0xA2, 0xE1, 0xBB, 0xB1, 0x0F,
+        ]));
+        assert!(redfish.is_bios_setup(Some(target)).await?);
+        assert!(!redfish.is_boot_order_setup(target).await?);
+        assert!(redfish
+            .machine_setup_status(Some(target))
+            .await?
+            .diffs
+            .iter()
+            .any(|diff| diff.key == "boot_first"));
+        redfish.set_boot_order_dpu_first(target).await?;
+    }
+
     // Exercise set_boot_override on vendors that support the bare (no URI)
     // override variant via the standard Redfish Boot block PATCH. The mockup
     // doesn't validate the PATCH body -- this just verifies the call path

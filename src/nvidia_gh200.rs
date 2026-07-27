@@ -13,7 +13,7 @@ use crate::model::update_service::{ComponentType, TransferProtocolType, UpdateSe
 use crate::Boot::UefiHttp;
 use crate::{
     model::{
-        boot::{BootOverride, BootSourceOverrideEnabled, BootSourceOverrideTarget},
+        boot::{self, BootOverride, BootSourceOverrideEnabled, BootSourceOverrideTarget},
         chassis::{Assembly, NetworkAdapter},
         sel::{LogEntry, LogEntryCollection},
         service_root::ServiceRoot,
@@ -26,6 +26,68 @@ use crate::{
 use crate::{EnabledDisabled, JobState, MachineSetupDiff, MachineSetupStatus, RoleId};
 
 const UEFI_PASSWORD_NAME: &str = "AdminPassword";
+
+fn secure_boot_diffs(secure_boot_enabled: bool) -> Vec<MachineSetupDiff> {
+    let mut diffs = Vec::new();
+
+    if secure_boot_enabled {
+        diffs.push(MachineSetupDiff {
+            key: "SecureBoot".to_string(),
+            expected: "false".to_string(),
+            actual: "true".to_string(),
+        });
+    }
+
+    diffs
+}
+
+fn dpu_http_boot_option_name(boot_interface_mac: &str) -> String {
+    let mac = boot_interface_mac.replace(':', "").to_uppercase();
+    format!("{} (MAC:{mac})", BootOptionName::Http.to_string())
+}
+
+fn find_dpu_http_boot_option<'a>(
+    boot_options: &'a [BootOption],
+    boot_interface_mac: &str,
+) -> Option<&'a BootOption> {
+    let expected = dpu_http_boot_option_name(boot_interface_mac);
+    boot_options
+        .iter()
+        .find(|option| option.display_name.eq_ignore_ascii_case(&expected))
+}
+
+fn compare_boot_order(
+    boot_order: &[String],
+    boot_options: &[BootOption],
+    boot_interface_mac: &str,
+) -> Vec<MachineSetupDiff> {
+    let target = find_dpu_http_boot_option(boot_options, boot_interface_mac);
+    let actual_first_reference = boot_order
+        .first()
+        .map(|entry| boot::boot_order_entry_reference(entry));
+    if target
+        .is_some_and(|option| actual_first_reference == Some(option.boot_option_reference.as_str()))
+    {
+        return Vec::new();
+    }
+
+    let expected = target
+        .map(|option| option.display_name.clone())
+        .unwrap_or_else(|| "Not found".to_string());
+    let actual = actual_first_reference
+        .and_then(|reference| {
+            boot_options
+                .iter()
+                .find(|option| option.boot_option_reference == reference)
+        })
+        .map(|option| option.display_name.clone())
+        .unwrap_or_else(|| "Not found".to_string());
+    vec![MachineSetupDiff {
+        key: "boot_first".to_string(),
+        expected,
+        actual,
+    }]
+}
 
 pub struct Bmc {
     s: RedfishStandard,
@@ -245,18 +307,14 @@ impl Redfish for Bmc {
 
     fn machine_setup_status<'a>(
         &'a self,
-        _boot_interface: Option<crate::BootInterfaceRef<'a>>,
+        boot_interface: Option<crate::BootInterfaceRef<'a>>,
     ) -> crate::RedfishFuture<'a, Result<MachineSetupStatus, RedfishError>> {
         Box::pin(async move {
-            let mut diffs = vec![];
-
             let sb = self.get_secure_boot().await?;
-            if sb.secure_boot_enable.unwrap_or(false) {
-                diffs.push(MachineSetupDiff {
-                    key: "SecureBoot".to_string(),
-                    expected: "false".to_string(),
-                    actual: "true".to_string(),
-                });
+            let mut diffs = secure_boot_diffs(sb.secure_boot_enable.unwrap_or(false));
+            if let Some(boot_interface) = boot_interface {
+                let mac = crate::resolve_boot_interface_mac(self, boot_interface).await?;
+                diffs.extend(self.boot_order_diffs(&mac).await?);
             }
 
             Ok(MachineSetupStatus {
@@ -747,21 +805,30 @@ impl Redfish for Bmc {
 
     fn set_boot_order_dpu_first<'a>(
         &'a self,
-        _boot_interface: crate::BootInterfaceRef<'a>,
+        boot_interface: crate::BootInterfaceRef<'a>,
     ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
         Box::pin(async move {
-            // TODO: If a mac_address is given
-            // read all the boot options
-            // look for "DisplayName" of "UEFI HTTPv4 (MAC:58A2E1BBB10F)"
-            // get it's Id (e.g. "Boot0020")
-            // Set that first
-            //
-            // If no MAC is given there no way for us to locate the Bluefield on GH200
-            // because it doens't have NetworkAdapters or PCIeDevices trees
-
-            Err(RedfishError::NotSupported(
-                "set_dpu_first_boot_order".to_string(),
-            ))
+            let mac = crate::resolve_boot_interface_mac(self, boot_interface).await?;
+            let (system, boot_options) = self.get_system_and_boot_options().await?;
+            let target = find_dpu_http_boot_option(&boot_options, &mac).ok_or_else(|| {
+                RedfishError::MissingBootOption(format!(
+                    "No boot option matching {}",
+                    dpu_http_boot_option_name(&mac)
+                ))
+            })?;
+            let mut boot_order = system.boot.boot_order;
+            let target_reference = &target.boot_option_reference;
+            if boot_order
+                .first()
+                .is_some_and(|entry| boot::boot_order_entry_reference(entry) == target_reference)
+            {
+                return Ok(None);
+            }
+            if !boot::promote_boot_order_entry_first(&mut boot_order, target_reference) {
+                boot_order.insert(0, target_reference.clone());
+            }
+            self.change_boot_order(boot_order).await?;
+            Ok(None)
         })
     }
 
@@ -889,12 +956,11 @@ impl Redfish for Bmc {
 
     fn is_boot_order_setup<'a>(
         &'a self,
-        _boot_interface: crate::BootInterfaceRef<'a>,
+        boot_interface: crate::BootInterfaceRef<'a>,
     ) -> crate::RedfishFuture<'a, Result<bool, RedfishError>> {
         Box::pin(async move {
-            Err(RedfishError::NotSupported(
-                "not populated for GH200".to_string(),
-            ))
+            let mac = crate::resolve_boot_interface_mac(self, boot_interface).await?;
+            Ok(self.boot_order_diffs(&mac).await?.is_empty())
         })
     }
 
@@ -999,9 +1065,8 @@ impl Redfish for Bmc {
         _boot_interface: Option<crate::BootInterfaceRef<'a>>,
     ) -> crate::RedfishFuture<'a, Result<bool, RedfishError>> {
         Box::pin(async move {
-            Err(RedfishError::NotSupported(
-                "not populated for GH200".to_string(),
-            ))
+            let secure_boot = self.get_secure_boot().await?;
+            Ok(secure_boot_diffs(secure_boot.secure_boot_enable.unwrap_or(false)).is_empty())
         })
     }
 
@@ -1033,6 +1098,39 @@ impl Redfish for Bmc {
 }
 
 impl Bmc {
+    async fn get_system_and_boot_options(
+        &self,
+    ) -> Result<(ComputerSystem, Vec<BootOption>), RedfishError> {
+        let system = self.s.get_system().await?;
+        let boot_options_id =
+            system
+                .boot
+                .boot_options
+                .clone()
+                .ok_or_else(|| RedfishError::MissingKey {
+                    key: "boot.boot_options".to_string(),
+                    url: system.odata.odata_id.clone(),
+                })?;
+        let boot_options = self
+            .get_collection(boot_options_id)
+            .await
+            .and_then(|collection| collection.try_get::<BootOption>())?
+            .members;
+        Ok((system, boot_options))
+    }
+
+    async fn boot_order_diffs(
+        &self,
+        boot_interface_mac: &str,
+    ) -> Result<Vec<MachineSetupDiff>, RedfishError> {
+        let (system, boot_options) = self.get_system_and_boot_options().await?;
+        Ok(compare_boot_order(
+            &system.boot.boot_order,
+            &boot_options,
+            boot_interface_mac,
+        ))
+    }
+
     // name: The name of the device you want to make the first boot choice.
     async fn set_boot_order(&self, name: BootOptionName) -> Result<(), RedfishError> {
         let boot_array = self
@@ -1080,5 +1178,70 @@ impl Bmc {
             self.s.client.get(&url).await?;
         let log_entries = log_entry_collection.members;
         Ok(log_entries)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn setup_without_boot_target_preserves_secure_boot_status() {
+        assert!(secure_boot_diffs(false).is_empty());
+
+        let diffs = secure_boot_diffs(true);
+        assert_eq!(diffs.len(), 1);
+        assert_eq!(diffs[0].key, "SecureBoot");
+    }
+
+    fn boot_option(reference: &str, display_name: &str) -> BootOption {
+        BootOption {
+            odata: Default::default(),
+            alias: None,
+            description: None,
+            boot_option_enabled: Some(true),
+            boot_option_reference: reference.to_string(),
+            display_name: display_name.to_string(),
+            id: reference.to_string(),
+            name: display_name.to_string(),
+            uefi_device_path: None,
+        }
+    }
+
+    #[test]
+    fn exact_http_boot_option_is_verified_by_mac_and_reference() {
+        let target_name = "UEFI HTTPv4 (MAC:58A2E1BBB10F)";
+        let options = vec![
+            boot_option("Boot0001", "UEFI Hard Drive"),
+            boot_option("Boot0020", target_name),
+        ];
+
+        let diffs = compare_boot_order(
+            &["Boot0020: Selected network adapter".to_string()],
+            &options,
+            "58:a2:e1:bb:b1:0f",
+        );
+
+        assert!(diffs.is_empty());
+    }
+
+    #[test]
+    fn different_first_boot_option_is_reported() {
+        let target_name = "UEFI HTTPv4 (MAC:58A2E1BBB10F)";
+        let options = vec![
+            boot_option("Boot0001", "UEFI Hard Drive"),
+            boot_option("Boot0020", target_name),
+        ];
+
+        let diffs = compare_boot_order(
+            &["Boot0001".to_string(), "Boot0020".to_string()],
+            &options,
+            "58:A2:E1:BB:B1:0F",
+        );
+
+        assert_eq!(diffs.len(), 1);
+        assert_eq!(diffs[0].key, "boot_first");
+        assert_eq!(diffs[0].expected, target_name);
+        assert_eq!(diffs[0].actual, "UEFI Hard Drive");
     }
 }

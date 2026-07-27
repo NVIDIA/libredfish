@@ -74,6 +74,93 @@ const MIN_BMC_FW_IPMI_HOST_IFACE: &str = "01.05.01";
 const HARD_DISK: &str = "UEFI Hard Disk";
 const NETWORK: &str = "UEFI Network";
 
+fn usable_standard_boot_order(boot_order: Vec<String>) -> Option<Vec<String>> {
+    (!boot_order.is_empty()).then_some(boot_order)
+}
+
+fn is_supported_uefi_http_boot_option(display_name: &str) -> bool {
+    display_name.contains(MELLANOX_UEFI_HTTP_IPV4) || display_name.contains(NVIDIA_UEFI_HTTP_IPV4)
+}
+
+fn http_boot_option_matches_mac(display_name: &str, boot_interface_mac: &str) -> bool {
+    is_supported_uefi_http_boot_option(display_name)
+        && display_name
+            .to_ascii_uppercase()
+            .contains(&boot_interface_mac.to_ascii_uppercase())
+}
+
+fn standard_boot_order_diff(
+    boot_order: &[String],
+    boot_options: &[BootOption],
+    boot_interface_mac: &str,
+) -> Option<MachineSetupDiff> {
+    let target = boot_options
+        .iter()
+        .find(|option| http_boot_option_matches_mac(&option.display_name, boot_interface_mac));
+    let actual_reference = boot_order
+        .first()
+        .map(|entry| boot::boot_order_entry_reference(entry));
+
+    if target.is_some_and(|option| actual_reference == Some(option.boot_option_reference.as_str()))
+    {
+        return None;
+    }
+
+    let expected = target
+        .map(|option| option.display_name.clone())
+        .unwrap_or_else(|| "Not found".to_string());
+    let actual = actual_reference
+        .and_then(|reference| {
+            boot_options
+                .iter()
+                .find(|option| option.boot_option_reference == reference)
+        })
+        .map(|option| option.display_name.clone())
+        .unwrap_or_else(|| "Not found".to_string());
+
+    Some(MachineSetupDiff {
+        key: "boot_first".to_string(),
+        expected,
+        actual,
+    })
+}
+
+fn fixed_boot_order_diff(
+    fixed_boot_order: &[String],
+    uefi_network: &[String],
+    boot_interface_mac: &str,
+) -> Option<MachineSetupDiff> {
+    let expected = uefi_network
+        .iter()
+        .find(|entry| http_boot_option_matches_mac(entry, boot_interface_mac))
+        .cloned();
+    let actual = fixed_boot_order.first().map(|entry| {
+        let network_category = entry
+            .strip_prefix(NETWORK)
+            .is_some_and(|suffix| suffix.is_empty() || suffix.starts_with(':'));
+        if network_category {
+            uefi_network
+                .first()
+                .cloned()
+                .unwrap_or_else(|| entry.clone())
+        } else if let Some((_, option)) = entry.split_once(':') {
+            option.trim().to_string()
+        } else {
+            entry.clone()
+        }
+    });
+
+    if expected.is_some() && expected == actual {
+        return None;
+    }
+
+    Some(MachineSetupDiff {
+        key: "boot_first".to_string(),
+        expected: expected.unwrap_or_else(|| "Not found".to_string()),
+        actual: actual.unwrap_or_else(|| "Not found".to_string()),
+    })
+}
+
 pub struct Bmc {
     s: RedfishStandard,
 }
@@ -270,14 +357,8 @@ impl Redfish for Bmc {
 
             // Check the first boot option
             if let Some(mac) = boot_interface_mac {
-                let (expected, actual) =
-                    self.get_expected_and_actual_first_boot_option(mac).await?;
-                if expected.is_none() || expected != actual {
-                    diffs.push(MachineSetupDiff {
-                        key: "boot_first".to_string(),
-                        expected: expected.unwrap_or_else(|| "Not found".to_string()),
-                        actual: actual.unwrap_or_else(|| "Not found".to_string()),
-                    });
+                if let Some(diff) = self.boot_order_diff(mac).await? {
+                    diffs.push(diff);
                 }
             }
 
@@ -904,8 +985,12 @@ impl Redfish for Bmc {
         Box::pin(async move {
             let mac_address = crate::resolve_boot_interface_mac(self, boot_interface).await?;
             let mac_address = mac_address.as_str();
-            match self.set_mellanox_first(mac_address).await {
-                Ok(_) => return Ok(None),
+            match self
+                .try_set_standard_boot_order_dpu_first(mac_address)
+                .await
+            {
+                Ok(true) => return Ok(None),
+                Ok(false) => {}
                 Err(RedfishError::HTTPErrorCode {
                     status_code,
                     response_body,
@@ -920,7 +1005,7 @@ impl Redfish for Bmc {
                 Err(e) => return Err(e),
             }
 
-            // Some supermicro models don't support the set_mellanox_first method, so we fall back to this method
+            // Some Supermicro models only expose the OEM fixed boot order.
             let mut fbo = self.get_boot_order().await?;
 
             // The network name is not consistent because it includes the interface name.
@@ -950,12 +1035,7 @@ impl Redfish for Bmc {
             let Some(pos) = fbo
                 .uefi_network
                 .iter()
-                .position(|s| s.contains("UEFI HTTP IPv4 Mellanox") && s.contains(mac_address))
-                .or_else(|| {
-                    fbo.uefi_network.iter().position(|s| {
-                        s.contains("UEFI HTTP IPv4 Nvidia") && s.contains(mac_address)
-                    })
-                })
+                .position(|entry| http_boot_option_matches_mac(entry, mac_address))
             else {
                 return Err(RedfishError::NotSupported(
                 format!("No match for Mellanox/Nvidia HTTP adapter with MAC address {} in network boot order", mac_address)
@@ -1111,8 +1191,7 @@ impl Redfish for Bmc {
     ) -> crate::RedfishFuture<'a, Result<bool, RedfishError>> {
         Box::pin(async move {
             let mac = crate::resolve_boot_interface_mac(self, boot_interface).await?;
-            let (expected, actual) = self.get_expected_and_actual_first_boot_option(&mac).await?;
-            Ok(expected.is_some() && expected == actual)
+            Ok(self.boot_order_diff(&mac).await?.is_none())
         })
     }
 
@@ -1231,37 +1310,29 @@ impl Bmc {
         Ok(diffs)
     }
 
-    async fn get_expected_and_actual_first_boot_option(
+    async fn boot_order_diff(
         &self,
         boot_interface_mac: &str,
-    ) -> Result<(Option<String>, Option<String>), RedfishError> {
+    ) -> Result<Option<MachineSetupDiff>, RedfishError> {
         // Try using standard BootOptions first
         match self.s.get_boot_options().await {
             Ok(all) => {
-                // Get actual first boot option
-                let actual_first_boot_option = if let Some(first) = all.members.first() {
-                    let id = first.odata_id_get()?;
-                    Some(self.s.get_boot_option(id).await?.display_name)
-                } else {
-                    None
-                };
-
-                // Find expected boot option
-                let mut expected_first_boot_option = None;
-                for b in &all.members {
-                    let id = b.odata_id_get()?;
-                    let boot_option = self.s.get_boot_option(id).await?;
-
-                    if (boot_option.display_name.contains(MELLANOX_UEFI_HTTP_IPV4)
-                        || boot_option.display_name.contains(NVIDIA_UEFI_HTTP_IPV4))
-                        && boot_option.display_name.contains(boot_interface_mac)
-                    {
-                        expected_first_boot_option = Some(boot_option.display_name);
-                        break;
-                    }
+                let system = self.s.get_system().await?;
+                if system.boot.boot_order.is_empty() {
+                    return self.load_fixed_boot_order_diff(boot_interface_mac).await;
                 }
 
-                Ok((expected_first_boot_option, actual_first_boot_option))
+                let mut boot_options = Vec::with_capacity(all.members.len());
+                for member in &all.members {
+                    let id = member.odata_id_get()?;
+                    boot_options.push(self.s.get_boot_option(id).await?);
+                }
+
+                Ok(standard_boot_order_diff(
+                    &system.boot.boot_order,
+                    &boot_options,
+                    boot_interface_mac,
+                ))
             }
             Err(RedfishError::HTTPErrorCode {
                 status_code,
@@ -1272,29 +1343,22 @@ impl Bmc {
                 && response_body.contains("BootOrder") =>
             {
                 // Fall back to FixedBootOrder for platforms that don't support standard BootOptions
-                let fbo = self.get_boot_order().await?;
-
-                // Get actual first boot option (strip prefix like "UEFI Network:", "UEFI Hard Disk:", etc.)
-                let actual_first_boot_option = fbo.fixed_boot_order.first().and_then(|entry| {
-                    // Find the first colon and take everything after it
-                    entry.find(':').map(|idx| entry[idx + 1..].to_string())
-                });
-
-                // Find expected boot option in UEFINetwork list
-                let expected_first_boot_option = fbo
-                    .uefi_network
-                    .iter()
-                    .find(|entry| {
-                        (entry.contains(MELLANOX_UEFI_HTTP_IPV4)
-                            || entry.contains(NVIDIA_UEFI_HTTP_IPV4))
-                            && entry.contains(boot_interface_mac)
-                    })
-                    .cloned();
-
-                Ok((expected_first_boot_option, actual_first_boot_option))
+                self.load_fixed_boot_order_diff(boot_interface_mac).await
             }
             Err(e) => Err(e),
         }
+    }
+
+    async fn load_fixed_boot_order_diff(
+        &self,
+        boot_interface_mac: &str,
+    ) -> Result<Option<MachineSetupDiff>, RedfishError> {
+        let fbo = self.get_boot_order().await?;
+        Ok(fixed_boot_order_diff(
+            &fbo.fixed_boot_order,
+            &fbo.uefi_network,
+            boot_interface_mac,
+        ))
     }
 
     async fn machine_setup_attrs(&self) -> Result<Vec<(String, serde_json::Value)>, RedfishError> {
@@ -1601,10 +1665,11 @@ impl Bmc {
             let Some(pos) = fbo
                 .uefi_network
                 .iter()
-                .position(|s| s.contains("UEFI HTTP IPv4 Mellanox"))
+                .position(|entry| is_supported_uefi_http_boot_option(entry))
             else {
                 return Err(RedfishError::NotSupported(
-                    "No match for 'UEFI HTTP IPv4 Mellanox' in network boot order".to_string(),
+                    "No match for a Mellanox/NVIDIA UEFI HTTP IPv4 adapter in network boot order"
+                        .to_string(),
                 ));
             };
             fbo.uefi_network.swap(0, pos);
@@ -1634,40 +1699,50 @@ impl Bmc {
         Ok(body)
     }
 
-    /// Set the DPU to be our first netboot device.
+    /// Try to select the DPU through the standard Redfish boot order.
     ///
-    /// Callers should usually ignore the error and continue. The HTTP adapter
-    /// will only appear after IPv4HTTPSupport bios setting is enabled and the host rebooted.
-    /// If the Mellanox adapter is not first everything still works, but boot takes a little longer
-    /// because it tries the other adapters too.
-    async fn set_mellanox_first(&self, boot_interface: &str) -> Result<(), RedfishError> {
-        let mut with_name_match = None; // the ID of the option matching with_name
-        let mut ordered = Vec::new(); // the final boot options
+    /// An empty standard boot order selects the OEM fixed-order fallback.
+    async fn try_set_standard_boot_order_dpu_first(
+        &self,
+        boot_interface: &str,
+    ) -> Result<bool, RedfishError> {
+        let system = self.s.get_system().await?;
+        let Some(mut boot_order) = usable_standard_boot_order(system.boot.boot_order) else {
+            return Ok(false);
+        };
+
         let all = self.s.get_boot_options().await?;
+        let mut target_reference = None;
         for b in all.members {
             let id = b.odata_id_get()?;
             let boot_option = self.s.get_boot_option(id).await?;
 
-            if (boot_option.display_name.contains(MELLANOX_UEFI_HTTP_IPV4)
-                || boot_option.display_name.contains(NVIDIA_UEFI_HTTP_IPV4))
-                && boot_option.display_name.contains(boot_interface)
-            {
+            if http_boot_option_matches_mac(&boot_option.display_name, boot_interface) {
                 // Here are the patterns we have seen so far:
                 // UEFI HTTP IPv4 Mellanox Network Adapter - A0:88:C2:EA:84:D0(MAC:A088C2EA84D0)
                 // UEFI HTTP IPv4 Nvidia Network Adapter - C4:70:BD:F0:40:AA - C470BDF040AA"
-                with_name_match = Some(boot_option.id);
-            } else {
-                ordered.push(boot_option.id);
+                target_reference = Some(boot_option.boot_option_reference);
+                break;
             }
         }
-        if with_name_match.is_none() {
+        let Some(target_reference) = target_reference else {
             // This happens if IPv4HTTPSupport#00F7 is disabled in the bios
             return Err(RedfishError::NotSupported(
                 "No match for Mellanox HTTP adapter boot".to_string(),
             ));
+        };
+
+        if boot_order
+            .first()
+            .is_some_and(|entry| boot::boot_order_entry_reference(entry) == target_reference)
+        {
+            return Ok(true);
         }
-        ordered.insert(0, with_name_match.unwrap());
-        self.change_boot_order(ordered).await
+        if !boot::promote_boot_order_entry_first(&mut boot_order, &target_reference) {
+            boot_order.insert(0, target_reference);
+        }
+        self.change_boot_order(boot_order).await?;
+        Ok(true)
     }
 
     // BIOS attribute names by their canonical name.
@@ -1801,6 +1876,124 @@ impl UpdateParameters {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn boot_option(reference: &str, display_name: &str) -> BootOption {
+        BootOption {
+            odata: Default::default(),
+            alias: None,
+            description: None,
+            boot_option_enabled: Some(true),
+            boot_option_reference: reference.to_string(),
+            display_name: display_name.to_string(),
+            id: reference.to_string(),
+            name: display_name.to_string(),
+            uefi_device_path: None,
+        }
+    }
+
+    #[test]
+    fn standard_boot_verification_uses_system_boot_order_not_collection_order() {
+        let target = format!("{NVIDIA_UEFI_HTTP_IPV4} - B8:E9:24:17:6D:72 (MAC:B8E924176D72)");
+        let disk = "UEFI Hard Disk";
+        let options = vec![
+            boot_option("Boot0001", &target),
+            boot_option("Boot0002", disk),
+        ];
+
+        let diff = standard_boot_order_diff(
+            &["Boot0002".to_string(), "Boot0001".to_string()],
+            &options,
+            "b8:e9:24:17:6d:72",
+        )
+        .expect("disk is first");
+
+        assert_eq!(diff.expected, target);
+        assert_eq!(diff.actual, disk);
+    }
+
+    #[test]
+    fn supported_uefi_http_boot_options_include_mellanox_and_nvidia_names() {
+        for display_name in [MELLANOX_UEFI_HTTP_IPV4, NVIDIA_UEFI_HTTP_IPV4] {
+            assert!(is_supported_uefi_http_boot_option(display_name));
+        }
+        assert!(!is_supported_uefi_http_boot_option(
+            "UEFI HTTP IPv4 Intel Network Adapter"
+        ));
+    }
+
+    #[test]
+    fn standard_boot_verification_resolves_decorated_boot_order_reference() {
+        let target = format!("{MELLANOX_UEFI_HTTP_IPV4} - B8:E9:24:17:6D:72 (MAC:B8E924176D72)");
+        let options = vec![
+            boot_option("Boot0002", "UEFI Hard Disk"),
+            boot_option("Boot0001", &target),
+        ];
+
+        let diff = standard_boot_order_diff(
+            &["Boot0001: Selected network adapter".to_string()],
+            &options,
+            "B8:E9:24:17:6D:72",
+        );
+
+        assert!(diff.is_none());
+    }
+
+    #[test]
+    fn standard_boot_verification_compares_references_not_display_names() {
+        let target = format!("{MELLANOX_UEFI_HTTP_IPV4} - B8:E9:24:17:6D:72 (MAC:B8E924176D72)");
+        let options = vec![
+            boot_option("Boot0001", &target),
+            boot_option("Boot0002", &target),
+        ];
+
+        let diff = standard_boot_order_diff(
+            &["Boot0002".to_string(), "Boot0001".to_string()],
+            &options,
+            "B8:E9:24:17:6D:72",
+        );
+
+        assert!(diff.is_some());
+    }
+
+    #[test]
+    fn fixed_boot_verification_resolves_network_category_and_prefixed_entry() {
+        let target = format!("{NVIDIA_UEFI_HTTP_IPV4} - B8:E9:24:17:6D:72 (MAC:B8E924176D72)");
+        let uefi_network = vec![target.clone()];
+
+        for fixed_order in [
+            vec![NETWORK.to_string()],
+            vec![format!("{NETWORK}:{target}")],
+        ] {
+            let diff = fixed_boot_order_diff(&fixed_order, &uefi_network, "b8:e9:24:17:6d:72");
+            assert!(diff.is_none(), "unexpected diff for {fixed_order:?}");
+        }
+    }
+
+    #[test]
+    fn empty_standard_boot_order_is_not_usable() {
+        assert!(usable_standard_boot_order(Vec::new()).is_none());
+    }
+
+    #[test]
+    fn fixed_boot_verification_uses_selected_network_device_not_category_suffix() {
+        let target = format!("{NVIDIA_UEFI_HTTP_IPV4} - B8:E9:24:17:6D:72 (MAC:B8E924176D72)");
+        let other = format!("{NVIDIA_UEFI_HTTP_IPV4} - B8:E9:24:17:6D:73 (MAC:B8E924176D73)");
+
+        let diff = fixed_boot_order_diff(
+            &[format!("{NETWORK}:{other}")],
+            &[target.clone(), other.clone()],
+            "b8:e9:24:17:6d:72",
+        );
+        assert!(diff.is_none());
+
+        let diff = fixed_boot_order_diff(
+            &[format!("{NETWORK}:{target}")],
+            &[other.clone(), target],
+            "b8:e9:24:17:6d:72",
+        )
+        .expect("a different network device is selected");
+        assert_eq!(diff.actual, other);
+    }
 
     #[test]
     fn identifies_mgx_c2_processor_modules() {
