@@ -106,16 +106,13 @@ fn promote_boot_order_entry_first(
     boot_order: &mut Vec<String>,
     target_reference: &str,
 ) -> Result<(), RedfishError> {
-    let target_index = boot_order
-        .iter()
-        .position(|entry| boot_order_entry_reference(entry) == target_reference)
-        .ok_or_else(|| RedfishError::GenericError {
+    if crate::model::boot::promote_boot_order_entry_first(boot_order, target_reference) {
+        Ok(())
+    } else {
+        Err(RedfishError::GenericError {
             error: format!("Boot option {target_reference} is not present in BootOrder"),
-        })?;
-    // Preserve the exact entry returned by Vera Rubin firmware.
-    let target_entry = boot_order.remove(target_index);
-    boot_order.insert(0, target_entry);
-    Ok(())
+        })
+    }
 }
 
 impl BootOptionMatchField {

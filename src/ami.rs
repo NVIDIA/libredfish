@@ -28,7 +28,7 @@ use crate::{
     model::{
         account_service::ManagerAccount,
         boot::{
-            BootOverride, BootSourceOverrideEnabled, BootSourceOverrideMode,
+            self, BootOverride, BootSourceOverrideEnabled, BootSourceOverrideMode,
             BootSourceOverrideTarget,
         },
         certificate::Certificate,
@@ -75,6 +75,82 @@ fn lockdown_status_from(message: String, is_locked: bool, is_unlocked: bool) -> 
             StatusInternal::Partial
         },
     }
+}
+
+fn is_target_or_network_boot_option(option: &BootOption, target_reference: &str) -> bool {
+    option.boot_option_reference == target_reference
+        || matches!(option.alias.as_deref(), Some("Pxe" | "UefiHttp"))
+}
+
+fn find_boot_option_for_mac<'a>(
+    boot_options: &'a [BootOption],
+    boot_interface_mac: &str,
+) -> Option<&'a BootOption> {
+    let mac = boot_interface_mac.to_uppercase();
+    boot_options.iter().find(|option| {
+        let display = option.display_name.to_uppercase();
+        display.contains("HTTP") && display.contains("IPV4") && display.contains(&mac)
+    })
+}
+
+fn compare_boot_order(
+    vendor: Option<RedfishVendor>,
+    boot_order: &[String],
+    boot_options: &[BootOption],
+    boot_interface_mac: &str,
+) -> Vec<MachineSetupDiff> {
+    let mut diffs = Vec::new();
+    let target = find_boot_option_for_mac(boot_options, boot_interface_mac);
+    let actual_first_reference = boot_order
+        .first()
+        .map(|entry| boot::boot_order_entry_reference(entry));
+
+    let target_is_first = target.is_some_and(|option| {
+        actual_first_reference == Some(option.boot_option_reference.as_str())
+    });
+    if !target_is_first {
+        let expected = target
+            .map(|option| option.display_name.clone())
+            .unwrap_or_else(|| "Not found".to_string());
+        let actual = actual_first_reference
+            .and_then(|reference| {
+                boot_options
+                    .iter()
+                    .find(|option| option.boot_option_reference == reference)
+            })
+            .map(|option| option.display_name.clone())
+            .unwrap_or_else(|| "Not found".to_string());
+        diffs.push(MachineSetupDiff {
+            key: "boot_first".to_string(),
+            expected,
+            actual,
+        });
+    }
+
+    if vendor != Some(RedfishVendor::LenovoGB300) {
+        return diffs;
+    }
+    let Some(target) = target else {
+        return diffs;
+    };
+    for option in boot_options
+        .iter()
+        .filter(|option| is_target_or_network_boot_option(option, &target.boot_option_reference))
+    {
+        let expected = option.boot_option_reference == target.boot_option_reference;
+        if option.boot_option_enabled != Some(expected) {
+            diffs.push(MachineSetupDiff {
+                key: format!("BootOptions/{}/BootOptionEnabled", option.id),
+                expected: expected.to_string(),
+                actual: option
+                    .boot_option_enabled
+                    .map(|enabled| enabled.to_string())
+                    .unwrap_or_else(|| "_missing_".to_string()),
+            });
+        }
+    }
+
+    diffs
 }
 
 pub struct Bmc {
@@ -431,15 +507,7 @@ impl Redfish for Bmc {
             let mut diffs = self.diff_bios_bmc_attr().await?;
 
             if let Some(mac) = boot_interface_mac {
-                let (expected, actual) =
-                    self.get_expected_and_actual_first_boot_option(mac).await?;
-                if expected.is_none() || expected != actual {
-                    diffs.push(MachineSetupDiff {
-                        key: "boot_first".to_string(),
-                        expected: expected.unwrap_or_else(|| "Not found".to_string()),
-                        actual: actual.unwrap_or_else(|| "Not found".to_string()),
-                    });
-                }
+                diffs.extend(self.boot_order_diffs(mac).await?);
             }
 
             let lockdown = self.lockdown_status().await?;
@@ -1042,10 +1110,7 @@ impl Redfish for Bmc {
                 .to_uppercase();
             let (system, all_boot_options) = self.get_system_and_boot_options().await?;
 
-            let target = all_boot_options.iter().find(|opt| {
-                let display = opt.display_name.to_uppercase();
-                display.contains("HTTP") && display.contains("IPV4") && display.contains(&mac)
-            });
+            let target = find_boot_option_for_mac(&all_boot_options, &mac);
 
             let Some(target) = target else {
                 let all_names: Vec<_> = all_boot_options
@@ -1061,19 +1126,22 @@ impl Redfish for Bmc {
             let target_id = target.boot_option_reference.clone();
             let mut boot_order = system.boot.boot_order;
 
-            let boot_order_is_set = boot_order.first() == Some(&target_id);
+            let boot_order_is_set = boot_order
+                .first()
+                .is_some_and(|entry| boot::boot_order_entry_reference(entry) == target_id);
             if boot_order_is_set {
                 tracing::info!("NO-OP: DPU ({mac}) is already first in boot order ({target_id})");
             } else {
-                boot_order.retain(|id| id != &target_id);
-                boot_order.insert(0, target_id.clone());
+                if !boot::promote_boot_order_entry_first(&mut boot_order, &target_id) {
+                    boot_order.insert(0, target_id.clone());
+                }
                 self.change_boot_order(boot_order).await?;
             }
 
             if self.s.vendor == Some(RedfishVendor::LenovoGB300) {
                 for option in all_boot_options
                     .iter()
-                    .filter(|option| matches!(option.alias.as_deref(), Some("Pxe" | "UefiHttp")))
+                    .filter(|option| is_target_or_network_boot_option(option, &target_id))
                 {
                     let should_be_enabled = option.boot_option_reference == target_id;
                     if option.boot_option_enabled != Some(should_be_enabled) {
@@ -1104,26 +1172,7 @@ impl Redfish for Bmc {
     ) -> crate::RedfishFuture<'a, Result<bool, RedfishError>> {
         Box::pin(async move {
             let mac = crate::resolve_boot_interface_mac(self, boot_interface).await?;
-            let (expected, actual) = self.get_expected_and_actual_first_boot_option(&mac).await?;
-            let Some(expected) = expected else {
-                return Ok(false);
-            };
-            if actual.as_deref() != Some(&expected) {
-                return Ok(false);
-            }
-
-            let network_options_setup = if self.s.vendor == Some(RedfishVendor::LenovoGB300) {
-                let (_, all_boot_options) = self.get_system_and_boot_options().await?;
-                all_boot_options
-                    .iter()
-                    .filter(|option| matches!(option.alias.as_deref(), Some("Pxe" | "UefiHttp")))
-                    .all(|option| {
-                        option.boot_option_enabled == Some(option.display_name == expected)
-                    })
-            } else {
-                true
-            };
-            Ok(network_options_setup)
+            Ok(self.boot_order_diffs(&mac).await?.is_empty())
         })
     }
 
@@ -1399,6 +1448,19 @@ impl Bmc {
         Ok((system, all_boot_options))
     }
 
+    async fn boot_order_diffs(
+        &self,
+        boot_interface_mac: &str,
+    ) -> Result<Vec<MachineSetupDiff>, RedfishError> {
+        let (system, boot_options) = self.get_system_and_boot_options().await?;
+        Ok(compare_boot_order(
+            self.s.vendor,
+            &system.boot.boot_order,
+            &boot_options,
+            boot_interface_mac,
+        ))
+    }
+
     /// Finds the first boot option matching the given alias and moves it to the front
     /// of the boot order.
     async fn set_boot_order(&self, alias: &str) -> Result<(), RedfishError> {
@@ -1431,44 +1493,17 @@ impl Bmc {
 
         let mut boot_order = system.boot.boot_order;
 
-        if boot_order.first() == Some(&target_ref) {
+        if boot_order
+            .first()
+            .is_some_and(|entry| boot::boot_order_entry_reference(entry) == target_ref)
+        {
             return Ok(());
         }
 
-        boot_order.retain(|id| id != &target_ref);
-        boot_order.insert(0, target_ref);
+        if !boot::promote_boot_order_entry_first(&mut boot_order, &target_ref) {
+            boot_order.insert(0, target_ref);
+        }
         self.change_boot_order(boot_order).await
-    }
-
-    /// Get expected and actual first boot option for checking boot order setup.
-    ///
-    /// AMI boot option format example:
-    /// DisplayName: "[Slot2]UEFI: HTTP IPv4 Nvidia Network Adapter - B8:E9:24:17:6D:72 P1"
-    /// BootOptionReference: "Boot0001"
-    ///
-    async fn get_expected_and_actual_first_boot_option(
-        &self,
-        boot_interface_mac: &str,
-    ) -> Result<(Option<String>, Option<String>), RedfishError> {
-        let mac = boot_interface_mac.to_uppercase();
-        let (system, all_boot_options) = self.get_system_and_boot_options().await?;
-
-        let expected_first_boot_option = all_boot_options
-            .iter()
-            .find(|opt| {
-                let display = opt.display_name.to_uppercase();
-                display.contains("HTTP") && display.contains("IPV4") && display.contains(&mac)
-            })
-            .map(|opt| opt.display_name.clone());
-
-        let actual_first_boot_option = system.boot.boot_order.first().and_then(|first_ref| {
-            all_boot_options
-                .iter()
-                .find(|opt| &opt.boot_option_reference == first_ref)
-                .map(|opt| opt.display_name.clone())
-        });
-
-        Ok((expected_first_boot_option, actual_first_boot_option))
     }
 
     /// Get the BIOS attributes for machine setup.
@@ -1660,6 +1695,197 @@ fn extract_ami_task_id(location: Option<&str>, body: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const BOOT_INTERFACE_MAC: &str = "B8:E9:24:17:6D:72";
+    const TARGET_DISPLAY_NAME: &str =
+        "[Slot2]UEFI: HTTP IPv4 Nvidia Network Adapter - B8:E9:24:17:6D:72 P1";
+
+    fn boot_option(
+        reference: &str,
+        alias: &str,
+        display_name: &str,
+        enabled: Option<bool>,
+    ) -> BootOption {
+        BootOption {
+            odata: Default::default(),
+            alias: Some(alias.to_string()),
+            description: None,
+            boot_option_enabled: enabled,
+            boot_option_reference: reference.to_string(),
+            display_name: display_name.to_string(),
+            id: reference.to_string(),
+            name: display_name.to_string(),
+            uefi_device_path: None,
+        }
+    }
+
+    fn boot_options(
+        target_enabled: Option<bool>,
+        other_network_enabled: Option<bool>,
+        disk_enabled: Option<bool>,
+    ) -> Vec<BootOption> {
+        vec![
+            boot_option("Boot0001", "UefiHttp", TARGET_DISPLAY_NAME, target_enabled),
+            boot_option(
+                "Boot0002",
+                "Pxe",
+                "UEFI PXEv4 Nvidia Network Adapter - 9C:6B:00:11:22:33",
+                other_network_enabled,
+            ),
+            boot_option("Boot0003", "Hdd", "UEFI Disk", disk_enabled),
+        ]
+    }
+
+    fn boot_order(references: &[&str]) -> Vec<String> {
+        references
+            .iter()
+            .map(|reference| reference.to_string())
+            .collect()
+    }
+
+    fn gb300_boot_order_diffs(
+        boot_order: &[String],
+        boot_options: &[BootOption],
+    ) -> Vec<MachineSetupDiff> {
+        compare_boot_order(
+            Some(RedfishVendor::LenovoGB300),
+            boot_order,
+            boot_options,
+            BOOT_INTERFACE_MAC,
+        )
+    }
+
+    fn assert_diff(
+        diff: &MachineSetupDiff,
+        expected_key: &str,
+        expected_value: &str,
+        actual_value: &str,
+    ) {
+        assert_eq!(diff.key, expected_key);
+        assert_eq!(diff.expected, expected_value);
+        assert_eq!(diff.actual, actual_value);
+    }
+
+    #[test]
+    fn gb300_boot_order_accepts_complete_configuration() {
+        let options = boot_options(Some(true), Some(false), Some(true));
+        let diffs = gb300_boot_order_diffs(&boot_order(&["Boot0001"]), &options);
+
+        assert!(diffs.is_empty());
+    }
+
+    #[test]
+    fn gb300_boot_order_accepts_decorated_boot_order_reference() {
+        let options = boot_options(Some(true), Some(false), Some(true));
+        let diffs = gb300_boot_order_diffs(
+            &boot_order(&["Boot0001: Selected network adapter"]),
+            &options,
+        );
+
+        assert!(diffs.is_empty());
+    }
+
+    #[test]
+    fn gb300_boot_order_reports_disabled_selected_option() {
+        let options = boot_options(Some(false), Some(false), Some(true));
+        let diffs = gb300_boot_order_diffs(&boot_order(&["Boot0001"]), &options);
+
+        assert_eq!(diffs.len(), 1);
+        assert_diff(
+            &diffs[0],
+            "BootOptions/Boot0001/BootOptionEnabled",
+            "true",
+            "false",
+        );
+    }
+
+    #[test]
+    fn gb300_boot_order_reports_disabled_selected_option_without_alias() {
+        let mut options = boot_options(Some(false), Some(false), Some(true));
+        options[0].alias = None;
+        let diffs = gb300_boot_order_diffs(&boot_order(&["Boot0001"]), &options);
+
+        assert_eq!(diffs.len(), 1);
+        assert_diff(
+            &diffs[0],
+            "BootOptions/Boot0001/BootOptionEnabled",
+            "true",
+            "false",
+        );
+    }
+
+    #[test]
+    fn gb300_boot_order_reports_enabled_competing_network_option() {
+        let options = boot_options(Some(true), Some(true), Some(true));
+        let diffs = gb300_boot_order_diffs(&boot_order(&["Boot0001"]), &options);
+
+        assert_eq!(diffs.len(), 1);
+        assert_diff(
+            &diffs[0],
+            "BootOptions/Boot0002/BootOptionEnabled",
+            "false",
+            "true",
+        );
+    }
+
+    #[test]
+    fn gb300_boot_order_reports_missing_enablement_values() {
+        for (target_enabled, other_network_enabled, expected_reference, expected_value) in [
+            (None, Some(false), "Boot0001", "true"),
+            (Some(true), None, "Boot0002", "false"),
+        ] {
+            let options = boot_options(target_enabled, other_network_enabled, Some(true));
+            let diffs = gb300_boot_order_diffs(&boot_order(&["Boot0001"]), &options);
+
+            assert_eq!(diffs.len(), 1);
+            assert_diff(
+                &diffs[0],
+                &format!("BootOptions/{expected_reference}/BootOptionEnabled"),
+                expected_value,
+                "_missing_",
+            );
+        }
+    }
+
+    #[test]
+    fn gb300_boot_order_reports_target_not_first() {
+        let options = boot_options(Some(true), Some(false), Some(true));
+        let diffs = gb300_boot_order_diffs(&boot_order(&["Boot0003", "Boot0001"]), &options);
+
+        assert_eq!(diffs.len(), 1);
+        assert_eq!(diffs[0].key, "boot_first");
+        assert_eq!(diffs[0].expected, TARGET_DISPLAY_NAME);
+        assert_eq!(diffs[0].actual, "UEFI Disk");
+    }
+
+    #[test]
+    fn gb300_boot_order_compares_boot_option_references() {
+        let mut options = boot_options(Some(true), Some(false), Some(true));
+        options[1].display_name = TARGET_DISPLAY_NAME.to_string();
+        let diffs = gb300_boot_order_diffs(&boot_order(&["Boot0002", "Boot0001"]), &options);
+
+        assert_eq!(diffs.len(), 1);
+        assert_eq!(diffs[0].key, "boot_first");
+    }
+
+    #[test]
+    fn gb300_boot_order_ignores_non_network_enablement() {
+        let options = boot_options(Some(true), Some(false), None);
+        let diffs = gb300_boot_order_diffs(&boot_order(&["Boot0001"]), &options);
+
+        assert!(diffs.is_empty());
+    }
+
+    #[test]
+    fn other_ami_vendors_ignore_network_option_enablement() {
+        let options = boot_options(Some(false), Some(true), Some(true));
+        let order = boot_order(&["Boot0001"]);
+
+        for vendor in [RedfishVendor::AMI, RedfishVendor::LenovoAMI] {
+            let diffs = compare_boot_order(Some(vendor), &order, &options, BOOT_INTERFACE_MAC);
+            assert!(diffs.is_empty(), "{vendor} unexpectedly reported a diff");
+        }
+    }
 
     #[test]
     fn update_parameters_serializes_to_pascal_case_targets() {
