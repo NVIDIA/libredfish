@@ -145,3 +145,13 @@ impl std::fmt::Display for TrustedModuleRequiredToBoot {
         std::fmt::Debug::fmt(self, f)
     }
 }
+
+/// Returns the boot option reference embedded in a `BootOrder` entry.
+///
+/// Some BMC firmware reports entries like `Boot0019: Ubuntu` while BootOption
+/// GET URLs use the reference prefix (`Boot0019`).
+pub fn boot_order_entry_reference(entry: &str) -> &str {
+    entry
+        .split_once(": ")
+        .map_or(entry, |(reference, _)| reference)
+}

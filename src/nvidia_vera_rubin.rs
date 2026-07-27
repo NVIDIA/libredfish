@@ -92,6 +92,32 @@ enum BootOptionMatchField {
     UefiDevicePath,
 }
 
+fn boot_order_entry_reference(entry: &str) -> &str {
+    crate::model::boot::boot_order_entry_reference(entry)
+}
+
+fn dpu_http_boot_display_name_matches(display_name: &str, boot_option_name: &str) -> bool {
+    // Vera Rubin firmware can expose duplicate HTTP entries such as
+    // "UEFI HTTPv4 (MAC:…)" and "UEFI HTTPv4 (MAC:…) 2"; prefix match is ambiguous.
+    display_name == boot_option_name
+}
+
+fn promote_boot_order_entry_first(
+    boot_order: &mut Vec<String>,
+    target_reference: &str,
+) -> Result<(), RedfishError> {
+    let target_index = boot_order
+        .iter()
+        .position(|entry| boot_order_entry_reference(entry) == target_reference)
+        .ok_or_else(|| RedfishError::GenericError {
+            error: format!("Boot option {target_reference} is not present in BootOrder"),
+        })?;
+    // Preserve the exact entry returned by Vera Rubin firmware.
+    let target_entry = boot_order.remove(target_index);
+    boot_order.insert(0, target_entry);
+    Ok(())
+}
+
 impl BootOptionMatchField {
     #[allow(dead_code)]
     fn to_string(self) -> &'static str {
@@ -954,7 +980,7 @@ impl Redfish for Bmc {
     ) -> crate::RedfishFuture<'a, Result<crate::EthernetInterface, RedfishError>> {
         Box::pin(async move {
             Err(RedfishError::NotSupported(format!(
-                "GB200 doesn't have Systems EthernetInterface {id}"
+                "Vera Rubin doesn't have Systems EthernetInterface {id}"
             )))
         })
     }
@@ -1092,14 +1118,32 @@ impl Redfish for Bmc {
             let mac_address = address.replace(':', "").to_uppercase();
             let boot_option_name =
                 format!("{} (MAC:{})", BootOptionName::Http.to_string(), mac_address);
-            let boot_array = self
-                .get_boot_options_ids_with_first(
-                    BootOptionName::Http,
-                    BootOptionMatchField::DisplayName,
-                    Some(&boot_option_name),
-                )
-                .await?;
-            self.change_boot_order(boot_array).await?;
+            let system = self.s.get_system().await?;
+            let boot_options_id =
+                system
+                    .boot
+                    .boot_options
+                    .clone()
+                    .ok_or_else(|| RedfishError::MissingKey {
+                        key: "boot.boot_options".to_string(),
+                        url: system.odata.odata_id.clone(),
+                    })?;
+            let boot_options: Vec<BootOption> = self
+                .get_collection(boot_options_id)
+                .await
+                .and_then(|collection| collection.try_get::<BootOption>())?
+                .members;
+            let target = boot_options
+                .iter()
+                .find(|option| {
+                    dpu_http_boot_display_name_matches(&option.display_name, &boot_option_name)
+                })
+                .ok_or_else(|| RedfishError::GenericError {
+                    error: format!("Could not find boot option matching {boot_option_name}"),
+                })?;
+            let mut boot_order = system.boot.boot_order;
+            promote_boot_order_entry_first(&mut boot_order, &target.boot_option_reference)?;
+            self.change_boot_order(boot_order).await?;
             Ok(None)
         })
     }
@@ -1396,19 +1440,21 @@ impl Bmc {
         let boot_option_name =
             format!("{} (MAC:{})", BootOptionName::Http.to_string(), mac_address);
 
-        let boot_options = self.s.get_system().await?.boot.boot_order;
+        let boot_order = self.s.get_system().await?.boot.boot_order;
 
-        let actual_first_boot_option = if let Some(first) = boot_options.first() {
-            Some(self.s.get_boot_option(first.as_str()).await?.display_name)
+        let actual_first_boot_option = if let Some(first) = boot_order.first() {
+            let reference = boot_order_entry_reference(first.as_str());
+            Some(self.s.get_boot_option(reference).await?.display_name)
         } else {
             None
         };
 
         let mut expected_first_boot_option = None;
-        for member in &boot_options {
-            let b = self.s.get_boot_option(member.as_str()).await?;
-            if b.display_name.starts_with(&boot_option_name) {
-                expected_first_boot_option = Some(b.display_name);
+        for entry in &boot_order {
+            let reference = boot_order_entry_reference(entry.as_str());
+            let option = self.s.get_boot_option(reference).await?;
+            if dpu_http_boot_display_name_matches(&option.display_name, &boot_option_name) {
+                expected_first_boot_option = Some(option.display_name);
                 break;
             }
         }
@@ -1472,14 +1518,9 @@ impl Bmc {
             });
         };
 
-        let target_id = target.id.clone();
-
-        // Prepend the found option to the front of the existing boot order
-        let mut ordered = system.boot.boot_order;
-        ordered.retain(|id| id != &target_id);
-        ordered.insert(0, target_id);
-
-        Ok(ordered)
+        let mut boot_order = system.boot.boot_order;
+        promote_boot_order_entry_first(&mut boot_order, &target.boot_option_reference)?;
+        Ok(boot_order)
     }
 
     async fn get_system_event_log(&self) -> Result<Vec<LogEntry>, RedfishError> {
@@ -1562,6 +1603,56 @@ impl UpdateParameters {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn dpu_http_boot_display_name_requires_exact_match() {
+        let boot_option_name = "UEFI HTTPv4 (MAC:F4204D494ECC)";
+        assert!(dpu_http_boot_display_name_matches(
+            "UEFI HTTPv4 (MAC:F4204D494ECC)",
+            boot_option_name,
+        ));
+        assert!(!dpu_http_boot_display_name_matches(
+            "UEFI HTTPv4 (MAC:F4204D494ECC) 2",
+            boot_option_name,
+        ));
+    }
+
+    #[test]
+    fn boot_order_entry_reference_strips_display_name_suffix() {
+        assert_eq!(boot_order_entry_reference("Boot0019: Ubuntu"), "Boot0019");
+        assert_eq!(boot_order_entry_reference("Boot0010"), "Boot0010");
+    }
+
+    #[test]
+    fn promote_boot_order_entry_first_preserves_exact_firmware_entry() {
+        let mut boot_order = vec![
+            "Boot0019: Ubuntu".to_string(),
+            "Boot0010: UEFI HTTPv4 (MAC:AA)".to_string(),
+        ];
+
+        promote_boot_order_entry_first(&mut boot_order, "Boot0010").unwrap();
+
+        assert_eq!(boot_order[0], "Boot0010: UEFI HTTPv4 (MAC:AA)");
+        assert_eq!(boot_order[1], "Boot0019: Ubuntu");
+    }
+
+    #[test]
+    fn promote_boot_order_entry_first_works_with_bare_references() {
+        let mut boot_order = vec!["Boot0019".to_string(), "Boot0010".to_string()];
+
+        promote_boot_order_entry_first(&mut boot_order, "Boot0010").unwrap();
+
+        assert_eq!(boot_order[0], "Boot0010");
+        assert_eq!(boot_order[1], "Boot0019");
+    }
+
+    #[test]
+    fn promote_boot_order_entry_first_errors_when_reference_missing() {
+        let mut boot_order = vec!["Boot0019: Ubuntu".to_string()];
+
+        let err = promote_boot_order_entry_first(&mut boot_order, "Boot0010").unwrap_err();
+        assert!(matches!(err, RedfishError::GenericError { .. }));
+    }
 
     #[test]
     fn test_update_parameters_targets_all_variants() {
