@@ -29,10 +29,7 @@ use tokio::fs::File;
 use crate::{
     model::{
         account_service::ManagerAccount,
-        boot::{
-            self, BootOverride, BootSourceOverrideEnabled, BootSourceOverrideMode,
-            BootSourceOverrideTarget,
-        },
+        boot::{self, BootOverride, BootSourceOverrideEnabled, BootSourceOverrideMode},
         certificate::Certificate,
         chassis::{Assembly, Chassis, NetworkAdapter},
         component_integrity::ComponentIntegrities,
@@ -505,11 +502,7 @@ impl Redfish for Bmc {
             Redfish::set_boot_override(
                 self,
                 BootOverride {
-                    target: match target {
-                        Boot::Pxe => BootSourceOverrideTarget::Pxe,
-                        Boot::HardDisk => BootSourceOverrideTarget::Hdd,
-                        Boot::UefiHttp => BootSourceOverrideTarget::UefiHttp,
-                    },
+                    target: target.into(),
                     enabled: BootSourceOverrideEnabled::Once,
                     mode: None,
                     http_boot_uri: None,
@@ -535,11 +528,7 @@ impl Redfish for Bmc {
                     Redfish::set_boot_override(
                         self,
                         BootOverride {
-                            target: match target {
-                                Boot::Pxe => BootSourceOverrideTarget::Pxe,
-                                Boot::HardDisk => BootSourceOverrideTarget::Hdd,
-                                Boot::UefiHttp => BootSourceOverrideTarget::UefiHttp,
-                            },
+                            target: target.into(),
                             enabled: BootSourceOverrideEnabled::Continuous,
                             mode: None,
                             http_boot_uri: None,

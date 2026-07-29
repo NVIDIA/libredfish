@@ -104,6 +104,18 @@ impl fmt::Display for BootSourceOverrideTarget {
     }
 }
 
+/// Maps the simple [`crate::Boot`] enum used by `boot_once` / `boot_first`
+/// to the richer `BootSourceOverrideTarget` consumed by `set_boot_override`.
+impl From<crate::Boot> for BootSourceOverrideTarget {
+    fn from(target: crate::Boot) -> Self {
+        match target {
+            crate::Boot::Pxe => BootSourceOverrideTarget::Pxe,
+            crate::Boot::HardDisk => BootSourceOverrideTarget::Hdd,
+            crate::Boot::UefiHttp => BootSourceOverrideTarget::UefiHttp,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[allow(clippy::upper_case_acronyms)]
 pub enum BootSourceOverrideMode {
