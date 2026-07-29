@@ -26,7 +26,7 @@ use reqwest::{header::HeaderName, Method, StatusCode};
 use serde_json::json;
 use tracing::debug;
 
-use crate::model::boot::{self, BootSourceOverrideEnabled, BootSourceOverrideTarget};
+use crate::model::boot::{self, BootSourceOverrideEnabled};
 use crate::model::certificate::Certificate;
 use crate::model::chassis::Assembly;
 use crate::model::component_integrity::ComponentIntegrities;
@@ -412,15 +412,12 @@ impl Redfish for RedfishStandard {
 
     fn boot_once<'a>(&'a self, target: Boot) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
         Box::pin(async move {
-            Redfish::set_boot_override(
-                self,
-                BootOverride {
-                    target: boot_target_from(target),
-                    enabled: BootSourceOverrideEnabled::Once,
-                    mode: None,
-                    http_boot_uri: None,
-                },
-            )
+            self.set_boot_override(BootOverride {
+                target: target.into(),
+                enabled: BootSourceOverrideEnabled::Once,
+                mode: None,
+                http_boot_uri: None,
+            })
             .await?;
             Ok(())
         })
@@ -431,15 +428,12 @@ impl Redfish for RedfishStandard {
         target: Boot,
     ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
         Box::pin(async move {
-            Redfish::set_boot_override(
-                self,
-                BootOverride {
-                    target: boot_target_from(target),
-                    enabled: BootSourceOverrideEnabled::Continuous,
-                    mode: None,
-                    http_boot_uri: None,
-                },
-            )
+            self.set_boot_override(BootOverride {
+                target: target.into(),
+                enabled: BootSourceOverrideEnabled::Continuous,
+                mode: None,
+                http_boot_uri: None,
+            })
             .await?;
             Ok(())
         })
@@ -1290,16 +1284,6 @@ impl Redfish for RedfishStandard {
         servers: &'a [String],
     ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
         Box::pin(async move { self.set_manager_ntp_servers(servers).await })
-    }
-}
-
-/// Map the simple `Boot` enum used by `boot_once` / `boot_first` to the
-/// richer `BootSourceOverrideTarget` consumed by `set_boot_override`.
-fn boot_target_from(target: Boot) -> BootSourceOverrideTarget {
-    match target {
-        Boot::Pxe => BootSourceOverrideTarget::Pxe,
-        Boot::HardDisk => BootSourceOverrideTarget::Hdd,
-        Boot::UefiHttp => BootSourceOverrideTarget::UefiHttp,
     }
 }
 

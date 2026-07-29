@@ -27,10 +27,7 @@ use crate::{
     jsonmap,
     model::{
         account_service::ManagerAccount,
-        boot::{
-            self, BootOverride, BootSourceOverrideEnabled, BootSourceOverrideMode,
-            BootSourceOverrideTarget,
-        },
+        boot::{self, BootOverride, BootSourceOverrideEnabled, BootSourceOverrideMode},
         certificate::Certificate,
         chassis::{Assembly, Chassis, NetworkAdapter},
         component_integrity::ComponentIntegrities,
@@ -710,15 +707,10 @@ impl Redfish for Bmc {
 
     fn boot_once<'a>(&'a self, target: Boot) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
         Box::pin(async move {
-            let override_target = match target {
-                Boot::Pxe => BootSourceOverrideTarget::Pxe,
-                Boot::HardDisk => BootSourceOverrideTarget::Hdd,
-                Boot::UefiHttp => BootSourceOverrideTarget::UefiHttp,
-            };
             Redfish::set_boot_override(
                 self,
                 BootOverride {
-                    target: override_target,
+                    target: target.into(),
                     enabled: BootSourceOverrideEnabled::Once,
                     mode: None,
                     http_boot_uri: None,
