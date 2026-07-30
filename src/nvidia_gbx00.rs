@@ -498,7 +498,13 @@ impl Redfish for Bmc {
         &'a self,
         from: Option<chrono::DateTime<chrono::Utc>>,
     ) -> crate::RedfishFuture<'a, Result<Vec<LogEntry>, RedfishError>> {
-        Box::pin(async move { self.s.get_bmc_event_log(from).await })
+        Box::pin(async move {
+            let url = format!(
+                "Systems/{}/LogServices/EventLog/Entries",
+                self.s.system_id()
+            );
+            self.s.fetch_bmc_event_log(url, from).await
+        })
     }
 
     fn get_drives_metrics<'a>(
