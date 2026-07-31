@@ -800,19 +800,32 @@ impl Redfish for RedfishStandard {
 
     fn get_ports<'a>(
         &'a self,
-        _chassis_id: &'a str,
-        _network_adapter: &'a str,
+        chassis_id: &'a str,
+        network_adapter: &'a str,
     ) -> crate::RedfishFuture<'a, Result<Vec<String>, RedfishError>> {
-        Box::pin(async move { Err(RedfishError::NotSupported("get_ports".to_string())) })
+        Box::pin(async move {
+            let url = format!(
+                "Chassis/{}/NetworkAdapters/{}/Ports",
+                chassis_id, network_adapter
+            );
+            self.get_members(&url).await
+        })
     }
 
     fn get_port<'a>(
         &'a self,
-        _chassis_id: &'a str,
-        _network_adapter: &'a str,
-        _id: &'a str,
+        chassis_id: &'a str,
+        network_adapter: &'a str,
+        id: &'a str,
     ) -> crate::RedfishFuture<'a, Result<NetworkPort, RedfishError>> {
-        Box::pin(async move { Err(RedfishError::NotSupported("get_port".to_string())) })
+        Box::pin(async move {
+            let url = format!(
+                "Chassis/{}/NetworkAdapters/{}/Ports/{}",
+                chassis_id, network_adapter, id
+            );
+            let (_status_code, body) = self.client.get(&url).await?;
+            Ok(body)
+        })
     }
 
     fn change_uefi_password<'a>(
