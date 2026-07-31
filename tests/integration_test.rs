@@ -374,6 +374,7 @@ async fn run_integration_test(
 
     let chassis = redfish.get_chassis_all().await?;
     assert!(!chassis.is_empty());
+    let mut tested_lenovo_adapter_ports = vendor_dir != "lenovo";
     for chassis_id in &chassis {
         let _chassis = redfish.get_chassis(chassis_id).await?;
         let Ok(chassis_net_adapters) = redfish.get_chassis_network_adapters(chassis_id).await
@@ -386,6 +387,20 @@ async fn run_integration_test(
                 .await?;
         }
 
+        if vendor_dir == "lenovo" {
+            if let Some(adapter_id) = chassis_net_adapters
+                .iter()
+                .find(|adapter_id| adapter_id.as_str() == "slot-27")
+            {
+                let ports = redfish.get_ports(chassis_id, adapter_id).await?;
+                assert_eq!(ports, ["1", "2", "3", "4"]);
+
+                let port = redfish.get_port(chassis_id, adapter_id, &ports[0]).await?;
+                assert_eq!(port.mac_addresses()?, ["00:62:0b:4c:28:4e".parse()?]);
+                tested_lenovo_adapter_ports = true;
+            }
+        }
+
         if vendor_dir == "hpe" {
             let adapter_ids = redfish.get_base_network_adapters(chassis_id).await?;
             assert!(!adapter_ids.is_empty());
@@ -396,6 +411,7 @@ async fn run_integration_test(
             }
         }
     }
+    assert!(tested_lenovo_adapter_ports);
 
     if vendor_dir != "liteon_powershelf" && vendor_dir != "delta_powershelf" {
         assert_eq!(redfish.get_power_state().await?, libredfish::PowerState::On);
