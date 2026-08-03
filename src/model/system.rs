@@ -179,6 +179,7 @@ pub struct ComputerSystem {
     pub asset_tag: Option<String>,
     #[serde(default)] // Some viking ComputerSystem has no Boot property; so use the default
     pub boot: Boot,
+    pub bios: Option<ODataId>,
     pub bios_version: Option<String>,
     pub ethernet_interfaces: Option<ODataId>,
     pub id: String,

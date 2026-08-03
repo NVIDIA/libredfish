@@ -41,7 +41,9 @@ use crate::model::{job::Job, oem::nvidia_dpu::NicMode};
 use crate::model::{
     manager_network_protocol::ManagerNetworkProtocol, update_service::TransferProtocolType,
 };
-use crate::model::{power, thermal, BootOption, InvalidValueError, Manager, Managers, ODataId};
+use crate::model::{
+    power, thermal, BootOption, ComputerSystem, InvalidValueError, Manager, Managers, ODataId,
+};
 use crate::model::{power::Power, update_service::UpdateService};
 use crate::model::{secure_boot::SecureBoot, sensor::GPUSensors};
 use crate::model::{sel::LogEntry, ManagerResetType};
@@ -1449,6 +1451,17 @@ impl RedfishStandard {
         Ok(b)
     }
 
+    pub fn get_manager_with_id<'a>(
+        &'a self,
+        manager_id: &'a str,
+    ) -> crate::RedfishFuture<'a, Result<Manager, RedfishError>> {
+        Box::pin(async move {
+            let (_, manager): (_, Manager) =
+                self.client.get(&format!("Managers/{}", manager_id)).await?;
+            Ok(manager)
+        })
+    }
+
     pub async fn fetch_bmc_event_log(
         &self,
         url: String,
@@ -1549,6 +1562,14 @@ impl RedfishStandard {
                 key: "Attributes".to_string(),
                 url,
             })
+    }
+
+    pub async fn if_system_has_bios(&self, system_id: &str) -> Option<ComputerSystem> {
+        self.client
+            .get::<ComputerSystem>(&format!("Systems/{system_id}"))
+            .await
+            .map_or(None, |(_code, cs)| Some(cs))
+            .and_then(|cs| if cs.bios.is_some() { Some(cs) } else { None })
     }
 
     pub async fn factory_reset_bios(&self) -> Result<(), RedfishError> {

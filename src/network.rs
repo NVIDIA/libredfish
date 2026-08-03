@@ -211,9 +211,9 @@ impl RedfishClientPool {
         };
 
         let managers = s.get_managers().await?;
-        let manager_id = managers.first().ok_or_else(|| RedfishError::GenericError {
+        let mut manager_id = managers.first().ok_or_else(|| RedfishError::GenericError {
             error: "No managers found in service root".to_string(),
-        })?;
+        })?.clone();
         let chassis = s.get_chassis_all().await?;
 
         // Delta power shelves expose no `/Systems` resource (a real query 404s)
@@ -228,18 +228,44 @@ impl RedfishClientPool {
             // member blindly targets the wrong system (no BIOS/boot). Falling
             // back to the first member preserves behavior for every platform
             // that does not expose `System_0` (e.g. Viking's `DGX`).
-            let system_id = systems
+            let at_least_one_system_id = systems
                 .iter()
                 .find(|id| *id == "System_0")
                 .or_else(|| systems.first())
                 .ok_or_else(|| RedfishError::GenericError {
                     error: "No systems found in service root".to_string(),
                 })?;
+
+            //Find another system with BIOS section
+            let mut system_with_bios: Option<ComputerSystem> = None;
+            for system_member in &systems {
+                // Treat any error as "no BIOS here": we already have
+                // `at_least_one_system_id` as a fallback, and this also handles the
+                // test mockup, which drops the connection instead of returning 404
+                // when the Bios section is empty.
+                system_with_bios = s.if_system_has_bios(system_member).await;
+                if system_with_bios.is_some() {
+                    break;
+                }
+                
+            }
+            let manager_from_system = system_with_bios
+                .as_ref()
+                .and_then(|swb| swb.links.as_ref())
+                .and_then(|links| links.managed_by.as_ref())
+                .and_then(|mb| mb.get(0))
+                .and_then(|d| d.odata_id.trim_matches('/').split('/').next_back())
+                .map(|m| m.to_string());
+            manager_id = manager_from_system.unwrap_or(manager_id);
+
+            let system_id = system_with_bios.map(|swb| swb.id.to_owned()).unwrap_or(at_least_one_system_id.to_owned());
+
             // call set_system_id always before calling set_vendor
-            s.set_system_id(system_id)?;
+            s.set_system_id(&system_id)?;
+
         }
 
-        s.set_manager_id(manager_id)?;
+        s.set_manager_id(&manager_id)?;
         s.set_service_root(service_root.clone())?;
 
         // Resolve placeholder/ambiguous vendors that can only be settled from
