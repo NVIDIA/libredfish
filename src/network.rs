@@ -698,16 +698,18 @@ impl RedfishHttpClient {
                 // If PasswordChangeRequired is in the response, return a PasswordChangeRequired error.
                 if let Ok(err) = serde_json::from_str::<crate::model::error::Error>(&response_body)
                 {
-                    if err
+                    if let Some(password_change_required) = err
                         .error
                         .extended
                         .iter()
                         // TODO(ajf) The actual message ID is specified in DTMF RedFish 9.5.11.2 so we
                         // should properly parse it into a type since the error may come from different
                         // MessageRegistries
-                        .any(|ext| ext.message_id.ends_with("PasswordChangeRequired"))
+                        .find(|ext| ext.message_id.ends_with("PasswordChangeRequired"))
                     {
-                        return Err(RedfishError::PasswordChangeRequired);
+                        return Err(RedfishError::PasswordChangeRequired {
+                            account_uri: password_change_required.message_args.first().cloned(),
+                        });
                     }
                 }
                 // If we can't decode the error JSON, just return the normal HTTPErrorCode. Some

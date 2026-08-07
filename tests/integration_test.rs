@@ -157,7 +157,7 @@ async fn test_forbidden_error_handling() -> anyhow::Result<()> {
 
     match redfish.get_chassis_all().await {
         Ok(_) => panic!("Request should have failed with password change required"),
-        Err(libredfish::RedfishError::PasswordChangeRequired) => {} // what we want
+        Err(libredfish::RedfishError::PasswordChangeRequired { .. }) => {} // what we want
         Err(err) => panic!("Unexpected error response: {}", err),
     }
 
