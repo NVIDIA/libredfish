@@ -255,7 +255,7 @@ impl RedfishClientPool {
                 .as_ref()
                 .and_then(|swb| swb.links.as_ref())
                 .and_then(|links| links.managed_by.as_ref())
-                .and_then(|mb| mb.get(0))
+                .and_then(|mb| mb.first())
                 .and_then(|d| d.odata_id.trim_matches('/').split('/').next_back())
                 .map(|m| m.to_string());
             manager_id = manager_from_system.unwrap_or(manager_id);
