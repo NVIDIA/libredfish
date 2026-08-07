@@ -1587,6 +1587,11 @@ impl Bmc {
             expected_attrs.http_device_1_interface,
             String
         );
+        diff!(
+            "HttpDev1TlsMode",
+            expected_attrs.http_device_1_tls_mode,
+            dell::TlsMode
+        );
 
         let manager_attrs = self.manager_dell_oem_attributes().await?;
         let expected = HashMap::from([
