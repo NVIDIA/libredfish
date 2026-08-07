@@ -211,9 +211,12 @@ impl RedfishClientPool {
         };
 
         let managers = s.get_managers().await?;
-        let mut manager_id = managers.first().ok_or_else(|| RedfishError::GenericError {
-            error: "No managers found in service root".to_string(),
-        })?.clone();
+        let mut manager_id = managers
+            .first()
+            .ok_or_else(|| RedfishError::GenericError {
+                error: "No managers found in service root".to_string(),
+            })?
+            .clone();
         let chassis = s.get_chassis_all().await?;
 
         // Delta power shelves expose no `/Systems` resource (a real query 404s)
@@ -247,22 +250,22 @@ impl RedfishClientPool {
                 if system_with_bios.is_some() {
                     break;
                 }
-                
             }
             let manager_from_system = system_with_bios
                 .as_ref()
                 .and_then(|swb| swb.links.as_ref())
                 .and_then(|links| links.managed_by.as_ref())
-                .and_then(|mb| mb.get(0))
+                .and_then(|mb| mb.first())
                 .and_then(|d| d.odata_id.trim_matches('/').split('/').next_back())
                 .map(|m| m.to_string());
             manager_id = manager_from_system.unwrap_or(manager_id);
 
-            let system_id = system_with_bios.map(|swb| swb.id.to_owned()).unwrap_or(at_least_one_system_id.to_owned());
+            let system_id = system_with_bios
+                .map(|swb| swb.id.to_owned())
+                .unwrap_or(at_least_one_system_id.to_owned());
 
             // call set_system_id always before calling set_vendor
             s.set_system_id(&system_id)?;
-
         }
 
         s.set_manager_id(&manager_id)?;
