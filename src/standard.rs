@@ -147,7 +147,21 @@ impl Redfish for RedfishStandard {
             let url = format!("AccountService/Accounts/{}", account_id);
             let mut data = HashMap::new();
             data.insert("Password", new_pass);
-            let service_root = self.get_service_root().await?;
+            // Some BMCs reject authenticated ServiceRoot reads until the
+            // factory password is changed, while still exposing it
+            // anonymously. Prefer that path so password bootstrap can reach
+            // the account PATCH. Fall back to the existing authenticated
+            // lookup for BMCs that protect or omit vendor details there.
+            let service_root = match self.client.get_anonymous::<ServiceRoot>("").await {
+                Ok((_status, service_root))
+                    if service_root
+                        .vendor()
+                        .is_some_and(|vendor| vendor != RedfishVendor::Unknown) =>
+                {
+                    service_root
+                }
+                _ => self.get_service_root().await?,
+            };
             // AMI BMC requires If-Match header for PATCH requests
             if matches!(
                 service_root.vendor(),
