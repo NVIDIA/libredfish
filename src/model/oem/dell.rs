@@ -97,9 +97,9 @@ pub struct System {
     pub bios_release_date: String,
     pub chassis_service_tag: String,
     pub chassis_system_height_unit: i64,
-    pub estimated_exhaust_temperature_celsius: i64,
+    pub estimated_exhaust_temperature_celsius: Option<i64>,
     #[serde(rename = "EstimatedSystemAirflowCFM")]
-    pub estimated_system_airflow_cfm: i64,
+    pub estimated_system_airflow_cfm: Option<i64>,
     pub express_service_code: String,
     pub fan_rollup_status: Option<String>, // null->None if machine is off
     pub intrusion_rollup_status: String,
