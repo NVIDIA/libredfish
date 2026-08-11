@@ -378,6 +378,16 @@ impl RedfishHttpClient {
         self.endpoint.user.is_none()
     }
 
+    pub(crate) async fn get_anonymous<T>(&self, api: &str) -> Result<(StatusCode, T), RedfishError>
+    where
+        T: DeserializeOwned + ::std::fmt::Debug,
+    {
+        let mut client = self.clone();
+        client.endpoint.user = None;
+        client.endpoint.password = None;
+        client.get(api).await
+    }
+
     pub async fn get<T>(&self, api: &str) -> Result<(StatusCode, T), RedfishError>
     where
         T: DeserializeOwned + ::std::fmt::Debug,
