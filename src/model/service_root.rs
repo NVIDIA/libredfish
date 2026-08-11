@@ -119,7 +119,7 @@ impl ServiceRoot {
                 _ => RedfishVendor::Supermicro,
             },
             "lite-on technology corp." => RedfishVendor::LiteOnPowerShelf,
-            "delta" => RedfishVendor::DeltaPowerShelf,
+            "delta electronics inc." => RedfishVendor::DeltaPowerShelf,
             _ => RedfishVendor::Unknown,
         })
     }
@@ -188,5 +188,26 @@ mod test {
         };
         assert_eq!(result.vendor().unwrap(), RedfishVendor::VeraRubin);
         assert!(result.is_vera_rubin());
+    }
+
+    #[test]
+    fn test_delta_powershelf_service_root() {
+        // Real Delta power shelves report their full manufacturer string in the
+        // service-root `Vendor` field, not a bare "Delta".
+        let result = ServiceRoot {
+            vendor: Some("Delta Electronics Inc.".to_string()),
+            ..Default::default()
+        };
+        assert_eq!(result.vendor().unwrap(), RedfishVendor::DeltaPowerShelf);
+    }
+
+    #[test]
+    fn test_delta_powershelf_service_root_case_insensitive() {
+        // Matching is case-insensitive (the vendor string is lowercased first).
+        let result = ServiceRoot {
+            vendor: Some("DELTA ELECTRONICS INC.".to_string()),
+            ..Default::default()
+        };
+        assert_eq!(result.vendor().unwrap(), RedfishVendor::DeltaPowerShelf);
     }
 }
