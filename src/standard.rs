@@ -1790,7 +1790,13 @@ impl RedfishStandard {
             self.vendor,
             Some(RedfishVendor::AMI | RedfishVendor::LenovoAMI | RedfishVendor::LenovoGB300)
         ) {
-            self.client.patch_with_if_match(&url, ntp_servers).await
+            match self.client.patch_with_if_match(&url, ntp_servers).await {
+                Err(RedfishError::HTTPErrorCode {
+                    status_code: StatusCode::ACCEPTED,
+                    ..
+                }) => Ok(()),
+                result => result,
+            }
         } else {
             self.client.patch(&url, ntp_servers).await.map(|_resp| ())
         }
