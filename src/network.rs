@@ -1118,20 +1118,15 @@ mod tests {
 
     #[test]
     fn bios_probe_order_prefers_system_0_ahead_of_hgx_baseboard() {
-        let systems = vec![
-            "HGX_Baseboard_0".to_string(),
-            "System_0".to_string(),
-        ];
-        let order: Vec<&str> =
-            system_ids_for_bios_probe("System_0", &systems).collect();
+        let systems = vec!["HGX_Baseboard_0".to_string(), "System_0".to_string()];
+        let order: Vec<&str> = system_ids_for_bios_probe("System_0", &systems).collect();
         assert_eq!(order, vec!["System_0", "HGX_Baseboard_0"]);
     }
 
     #[test]
     fn bios_probe_order_keeps_preferred_first_when_already_first() {
         let systems = vec!["System_0".to_string(), "HGX_Baseboard_0".to_string()];
-        let order: Vec<&str> =
-            system_ids_for_bios_probe("System_0", &systems).collect();
+        let order: Vec<&str> = system_ids_for_bios_probe("System_0", &systems).collect();
         assert_eq!(order, vec!["System_0", "HGX_Baseboard_0"]);
     }
 
