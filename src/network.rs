@@ -231,7 +231,7 @@ impl RedfishClientPool {
             // member blindly targets the wrong system (no BIOS/boot). Falling
             // back to the first member preserves behavior for every platform
             // that does not expose `System_0` (e.g. Viking's `DGX`).
-            let at_least_one_system_id = systems
+            let preferred_system_id = systems
                 .iter()
                 .find(|id| *id == "System_0")
                 .or_else(|| systems.first())
@@ -239,13 +239,17 @@ impl RedfishClientPool {
                     error: "No systems found in service root".to_string(),
                 })?;
 
-            //Find another system with BIOS section
+            // Prefer a system that exposes a Bios resource, but probe the
+            // preferred host id first. Auxiliary systems such as
+            // `HGX_Baseboard_0` are often enumerated ahead of `System_0` and
+            // also advertise a Bios link, so scanning Members order alone
+            // selects the GPU baseboard (no host SecureBoot / BootOrder) and
+            // discards the System_0 preference above. Treat fetch errors as
+            // "no BIOS here": we already have `preferred_system_id` as a
+            // fallback, and this also handles the test mockup, which drops
+            // the connection instead of returning 404 when Bios is empty.
             let mut system_with_bios: Option<ComputerSystem> = None;
-            for system_member in &systems {
-                // Treat any error as "no BIOS here": we already have
-                // `at_least_one_system_id` as a fallback, and this also handles the
-                // test mockup, which drops the connection instead of returning 404
-                // when the Bios section is empty.
+            for system_member in system_ids_for_bios_probe(preferred_system_id, &systems) {
                 system_with_bios = s.if_system_has_bios(system_member).await;
                 if system_with_bios.is_some() {
                     break;
@@ -262,7 +266,7 @@ impl RedfishClientPool {
 
             let system_id = system_with_bios
                 .map(|swb| swb.id.to_owned())
-                .unwrap_or(at_least_one_system_id.to_owned());
+                .unwrap_or(preferred_system_id.to_owned());
 
             // call set_system_id always before calling set_vendor
             s.set_system_id(&system_id)?;
@@ -907,6 +911,20 @@ impl RedfishHttpClient {
     }
 }
 
+/// Order system ids for the Bios probe: preferred host first, then the remaining
+/// members in enumeration order (skipping the preferred id so it is not probed twice).
+fn system_ids_for_bios_probe<'a>(
+    preferred: &'a str,
+    systems: &'a [String],
+) -> impl Iterator<Item = &'a str> {
+    std::iter::once(preferred).chain(
+        systems
+            .iter()
+            .map(String::as_str)
+            .filter(move |id| *id != preferred),
+    )
+}
+
 fn truncate(s: &str, len: usize) -> &str {
     &s[..len.min(s.len())]
 }
@@ -1096,5 +1114,27 @@ mod tests {
             !logged.contains("supersecret"),
             "no part of the secret must appear after truncation"
         );
+    }
+
+    #[test]
+    fn bios_probe_order_prefers_system_0_ahead_of_hgx_baseboard() {
+        let systems = vec!["HGX_Baseboard_0".to_string(), "System_0".to_string()];
+        let order: Vec<&str> = system_ids_for_bios_probe("System_0", &systems).collect();
+        assert_eq!(order, vec!["System_0", "HGX_Baseboard_0"]);
+    }
+
+    #[test]
+    fn bios_probe_order_keeps_preferred_first_when_already_first() {
+        let systems = vec!["System_0".to_string(), "HGX_Baseboard_0".to_string()];
+        let order: Vec<&str> = system_ids_for_bios_probe("System_0", &systems).collect();
+        assert_eq!(order, vec!["System_0", "HGX_Baseboard_0"]);
+    }
+
+    #[test]
+    fn bios_probe_order_falls_back_to_first_member_when_no_system_0() {
+        let systems = vec!["DGX".to_string(), "HGX_Baseboard_0".to_string()];
+        let preferred = systems.first().map(String::as_str).unwrap();
+        let order: Vec<&str> = system_ids_for_bios_probe(preferred, &systems).collect();
+        assert_eq!(order, vec!["DGX", "HGX_Baseboard_0"]);
     }
 }
