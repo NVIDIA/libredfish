@@ -232,9 +232,12 @@ impl Redfish for RedfishStandard {
         false
     }
 
-    fn bmc_reset<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+    fn bmc_reset<'a>(
+        &'a self,
+        reset_type: Option<ManagerResetType>,
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
         Box::pin(async move {
-            self.reset_manager(ManagerResetType::GracefulRestart, None)
+            self.reset_manager(reset_type.unwrap_or(ManagerResetType::GracefulRestart), None)
                 .await
         })
     }

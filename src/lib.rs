@@ -39,6 +39,7 @@ pub use model::system::{BootOptions, PCIeDevice, PowerState, SystemPowerControl,
 use model::task::Task;
 use model::update_service::{ComponentType, TransferProtocolType, UpdateService};
 pub use model::EnabledDisabled;
+pub use model::manager::ManagerResetType;
 use model::Manager;
 use model::{secure_boot::SecureBoot, BootOption, ComputerSystem, ODataId};
 use serde::{Deserialize, Serialize};
@@ -190,8 +191,14 @@ pub trait Redfish: Send + Sync + 'static {
         action: SystemPowerControl,
     ) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
-    /// Reboot the BMC itself
-    fn bmc_reset<'a>(&'a self) -> RedfishFuture<'a, Result<(), RedfishError>>;
+    /// Reboot the BMC itself. `reset_type` selects the Redfish `Manager.Reset`
+    /// action; `None` uses the vendor's default (`GracefulRestart` for the
+    /// standard implementation, `ForceRestart` for vendors that only support
+    /// it, e.g. AMI and Viking).
+    fn bmc_reset<'a>(
+        &'a self,
+        reset_type: Option<ManagerResetType>,
+    ) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     /// Reset Chassis
     fn chassis_reset<'a>(

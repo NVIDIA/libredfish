@@ -181,8 +181,11 @@ impl Redfish for Bmc {
         false
     }
 
-    fn bmc_reset<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
-        Box::pin(async move { self.s.bmc_reset().await })
+    fn bmc_reset<'a>(
+        &'a self,
+        reset_type: Option<crate::ManagerResetType>,
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move { self.s.bmc_reset(reset_type).await })
     }
 
     fn chassis_reset<'a>(

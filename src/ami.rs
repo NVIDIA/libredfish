@@ -407,12 +407,25 @@ impl Redfish for Bmc {
         Box::pin(async move { self.s.power(action).await })
     }
 
-    /// AMI BMC only supports ForceRestart
-    fn bmc_reset<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+    /// AMI BMCs are assumed to only accept `ForceRestart` for `Manager.Reset`
+    /// (per the AMI support work, #34). `None` defaults to `ForceRestart`; an
+    /// explicit non-`ForceRestart` `reset_type` is rejected rather than
+    /// silently downgraded, so callers learn their choice was not honored.
+    fn bmc_reset<'a>(
+        &'a self,
+        reset_type: Option<ManagerResetType>,
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
         Box::pin(async move {
-            self.s
-                .reset_manager(ManagerResetType::ForceRestart, None)
-                .await
+            match reset_type {
+                None | Some(ManagerResetType::ForceRestart) => {
+                    self.s
+                        .reset_manager(ManagerResetType::ForceRestart, None)
+                        .await
+                }
+                Some(other) => Err(RedfishError::NotSupported(format!(
+                    "AMI BMC only supports ForceRestart for Manager.Reset, but {other} was requested"
+                ))),
+            }
         })
     }
 
