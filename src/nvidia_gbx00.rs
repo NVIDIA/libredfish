@@ -80,6 +80,10 @@ impl Bmc {
                 .is_some_and(|model| model.contains("GB300"))
         }))
     }
+
+    async fn is_supermicro_gb300(&self) -> Result<bool, RedfishError> {
+        Ok(self.s.is_supermicro() && self.is_gb300().await?)
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -541,15 +545,15 @@ impl Redfish for Bmc {
         >,
     ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
         Box::pin(async move {
-            let is_gb300 = self.is_gb300().await?;
+            let is_supermicro_gb300 = self.is_supermicro_gb300().await?;
 
             // The Supermicro GB300 SecureBoot resource does not expose
             // SecureBootEnable, so there is no supported setting to change.
-            if !is_gb300 {
+            if !is_supermicro_gb300 {
                 self.disable_secure_boot().await?;
             }
 
-            let bios_attrs = self.machine_setup_attrs(is_gb300).await?;
+            let bios_attrs = self.machine_setup_attrs(is_supermicro_gb300).await?;
             let mut attrs = HashMap::new();
             attrs.extend(bios_attrs);
             let body = HashMap::from([("Attributes", attrs)]);
@@ -867,7 +871,7 @@ impl Redfish for Bmc {
 
     fn enable_secure_boot<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
         Box::pin(async move {
-            if self.is_gb300().await? {
+            if self.is_supermicro_gb300().await? {
                 return Err(RedfishError::NotSupported(
                     "Supermicro GB300 does not expose SecureBootEnable".to_string(),
                 ));
@@ -878,7 +882,7 @@ impl Redfish for Bmc {
 
     fn disable_secure_boot<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
         Box::pin(async move {
-            if self.is_gb300().await? {
+            if self.is_supermicro_gb300().await? {
                 return Err(RedfishError::NotSupported(
                     "Supermicro GB300 does not expose SecureBootEnable".to_string(),
                 ));
@@ -1212,7 +1216,7 @@ impl Redfish for Bmc {
 
     fn enable_infinite_boot<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
         Box::pin(async move {
-            if self.is_gb300().await? {
+            if self.is_supermicro_gb300().await? {
                 return Err(RedfishError::NotSupported(
                     "Supermicro GB300 does not expose EmbeddedUefiShell".to_string(),
                 ));
@@ -1229,7 +1233,7 @@ impl Redfish for Bmc {
         &'a self,
     ) -> crate::RedfishFuture<'a, Result<Option<bool>, RedfishError>> {
         Box::pin(async move {
-            if self.is_gb300().await? {
+            if self.is_supermicro_gb300().await? {
                 return Ok(None);
             }
             let embedded_uefi_shell = self.get_embedded_uefi_shell_status().await?;
@@ -1410,8 +1414,8 @@ impl Bmc {
         }
 
         let bios = self.s.bios_attributes().await?;
-        let is_gb300 = self.is_gb300().await?;
-        let expected_attrs = self.machine_setup_attrs(is_gb300).await?;
+        let is_supermicro_gb300 = self.is_supermicro_gb300().await?;
+        let expected_attrs = self.machine_setup_attrs(is_supermicro_gb300).await?;
         for (key, expected) in expected_attrs {
             let Some(actual) = bios.get(&key) else {
                 diffs.push(MachineSetupDiff {
@@ -1542,24 +1546,14 @@ impl Bmc {
 
     async fn machine_setup_attrs(
         &self,
-        is_gb300: bool,
+        is_supermicro_gb300: bool,
     ) -> Result<Vec<(String, serde_json::Value)>, RedfishError> {
-        let mut bios_attrs: Vec<(String, serde_json::Value)> = vec![];
-
-        if is_gb300 {
-            // This platform exposes the TPM through the AMI BIOS name.
-            bios_attrs.push(("SecurityDeviceSupport".into(), "Enabled".into()));
-        } else {
-            // Enable TPM.
-            bios_attrs.push(("TPM".into(), "Enabled".into()));
-
-            // Disable EmbeddedUefiShell (infinite boot workaround).
-            bios_attrs.push(("EmbeddedUefiShell".into(), "Disabled".into()));
-        }
+        let mut bios_attrs = machine_setup_bios_attrs(is_supermicro_gb300);
+        let current_bios_attributes = self.s.bios_attributes().await?;
 
         // Enable Option ROM so that the DPU will show up in the Host's network devce list
         // Otherwise, we will never see the DPU's Host PF MAC in the boot option list
-        if let Some(curr_bios_attributes) = self.s.bios_attributes().await?.as_object() {
+        if let Some(curr_bios_attributes) = current_bios_attributes.as_object() {
             for attribute in curr_bios_attributes.keys() {
                 if attribute.contains("Pcie6DisableOptionROM") {
                     bios_attrs.push((attribute.into(), false.into()));
@@ -1600,6 +1594,20 @@ impl Bmc {
     }
 }
 
+fn machine_setup_bios_attrs(is_supermicro_gb300: bool) -> Vec<(String, serde_json::Value)> {
+    if is_supermicro_gb300 {
+        // Supermicro GB300 exposes TPM through this AMI BIOS attribute.
+        vec![("SecurityDeviceSupport".into(), "Enabled".into())]
+    } else {
+        vec![
+            // NVIDIA GB200/GB300 exposes TPM directly.
+            ("TPM".into(), "Enabled".into()),
+            // Disable EmbeddedUefiShell (infinite boot workaround).
+            ("EmbeddedUefiShell".into(), "Disabled".into()),
+        ]
+    }
+}
+
 // UpdateParameters is what is sent for a multipart firmware upload's metadata.
 #[derive(Serialize)]
 #[serde(rename_all = "PascalCase")]
@@ -1634,6 +1642,22 @@ impl UpdateParameters {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn gb300_machine_setup_uses_vendor_specific_bios_attributes() {
+        let dgx_attrs = machine_setup_bios_attrs(false);
+        assert!(dgx_attrs.contains(&("TPM".into(), "Enabled".into())));
+        assert!(dgx_attrs.contains(&("EmbeddedUefiShell".into(), "Disabled".into())));
+        assert!(!dgx_attrs
+            .iter()
+            .any(|(key, _)| key == "SecurityDeviceSupport"));
+
+        let supermicro_attrs = machine_setup_bios_attrs(true);
+        assert_eq!(
+            supermicro_attrs,
+            vec![("SecurityDeviceSupport".into(), "Enabled".into())]
+        );
+    }
 
     #[test]
     fn test_update_parameters_targets_all_variants() {
