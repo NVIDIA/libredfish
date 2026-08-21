@@ -237,8 +237,11 @@ impl Redfish for RedfishStandard {
         reset_type: Option<ManagerResetType>,
     ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
         Box::pin(async move {
-            self.reset_manager(reset_type.unwrap_or(ManagerResetType::GracefulRestart), None)
-                .await
+            self.reset_manager(
+                reset_type.unwrap_or(ManagerResetType::GracefulRestart),
+                None,
+            )
+            .await
         })
     }
 
