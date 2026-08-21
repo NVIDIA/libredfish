@@ -154,11 +154,14 @@ impl Redfish for Bmc {
         false
     }
 
-    fn bmc_reset<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+    fn bmc_reset<'a>(
+        &'a self,
+        reset_type: Option<ManagerResetType>,
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
         Box::pin(async move {
             self.s
                 .reset_manager(
-                    ManagerResetType::ForceRestart,
+                    reset_type.unwrap_or(ManagerResetType::ForceRestart),
                     Some(vec![(IF_MATCH, "*".to_string())]),
                 )
                 .await

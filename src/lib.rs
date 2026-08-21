@@ -28,6 +28,7 @@ pub use model::boot::{
 };
 pub use model::chassis::{Assembly, Chassis, NetworkAdapter};
 pub use model::ethernet_interface::EthernetInterface;
+pub use model::manager::ManagerResetType;
 pub use model::network_device_function::NetworkDeviceFunction;
 use model::oem::nvidia_dpu::{HostPrivilegeLevel, InternalCPUModel, NicMode};
 pub use model::port::NetworkPort;
@@ -190,8 +191,14 @@ pub trait Redfish: Send + Sync + 'static {
         action: SystemPowerControl,
     ) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
-    /// Reboot the BMC itself
-    fn bmc_reset<'a>(&'a self) -> RedfishFuture<'a, Result<(), RedfishError>>;
+    /// Reboot the BMC itself. `reset_type` selects the Redfish `Manager.Reset`
+    /// action; `None` uses the vendor's default (`GracefulRestart` for the
+    /// standard implementation, `ForceRestart` for vendors that only support
+    /// it, e.g. AMI and Viking).
+    fn bmc_reset<'a>(
+        &'a self,
+        reset_type: Option<ManagerResetType>,
+    ) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
     /// Reset Chassis
     fn chassis_reset<'a>(
