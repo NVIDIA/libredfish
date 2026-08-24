@@ -1401,6 +1401,43 @@ impl Redfish for Bmc {
         Box::pin(async move { self.s.set_utc_timezone().await })
     }
 
+    fn get_spx_nic_east_west_control_enabled<'a>(
+        &'a self,
+        nic_index: u8,
+    ) -> crate::RedfishFuture<'a, Result<Option<bool>, RedfishError>> {
+        Box::pin(async move {
+            self.s
+                .get_spx_nic_east_west_control_enabled(nic_index)
+                .await
+        })
+    }
+
+    fn set_spx_nic_east_west_control_enabled<'a>(
+        &'a self,
+        nic_index: u8,
+        enabled: bool,
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move {
+            self.s
+                .set_spx_nic_east_west_control_enabled(nic_index, enabled)
+                .await
+        })
+    }
+
+    fn get_spx_nic_mac_address<'a>(
+        &'a self,
+        nic_index: u8,
+    ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
+        Box::pin(async move { self.s.get_spx_nic_mac_address(nic_index).await })
+    }
+
+    fn get_spx_nic_model_and_name<'a>(
+        &'a self,
+        nic_index: u8,
+    ) -> crate::RedfishFuture<'a, Result<Option<crate::SpxNicModelAndName>, RedfishError>> {
+        Box::pin(async move { self.s.get_spx_nic_model_and_name(nic_index).await })
+    }
+
     fn set_ntp_servers<'a>(
         &'a self,
         servers: &'a [String],

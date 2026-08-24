@@ -1314,6 +1314,47 @@ impl Redfish for RedfishStandard {
         })
     }
 
+    fn get_spx_nic_east_west_control_enabled<'a>(
+        &'a self,
+        _nic_index: u8,
+    ) -> crate::RedfishFuture<'a, Result<Option<bool>, RedfishError>> {
+        Box::pin(async move {
+            // Not applicable for non-Vera-Rubin vendors
+            Ok(None)
+        })
+    }
+
+    fn set_spx_nic_east_west_control_enabled<'a>(
+        &'a self,
+        _nic_index: u8,
+        _enabled: bool,
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move {
+            // No-op for non-Vera-Rubin vendors
+            Ok(())
+        })
+    }
+
+    fn get_spx_nic_mac_address<'a>(
+        &'a self,
+        _nic_index: u8,
+    ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
+        Box::pin(async move {
+            // Not applicable for non-Vera-Rubin vendors
+            Ok(None)
+        })
+    }
+
+    fn get_spx_nic_model_and_name<'a>(
+        &'a self,
+        _nic_index: u8,
+    ) -> crate::RedfishFuture<'a, Result<Option<crate::SpxNicModelAndName>, RedfishError>> {
+        Box::pin(async move {
+            // Not applicable for non-Vera-Rubin vendors
+            Ok(None)
+        })
+    }
+
     fn set_ntp_servers<'a>(
         &'a self,
         servers: &'a [String],
