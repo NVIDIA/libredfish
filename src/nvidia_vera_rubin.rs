@@ -1383,6 +1383,105 @@ impl Redfish for Bmc {
         Box::pin(async move { self.s.set_utc_timezone().await })
     }
 
+    // Get the EastWestControlEnabled attribute for the CX NIC with the given index
+    fn get_spx_nic_east_west_control_enabled<'a>(
+        &'a self,
+        nic_index: u8,
+    ) -> crate::RedfishFuture<'a, Result<Option<bool>, RedfishError>> {
+        Box::pin(async move {
+            if nic_index >= 8 {
+                return Err(RedfishError::GenericError {
+                    error: format!("nic_index {nic_index} out of range; expected 0..8"),
+                });
+            }
+            let url = format!("Chassis/CX_{nic_index}/NetworkAdapters/CX_NIC_{nic_index}/Settings");
+            let (_status_code, body): (StatusCode, HashMap<String, serde_json::Value>) =
+                self.s.client.get(&url).await?;
+            let oem = jsonmap::get_object(&body, "Oem", &url)?;
+            let nvidia = jsonmap::get_object(oem, "Nvidia", &url)?;
+            Ok(Some(jsonmap::get_bool(
+                nvidia,
+                "EastWestControlEnabled",
+                &url,
+            )?))
+        })
+    }
+
+    // Set the EastWestControlEnabled attribute to the given value for the CX NIC with the given index
+    fn set_spx_nic_east_west_control_enabled<'a>(
+        &'a self,
+        nic_index: u8,
+        enabled: bool,
+    ) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move {
+            if nic_index >= 8 {
+                return Err(RedfishError::GenericError {
+                    error: format!("nic_index {nic_index} out of range; expected 0..8"),
+                });
+            }
+            let body = serde_json::json!({
+                "Oem": {
+                    "Nvidia": {
+                        "EastWestControlEnabled": enabled
+                    }
+                }
+            });
+            let url = format!("Chassis/CX_{nic_index}/NetworkAdapters/CX_NIC_{nic_index}/Settings");
+            self.s.client.patch(&url, &body).await?;
+            Ok(())
+        })
+    }
+
+    // Get the MAC address for the CX NIC with the given index
+    fn get_spx_nic_mac_address<'a>(
+        &'a self,
+        nic_index: u8,
+    ) -> crate::RedfishFuture<'a, Result<Option<String>, RedfishError>> {
+        Box::pin(async move {
+            if nic_index >= 8 {
+                return Err(RedfishError::GenericError {
+                    error: format!("nic_index {nic_index} out of range; expected 0..8"),
+                });
+            }
+            let url = format!(
+                "Systems/{}/EthernetInterfaces/CX_NIC_{nic_index}_Port_0",
+                self.s.system_id()
+            );
+            let (_status_code, iface): (StatusCode, crate::EthernetInterface) =
+                self.s.client.get(&url).await?;
+            let mac = iface.mac_address.ok_or_else(|| RedfishError::MissingKey {
+                key: "MACAddress".to_string(),
+                url: url.clone(),
+            })?;
+            Ok(Some(mac))
+        })
+    }
+
+    // Get the model and name for the CX NIC with the given index
+    fn get_spx_nic_model_and_name<'a>(
+        &'a self,
+        nic_index: u8,
+    ) -> crate::RedfishFuture<'a, Result<Option<crate::SpxNicModelAndName>, RedfishError>> {
+        Box::pin(async move {
+            if nic_index >= 8 {
+                return Err(RedfishError::GenericError {
+                    error: format!("nic_index {nic_index} out of range; expected 0..8"),
+                });
+            }
+            let chassis_id = format!("CX_{nic_index}");
+            let chassis = self.get_chassis(&chassis_id).await?;
+            let model = chassis.model.ok_or_else(|| RedfishError::MissingKey {
+                key: "Model".to_string(),
+                url: format!("Chassis/{chassis_id}"),
+            })?;
+            let name = chassis.name.ok_or_else(|| RedfishError::MissingKey {
+                key: "Name".to_string(),
+                url: format!("Chassis/{chassis_id}"),
+            })?;
+            Ok(Some(crate::SpxNicModelAndName { model, name }))
+        })
+    }
+
     fn set_ntp_servers<'a>(
         &'a self,
         servers: &'a [String],

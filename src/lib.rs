@@ -681,11 +681,47 @@ pub trait Redfish: Send + Sync + 'static {
     // Only applicable to Dells
     fn set_utc_timezone<'a>(&'a self) -> RedfishFuture<'a, Result<(), RedfishError>>;
 
+    // Gets Oem.Nvidia.EastWestControlEnabled from a single CX NIC Settings
+    // Only applicable to Vera-Rubin. `nic_index` must be in 0..8.
+    fn get_spx_nic_east_west_control_enabled<'a>(
+        &'a self,
+        nic_index: u8,
+    ) -> RedfishFuture<'a, Result<Option<bool>, RedfishError>>;
+
+    // Sets Oem.Nvidia.EastWestControlEnabled on a single CX NIC Settings
+    // Only applicable to Vera-Rubin. `nic_index` must be in 0..8.
+    fn set_spx_nic_east_west_control_enabled<'a>(
+        &'a self,
+        nic_index: u8,
+        enabled: bool,
+    ) -> RedfishFuture<'a, Result<(), RedfishError>>;
+
+    // Gets MAC address for a single CX_NIC_{nic_index}_Port_0 EthernetInterface
+    // Only applicable to Vera-Rubin. `nic_index` must be in 0..8.
+    fn get_spx_nic_mac_address<'a>(
+        &'a self,
+        nic_index: u8,
+    ) -> RedfishFuture<'a, Result<Option<String>, RedfishError>>;
+
+    // Gets Model and Name from Chassis/CX_{nic_index}
+    // Only applicable to Vera-Rubin. `nic_index` must be in 0..8.
+    fn get_spx_nic_model_and_name<'a>(
+        &'a self,
+        nic_index: u8,
+    ) -> RedfishFuture<'a, Result<Option<SpxNicModelAndName>, RedfishError>>;
+
     // Sets the NTP servers
     fn set_ntp_servers<'a>(
         &'a self,
         servers: &'a [String],
     ) -> RedfishFuture<'a, Result<(), RedfishError>>;
+}
+
+/// Model and Name from a Vera-Rubin CX NIC chassis (`Chassis/CX_{index}`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SpxNicModelAndName {
+    pub model: String,
+    pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
