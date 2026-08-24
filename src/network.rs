@@ -26,7 +26,8 @@ use regex::Regex;
 use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue, ACCEPT, CONTENT_TYPE, IF_MATCH},
     multipart::{Form, Part},
-    Client as HttpClient, ClientBuilder as HttpClientBuilder, Method, Proxy, StatusCode,
+    Certificate, Client as HttpClient, ClientBuilder as HttpClientBuilder, Identity, Method, Proxy,
+    StatusCode,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use tracing::{debug, Instrument};
@@ -40,12 +41,33 @@ const DEFAULT_CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60);
 const MIN_UPLOAD_BANDWIDTH: u64 = 10_000;
 
-#[derive(Debug)]
 pub struct RedfishClientPoolBuilder {
     connect_timeout: Duration,
     timeout: Duration,
     accept_invalid_certs: bool,
     proxy: Option<String>,
+    identity: Option<ClientIdentityPem>,
+    root_certificates: Vec<Vec<u8>>,
+}
+
+/// A PEM encoded client certificate chain and its private key.
+#[derive(Clone)]
+struct ClientIdentityPem {
+    cert: Vec<u8>,
+    key: Vec<u8>,
+}
+
+impl std::fmt::Debug for RedfishClientPoolBuilder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RedfishClientPoolBuilder")
+            .field("connect_timeout", &self.connect_timeout)
+            .field("timeout", &self.timeout)
+            .field("accept_invalid_certs", &self.accept_invalid_certs)
+            .field("proxy", &self.proxy)
+            .field("identity", &self.identity.as_ref().map(|_| "[REDACTED]"))
+            .field("root_certificates", &self.root_certificates.len())
+            .finish()
+    }
 }
 
 impl RedfishClientPoolBuilder {
@@ -76,12 +98,60 @@ impl RedfishClientPoolBuilder {
         self
     }
 
+    /// Presents a client certificate during the TLS handshake.
+    ///
+    /// Redfish endpoints themselves do not ask for one, but an authenticating
+    /// proxy in front of them identifies its callers this way, so a pool aimed
+    /// at such a proxy needs an identity.
+    ///
+    /// `cert_pem` is the PEM encoded certificate chain and `key_pem` its PEM
+    /// encoded private key, in RSA, SEC1 elliptic curve, or PKCS#8 format.
+    /// They are commonly two separate files (`tls.crt` and `tls.key`) and are
+    /// accepted separately here so the caller does not have to join them.
+    ///
+    /// The PEM is not parsed until [`Self::build`], which reports a malformed
+    /// certificate or key.
+    pub fn identity(mut self, cert_pem: impl Into<Vec<u8>>, key_pem: impl Into<Vec<u8>>) -> Self {
+        self.identity = Some(ClientIdentityPem {
+            cert: cert_pem.into(),
+            key: key_pem.into(),
+        });
+        self
+    }
+
+    /// Trusts the certificates in a PEM bundle for server verification, in
+    /// addition to the roots the platform already trusts.
+    ///
+    /// May be called more than once; each bundle adds to the trusted set. The
+    /// bundle is not parsed until [`Self::build`].
+    pub fn add_root_certificates(mut self, pem_bundle: impl Into<Vec<u8>>) -> Self {
+        self.root_certificates.push(pem_bundle.into());
+        self
+    }
+
     /// Builds a Redfish Client Network Configuration
     pub fn build(&self) -> Result<RedfishClientPool, RedfishError> {
         let mut builder = HttpClientBuilder::new();
         if let Some(proxy) = self.proxy.as_ref() {
             let p = Proxy::https(proxy)?;
             builder = builder.proxy(p);
+        }
+
+        if let Some(identity) = self.identity.as_ref() {
+            builder = builder.identity(identity.to_reqwest_identity()?);
+        }
+
+        for pem_bundle in &self.root_certificates {
+            // A bundle legitimately holds more than one certificate, and
+            // reqwest takes them one at a time.
+            let certificates = Certificate::from_pem_bundle(pem_bundle).map_err(|e| {
+                RedfishError::GenericError {
+                    error: format!("Failed to parse root certificate bundle: {}", e),
+                }
+            })?;
+            for certificate in certificates {
+                builder = builder.add_root_certificate(certificate);
+            }
         }
 
         let http_client = builder
@@ -95,6 +165,21 @@ impl RedfishClientPoolBuilder {
         let pool = RedfishClientPool { http_client };
 
         Ok(pool)
+    }
+}
+
+impl ClientIdentityPem {
+    fn to_reqwest_identity(&self) -> Result<Identity, RedfishError> {
+        let mut pem = Vec::with_capacity(self.key.len() + self.cert.len() + 1);
+        pem.extend_from_slice(&self.key);
+        if !self.key.ends_with(b"\n") {
+            pem.push(b'\n');
+        }
+        pem.extend_from_slice(&self.cert);
+
+        Identity::from_pem(&pem).map_err(|e| RedfishError::GenericError {
+            error: format!("Failed to parse client identity: {}", e),
+        })
     }
 }
 
@@ -136,6 +221,8 @@ impl RedfishClientPool {
             // BMCs often have a self-signed cert, so usually this has to be true
             accept_invalid_certs: false,
             proxy: None,
+            identity: None,
+            root_certificates: Vec::new(),
         }
     }
 
@@ -1136,5 +1223,86 @@ mod tests {
         let preferred = systems.first().map(String::as_str).unwrap();
         let order: Vec<&str> = system_ids_for_bios_probe(preferred, &systems).collect();
         assert_eq!(order, vec!["DGX", "HGX_Baseboard_0"]);
+    }
+
+    const TEST_CERT_PEM: &[u8] = include_bytes!("../tests/cert.pem");
+    const TEST_KEY_PEM: &[u8] = include_bytes!("../tests/key.pem");
+
+    #[test]
+    fn builds_with_a_client_identity() {
+        RedfishClientPool::builder()
+            .identity(TEST_CERT_PEM, TEST_KEY_PEM)
+            .build()
+            .expect("a matching certificate and key should build a client identity");
+    }
+
+    // The two files are supplied separately and joined internally, so a cert
+    // that does not end in a newline must not run into the key's PEM header.
+    #[test]
+    fn builds_with_a_client_identity_lacking_a_trailing_newline() {
+        let mut key = TEST_KEY_PEM.to_vec();
+        while key.last() == Some(&b'\n') {
+            key.pop();
+        }
+
+        RedfishClientPool::builder()
+            .identity(TEST_CERT_PEM, key)
+            .build()
+            .expect("a key without a trailing newline should still build");
+    }
+
+    #[test]
+    fn rejects_a_malformed_client_identity() {
+        let err = RedfishClientPool::builder()
+            .identity(b"not a certificate".to_vec(), b"not a key".to_vec())
+            .build()
+            .expect_err("malformed PEM should fail the build");
+
+        let message = err.to_string();
+        assert!(
+            message.contains("Failed to parse client identity"),
+            "unexpected error: {message}"
+        );
+        assert!(
+            !message.contains("not a key"),
+            "the error must not quote the key material: {message}"
+        );
+    }
+
+    #[test]
+    fn builds_with_added_root_certificates() {
+        RedfishClientPool::builder()
+            .add_root_certificates(TEST_CERT_PEM)
+            .build()
+            .expect("a PEM certificate should be accepted as a root");
+    }
+
+    #[test]
+    fn rejects_a_malformed_root_certificate_bundle() {
+        let err = RedfishClientPool::builder()
+            .add_root_certificates(b"-----BEGIN CERTIFICATE-----\nnope\n".to_vec())
+            .build()
+            .expect_err("malformed PEM should fail the build");
+
+        assert!(
+            err.to_string()
+                .contains("Failed to parse root certificate bundle"),
+            "unexpected error: {err}"
+        );
+    }
+
+    // The builder carries a private key, so its Debug must not print it.
+    #[test]
+    fn debug_redacts_the_client_identity() {
+        let rendered = format!(
+            "{:?}",
+            RedfishClientPool::builder().identity(TEST_CERT_PEM, TEST_KEY_PEM)
+        );
+
+        assert!(rendered.contains("[REDACTED]"), "unexpected: {rendered}");
+        assert!(
+            !rendered.contains("PRIVATE KEY"),
+            "the key must not be rendered: {rendered}"
+        );
     }
 }
