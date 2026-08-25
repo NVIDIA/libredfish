@@ -61,6 +61,7 @@ mod nvidia_gh200;
 mod nvidia_vera_rubin;
 mod nvidia_viking;
 mod supermicro;
+mod sushy;
 pub use network::{Endpoint, RedfishClientPool, RedfishClientPoolBuilder, REDFISH_ENDPOINT};
 pub mod standard;
 pub use error::RedfishError;
