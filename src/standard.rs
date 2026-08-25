@@ -72,6 +72,9 @@ pub struct RedfishStandard {
     service_root: ServiceRoot,
 }
 impl Redfish for RedfishStandard {
+    fn std_redfish(&self) -> &RedfishStandard {
+        self
+    }
     fn create_user<'a>(
         &'a self,
         username: &'a str,
