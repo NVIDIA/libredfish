@@ -67,23 +67,31 @@ impl Bmc {
         Ok(Bmc { s })
     }
 
-    async fn is_gb300(&self) -> Result<bool, RedfishError> {
+    async fn is_supermicro_gb300(&self) -> Result<bool, RedfishError> {
         let systems = self
             .s
             .get_collection(ODataId::from("/redfish/v1/Systems"))
             .await?
             .try_get::<ComputerSystem>()?;
-        Ok(systems.members.iter().any(|system| {
-            system
-                .model
-                .as_deref()
-                .is_some_and(|model| model.contains("GB300"))
-        }))
+        Ok(systems_are_supermicro_gb300(&systems.members))
     }
+}
 
-    async fn is_supermicro_gb300(&self) -> Result<bool, RedfishError> {
-        Ok(self.s.is_supermicro() && self.is_gb300().await?)
-    }
+fn systems_are_supermicro_gb300(systems: &[ComputerSystem]) -> bool {
+    let is_supermicro = systems.iter().any(|system| {
+        system
+            .manufacturer
+            .as_deref()
+            .is_some_and(|manufacturer| manufacturer.eq_ignore_ascii_case("supermicro"))
+    });
+    let is_gb300 = systems.iter().any(|system| {
+        system
+            .model
+            .as_deref()
+            .is_some_and(|model| model.contains("GB300"))
+    });
+
+    is_supermicro && is_gb300
 }
 
 #[derive(Copy, Clone)]
@@ -1657,6 +1665,23 @@ mod tests {
             supermicro_attrs,
             vec![("SecurityDeviceSupport".into(), "Enabled".into())]
         );
+    }
+
+    #[test]
+    fn systems_are_supermicro_gb300_only_for_supermicro_hardware() {
+        let dgx_systems = vec![ComputerSystem {
+            manufacturer: Some("NVIDIA".into()),
+            model: Some("GB300 NVL".into()),
+            ..Default::default()
+        }];
+        assert!(!systems_are_supermicro_gb300(&dgx_systems));
+
+        let supermicro_systems = vec![ComputerSystem {
+            manufacturer: Some("Supermicro".into()),
+            model: Some("GB300 NVL".into()),
+            ..Default::default()
+        }];
+        assert!(systems_are_supermicro_gb300(&supermicro_systems));
     }
 
     #[test]

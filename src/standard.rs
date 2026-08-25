@@ -1412,10 +1412,6 @@ impl RedfishStandard {
         Ok(())
     }
 
-    pub fn is_supermicro(&self) -> bool {
-        self.service_root.is_supermicro()
-    }
-
     /// Create client object
     pub fn new(client: RedfishHttpClient) -> Self {
         Self {

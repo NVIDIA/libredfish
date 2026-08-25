@@ -94,11 +94,6 @@ impl ServiceRoot {
         })
     }
 
-    pub fn is_supermicro(&self) -> bool {
-        self.vendor_string()
-            .is_some_and(|vendor| vendor.eq_ignore_ascii_case("supermicro"))
-    }
-
     pub fn vendor(&self) -> Option<RedfishVendor> {
         let v = self.vendor_string().unwrap_or("Unknown".to_string());
         Some(match v.to_lowercase().as_str() {
@@ -162,17 +157,6 @@ mod test {
             ..Default::default()
         };
         assert_eq!(result.vendor().unwrap(), RedfishVendor::NvidiaGBx00);
-    }
-
-    #[test]
-    fn test_supermicro_gb300_service_root() {
-        let result = ServiceRoot {
-            vendor: Some("Supermicro".to_string()),
-            product: Some("GB NVL".to_string()),
-            ..Default::default()
-        };
-        assert_eq!(result.vendor().unwrap(), RedfishVendor::NvidiaGBx00);
-        assert!(result.is_supermicro());
     }
 
     #[test]
