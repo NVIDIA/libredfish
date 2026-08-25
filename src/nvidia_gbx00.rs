@@ -78,20 +78,16 @@ impl Bmc {
 }
 
 fn systems_are_supermicro_gb300(systems: &[ComputerSystem]) -> bool {
-    let is_supermicro = systems.iter().any(|system| {
+    systems.iter().any(|system| {
         system
             .manufacturer
             .as_deref()
             .is_some_and(|manufacturer| manufacturer.eq_ignore_ascii_case("supermicro"))
-    });
-    let is_gb300 = systems.iter().any(|system| {
-        system
-            .model
-            .as_deref()
-            .is_some_and(|model| model.contains("GB300"))
-    });
-
-    is_supermicro && is_gb300
+            && system
+                .model
+                .as_deref()
+                .is_some_and(|model| model.contains("GB300"))
+    })
 }
 
 #[derive(Copy, Clone)]
@@ -1682,6 +1678,20 @@ mod tests {
             ..Default::default()
         }];
         assert!(systems_are_supermicro_gb300(&supermicro_systems));
+
+        let mixed_systems = vec![
+            ComputerSystem {
+                manufacturer: Some("Supermicro".into()),
+                model: Some("GB200 NVL".into()),
+                ..Default::default()
+            },
+            ComputerSystem {
+                manufacturer: Some("NVIDIA".into()),
+                model: Some("GB300 NVL".into()),
+                ..Default::default()
+            },
+        ];
+        assert!(!systems_are_supermicro_gb300(&mixed_systems));
     }
 
     #[test]

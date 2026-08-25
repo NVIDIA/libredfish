@@ -160,6 +160,16 @@ mod test {
     }
 
     #[test]
+    fn test_supermicro_gb300_service_root() {
+        let result = ServiceRoot {
+            vendor: Some("Supermicro".to_string()),
+            product: Some("GB NVL".to_string()),
+            ..Default::default()
+        };
+        assert_eq!(result.vendor().unwrap(), RedfishVendor::NvidiaGBx00);
+    }
+
+    #[test]
     fn test_nvidia_bluefield_service_root() {
         let result = ServiceRoot {
             vendor: Some("NVIDIA".to_string()),
