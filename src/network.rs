@@ -440,6 +440,32 @@ impl RedfishClientPool {
     }
 }
 
+/// Applies `custom_headers` to a request, failing on a value that is not a
+/// valid HTTP header value.
+fn apply_custom_headers(
+    mut req_b: reqwest::RequestBuilder,
+    custom_headers: &[(HeaderName, String)],
+    url: &str,
+) -> Result<reqwest::RequestBuilder, RedfishError> {
+    for (key, val) in custom_headers.iter() {
+        let value = match HeaderValue::from_str(val) {
+            Ok(x) => x,
+            Err(e) => {
+                return Err(RedfishError::InvalidValue {
+                    url: url.to_string(),
+                    field: "0".to_string(),
+                    err: InvalidValueError(format!(
+                        "Invalid custom header {} value: {}, error: {}",
+                        key, val, e
+                    )),
+                });
+            }
+        };
+        req_b = req_b.header(key, value);
+    }
+    Ok(req_b)
+}
+
 /// A HTTP client which targets a single libredfish endpoint
 #[derive(Clone)]
 pub struct RedfishHttpClient {
@@ -736,22 +762,7 @@ impl RedfishHttpClient {
             req_b = req_b.header(CONTENT_TYPE, HeaderValue::from_static("application/json"));
         }
 
-        for (key, val) in custom_headers.iter() {
-            let value = match HeaderValue::from_str(val) {
-                Ok(x) => x,
-                Err(e) => {
-                    return Err(RedfishError::InvalidValue {
-                        url: url.to_string(),
-                        field: "0".to_string(),
-                        err: InvalidValueError(format!(
-                            "Invalid custom header {} value: {}, error: {}",
-                            key, val, e
-                        )),
-                    });
-                }
-            };
-            req_b = req_b.header(key, value);
-        }
+        req_b = apply_custom_headers(req_b, custom_headers, &url)?;
 
         if let Some(user) = &self.endpoint.user {
             req_b = req_b.basic_auth(user, self.endpoint.password.as_ref());
@@ -953,11 +964,12 @@ impl RedfishHttpClient {
             );
         }
 
-        let response = self
+        let req_b = self
             .http_client
             .post(url.clone())
             .timeout(timeout)
-            .multipart(form)
+            .multipart(form);
+        let response = apply_custom_headers(req_b, &self.custom_headers, &url)?
             .basic_auth(user, self.endpoint.password.as_ref())
             .send()
             .await
@@ -1229,6 +1241,43 @@ mod tests {
 
     const TEST_CERT_PEM: &[u8] = include_bytes!("../tests/cert.pem");
     const TEST_KEY_PEM: &[u8] = include_bytes!("../tests/key.pem");
+
+    #[test]
+    fn custom_headers_are_applied_and_invalid_values_rejected() {
+        let client = HttpClient::new();
+        let headers = vec![(
+            HeaderName::from_static("forwarded"),
+            "host=192.0.2.10".to_string(),
+        )];
+
+        let request = apply_custom_headers(
+            client.post("https://bmc.invalid/redfish/v1/UpdateService"),
+            &headers,
+            "https://bmc.invalid/redfish/v1/UpdateService",
+        )
+        .expect("valid header value applies")
+        .build()
+        .expect("request builds");
+        assert_eq!(
+            request.headers().get("forwarded").unwrap(),
+            "host=192.0.2.10"
+        );
+
+        let invalid = vec![(
+            HeaderName::from_static("forwarded"),
+            "host=bad\nvalue".to_string(),
+        )];
+        let err = apply_custom_headers(
+            client.post("https://bmc.invalid/x"),
+            &invalid,
+            "https://bmc.invalid/x",
+        )
+        .expect_err("a header value with a control character must be rejected");
+        assert!(
+            err.to_string().contains("Invalid custom header"),
+            "unexpected error: {err}"
+        );
+    }
 
     #[test]
     fn builds_with_a_client_identity() {
