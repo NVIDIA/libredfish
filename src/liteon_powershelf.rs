@@ -138,6 +138,23 @@ impl Redfish for Bmc {
         })
     }
 
+    fn bmc_reset_to_defaults<'a>(&'a self) -> crate::RedfishFuture<'a, Result<(), RedfishError>> {
+        Box::pin(async move {
+            let url = format!(
+                "Managers/{}/Actions/Manager.ResetToDefaults",
+                self.s.manager_id()
+            );
+            // The Lite-On PMC follows the DMTF Manager.ResetToDefaults schema and
+            // requires the parameter named ResetToDefaultsType. The standard
+            // implementation sends ResetType (which several other vendors name
+            // their parameter), so the PMC rejects it with HTTP 400
+            // PropertyUnknown/ActionParameterMissing.
+            let mut arg = HashMap::new();
+            arg.insert("ResetToDefaultsType", "ResetAll".to_string());
+            self.s.client.post(&url, arg).await.map(|_resp| Ok(()))?
+        })
+    }
+
     fn get_boot_options<'a>(
         &'a self,
     ) -> crate::RedfishFuture<'a, Result<crate::BootOptions, RedfishError>> {
